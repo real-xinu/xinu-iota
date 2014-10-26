@@ -21,12 +21,13 @@
 #include <lfilesys.h>
 #include <ether.h>
 #include <net.h>
+#include <netiface.h>
 #include <ip.h>
-#include <arp.h>
+/*#include <arp.h>
 #include <udp.h>
-#include <dhcp.h>
+#include <dhcp.h>*/
 #include <icmp.h>
-#include <tftp.h>
+//#include <tftp.h>
 #include <name.h>
 #include <shell.h>
 #include <date.h>
@@ -39,3 +40,4 @@
 #include <multiboot.h>
 #include <stdio.h>
 #include <string.h>
+#include <xinube_macs.h>

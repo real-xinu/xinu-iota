@@ -48,7 +48,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 			break;
 		}
 	}
-
+	#if 0
 	if(dname == TRUE) {
 		ipaddr = dns_qa(args[1]);
 		if((int32)ipaddr == SYSERR) {
@@ -69,12 +69,31 @@ shellcmd xsh_ping(int nargs, char *args[])
 			return 1;
 		}
 	}
+	#endif
+
+	int32	dest;
+	dest = atoi(args[1]);
+	if( (dest < 101) || (dest > 196) ) {
+		fprintf(stderr, "Destination must be in range [101, 196]\n");
+		return 1;
+	}
+
+	kprintf("pinging %d\n", dest);
+	byte remip[16];
+	memcpy(remip, ipllprefix, 16);
+	remip[15] = dest;
 
 	/* Register to receive an ICMP Echo Reply */
 
-	slot = icmp_register(ipaddr);
+	slot = icmp_register(remip, if_tab[0].if_ipucast[0].ipaddr, 128, 0);
 	if (slot == SYSERR) {
 		fprintf(stderr,"%s: ICMP registration failed\n", args[0]);
+		return 1;
+	}
+
+	int32	recvslot = icmp_register(remip, if_tab[0].if_ipucast[0].ipaddr, 129, 0);
+	if(recvslot == SYSERR) {
+		fprintf(stderr, "icmp registration failed\n");
 		return 1;
 	}
 
@@ -87,18 +106,19 @@ shellcmd xsh_ping(int nargs, char *args[])
 	}
 
 	/* Send an ICMP Echo Request */
-	retval = icmp_send(ipaddr, ICMP_ECHOREQST, slot,
-					seq++, buf, sizeof(buf));
+	retval = icmp_send(slot, buf, sizeof(buf));
 	if (retval == SYSERR) {
 		fprintf(stderr, "%s: no response from host %s\n", args[0], args[1]);
 		icmp_release(slot);
+		icmp_release(recvslot);
 		return 1;
 	}
 
 	/* Read a reply */
 
-	retval = icmp_recv(slot, buf, sizeof(buf), 3000);
+	retval = icmp_recv(recvslot, buf, sizeof(buf), 3000);
 	icmp_release(slot);
+	icmp_release(recvslot);
 	if (retval == TIMEOUT) {
 		fprintf(stderr, "%s: no response from host %s\n", args[0],
 					args[1]);

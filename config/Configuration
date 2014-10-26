@@ -41,21 +41,21 @@ eth:
 		-intr ethdispatch
 
 /* type of a remote disk system device */
-rds:
+/*rds:
 	on udp
 		-i rdsinit	-o rdsopen	-c rdsclose
 		-r rdsread	-g ioerr	-p ioerr
 		-w rdswrite	-s ioerr	-n rdscontrol
 		-intr ionull
-
+*/
 /* type of ram disk */
-ram:
+/*ram:
 	on mem
 		-i raminit	-o ramopen	-c ramclose
 		-r ramread	-g ioerr	-p ioerr
 		-w ramwrite	-s ioerr	-n ioerr
 		-intr ionull
-
+*/
 /* type of SD memory card */
 /*
 sdmc:
@@ -67,37 +67,37 @@ sdmc:
 */
 
 /* type of a remote file system device */
-rfs:
+/*rfs:
 	on udp
 		-i rfsinit	-o rfsopen	-c ioerr
 		-r ioerr	-g ioerr	-p ioerr
 		-w ioerr	-s ioerr	-n rfscontrol
 		-intr ionull
-
+*/
 /* type of a remote file pseudo-device */
-rfl:
+/*rfl:
 	on rfs
 		-i rflinit	-o ioerr	-c rflclose
 		-r rflread	-g rflgetc	-p rflputc
 		-w rflwrite	-s rflseek	-n ioerr
 		-intr ionull
-
+*/
 /* type of a local file system master device */
-lfs:
+/*lfs:
 	on ram
 		-i lfsinit	-o lfsopen	-c ioerr
 		-r ioerr	-g ioerr	-p ioerr
 		-w ioerr	-s ioerr	-n ioerr
 		-intr ionull
-
+*/
 /* type of a local file pseudo-device */
-lfl:
+/*lfl:
 	on lfs
 		-i lflinit	-o ioerr	-c lflclose
 		-r lflread	-g lflgetc	-p lflputc
 		-w lflwrite	-s lflseek	-n lflcontrol
 		-intr ionull
-		
+*/		
 /* type of namespace device */
 nam:
 	on top
@@ -124,18 +124,18 @@ nam:
    NAMESPACE is nam on top
 
    /* Define a remote disk system device */
-   RDISK is rds on udp
+   /*RDISK is rds on udp*/
    
    /* Define a ram disk device */
-   RAM0 is ram on mem
+   /*RAM0 is ram on mem*/
 
    /* Define the remote file system device */
 
-   RFILESYS is rfs on udp
+   /*RFILESYS is rfs on udp*/
 
    /* Define remote file pseudo-devices */
 
-   RFILE0 is rfl on rfs
+   /*RFILE0 is rfl on rfs
    RFILE1 is rfl on rfs
    RFILE2 is rfl on rfs
    RFILE3 is rfl on rfs
@@ -144,20 +144,20 @@ nam:
    RFILE6 is rfl on rfs
    RFILE7 is rfl on rfs
    RFILE8 is rfl on rfs
-   RFILE9 is rfl on rfs
+   RFILE9 is rfl on rfs*/
 
    /* Define the local file system master device (one per system) */
 
-   LFILESYS is lfs on ram
+   /*LFILESYS is lfs on ram*/
 
    /* Define local file pseudo-devices (multiple per system) */
 
-   LFILE0 is lfl on lfs
+   /*LFILE0 is lfl on lfs
    LFILE1 is lfl on lfs
    LFILE2 is lfl on lfs
    LFILE3 is lfl on lfs
    LFILE4 is lfl on lfs
-   LFILE5 is lfl on lfs
+   LFILE5 is lfl on lfs*/
    
    /* Define a SD memory card device */
    /*

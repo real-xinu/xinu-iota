@@ -1,139 +1,78 @@
-/* net.c - net_init, netin, eth_hton */
+/* net.c - netin */
 
 #include <xinu.h>
-#include <stdio.h>
-
-struct	network	NetData;
+extern	process	icmp_echoproc(void);
 bpid32	netbufpool;
 
 /*------------------------------------------------------------------------
- * net_init  -  Initialize network data structures and processes
+ * net_init  -  Initialize the network
  *------------------------------------------------------------------------
  */
-
-void	net_init (void)
+void	net_init ()
 {
-	int32	nbufs;			/* Total no of buffers		*/
+	int32	iface;		/* Interface number	*/
+	char	netstr[20];	/* Process name		*/
 
-	/* Initialize the network data structure */
+	/* Initialize the network interfaces */
 
-	memset((char *)&NetData, NULLCH, sizeof(struct network));
+	netiface_init();
 
-	/* Obtain the Ethernet MAC address */
+	/* Create network buffer pool */
 
-	control(ETHER0, ETH_CTRL_GET_MAC, (int32)NetData.ethucast, 0);
+	netbufpool = mkbufpool(PACKLEN, 20);
+	if((int32)netbufpool == SYSERR) {
+		panic("Cannot create network buffer pool\n");
+	}
 
-	memset((char *)NetData.ethbcast, 0xFF, ETH_ADDR_LEN);
-
-	/* Create the network buffer pool */
-
-	nbufs = UDP_SLOTS * UDP_QSIZ + ICMP_SLOTS * ICMP_QSIZ + 1;
-
-	netbufpool = mkbufpool(PACKLEN, nbufs);
-
-	/* Initialize the ARP cache */
-
-	arp_init();
-
-	/* Initialize UDP */
-
-	udp_init();
-
-	/* Initialize ICMP */
-
-	icmp_init();
-
-	/* Initialize the IP output queue */
-
+	ipoqueue.iqsem = semcreate(0);
+	if(ipoqueue.iqsem == SYSERR) {
+		panic("Cannot create IP output queue semaphore\n");
+	}
 	ipoqueue.iqhead = 0;
 	ipoqueue.iqtail = 0;
-	ipoqueue.iqsem = semcreate(0);
-	if((int32)ipoqueue.iqsem == SYSERR) {
-		panic("Cannot create ip output queue semaphore");
-		return;
+
+	/* Create a netin process for each interface */
+
+	for(iface = 0; iface < NIFACES; iface++) {
+
+		sprintf(netstr, "netin(iface = %d)", iface);
+		resume(create(netin, NETSTK, NETPRIO, netstr, 1, iface));
 	}
 
 	/* Create the IP output process */
 
 	resume(create(ipout, NETSTK, NETPRIO, "ipout", 0, NULL));
 
-	/* Create a network input process */
+	resume(create(icmp_echoproc, 4096, NETPRIO, "icmp_echoproc", 0, NULL));
 
-	resume(create(netin, NETSTK, NETPRIO, "netin", 0, NULL));
+	return;
 }
 
-
 /*------------------------------------------------------------------------
- * netin  -  Repeatedly read and process the next incoming packet
+ * netin  -  Process that reads incoming packets
  *------------------------------------------------------------------------
  */
-
-process	netin ()
+process	netin (
+	int32	iface
+	)
 {
-	struct	netpacket *pkt;		/* Ptr to current packet	*/
-	int32	retval;			/* Return value from read	*/
+	struct	netpacket *pkt;		/* Packet pointer	*/
+	struct	if_entry  *ifptr;	/* Interface entry ptr	*/
+	int32	retval;
 
-	/* Do forever: read a packet from the network and process */
+	if( (iface < 0) || (iface >= NIFACES) ) {
+		return SYSERR;
+	}
 
-	while(1) {
+	ifptr = &if_tab[iface];
 
-		/* Allocate a buffer */
+	while(TRUE) {
 
 		pkt = (struct netpacket *)getbuf(netbufpool);
-
-		/* Obtain next packet that arrives */
-
-		retval = read(ETHER0, (char *)pkt, PACKLEN);
-		if(retval == SYSERR) {
-			panic("Cannot read from Ethernet\n");
-		}
-
-		/* Convert Ethernet Type to host order */
-
-		eth_ntoh(pkt);
-
-		/* Demultiplex on Ethernet type */
-
-		switch (pkt->net_ethtype) {
-
-		    case ETH_ARP:			/* Handle ARP	*/
-			arp_in((struct arppacket *)pkt);
-			continue;
-
-		    case ETH_IP:			/* Handle IP	*/
-			ip_in(pkt);
-			continue;
-	
-		    case ETH_IPv6:			/* Handle IPv6	*/
-			freebuf((char *)pkt);
-			continue;
-
-		    default:	/* Ignore all other incoming packets	*/
-			freebuf((char *)pkt);
-			continue;
-		}
+		retval = read(ETHER0, (char *)pkt, 1576);
+		pkt->net_iface = iface;
+		ip_in(pkt);
 	}
-}
 
-/*------------------------------------------------------------------------
- * eth_hton  -  Convert Ethernet type field to network byte order
- *------------------------------------------------------------------------
- */
-void 	eth_hton(
-	  struct netpacket *pktptr
-	)
-{
-	pktptr->net_ethtype = htons(pktptr->net_ethtype);
-}
-
-
-/*------------------------------------------------------------------------
- * eth_ntoh  -  Convert Ethernet type field to host byte order
- *------------------------------------------------------------------------
- */
-void 	eth_ntoh(
-	  struct netpacket *pktptr
-	)
-{
-	pktptr->net_ethtype = ntohs(pktptr->net_ethtype);
+	return OK;
 }

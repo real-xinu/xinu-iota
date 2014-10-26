@@ -2,14 +2,14 @@
 extern	status	addargs(pid32, int32, int32[], int32,char *, void *);
 
 /* in file arp.c */
-
+/*
 extern	void	arp_init();
 extern	status	arp_resolve(uint32, byte[]);
 extern	void	arp_in(struct arppacket *);
 extern	int32	arp_alloc();
 extern	void	arp_ntoh(struct arppacket *);
 extern	void	arp_hton(struct arppacket *);
-
+*/
 /* in file ascdate.c */
 
 extern	status	ascdate(uint32, char *);
@@ -55,11 +55,11 @@ extern	pid32	create(void *, uint32, pri16, char *, uint32, ...);
 extern	void	ctxsw(void *, void *);
 
 /* in file dhcp.c */
-
+/*
 extern	uint32	getlocalip(void);
-
+*/
 /* in file dns.c */
-extern	uint32	dns_qa(char *);
+/*extern	uint32	dns_qa(char *);*/
 
 /* in file dot2ip.c */
 
@@ -156,7 +156,7 @@ extern	status	getutime(uint32 *);
 extern	void	halt(void);
 
 /* in file icmp.c */
-
+/*
 extern	void	icmp_init(void);
 extern	void	icmp_in(struct netpacket *);
 extern	int32	icmp_register(uint32);
@@ -167,7 +167,7 @@ extern	status	icmp_release(int32);
 extern	uint16	icmp_cksum(char *, int32);
 extern	void	icmp_hton(struct netpacket *);
 extern	void	icmp_ntoh(struct netpacket *);
-
+*/
 /* in file init.c */
 extern	syscall	init(did32);
 
@@ -196,7 +196,7 @@ extern	status	ip_send(struct netpacket *);
 extern	void	ip_local(struct netpacket *);
 extern	status	ip_out(struct netpacket *);
 extern	int32	ip_route(uint32);
-extern	uint16	ipcksum(struct netpacket *);
+//extern	uint16	ipcksum(struct netpacket *);
 extern	void	ip_ntoh(struct netpacket *);
 extern	void	ip_hton(struct netpacket *);
 extern	process	ipout(void);
@@ -617,7 +617,7 @@ extern	devcall	ttyread(struct dentry *, char *, int32);
 extern	devcall	ttywrite(struct dentry *, char *, int32);
 
 /* in file udp.c */
-
+/*
 extern	void	udp_init(void);
 extern	void	udp_in(struct netpacket *);
 extern	uid32	udp_register(uint32, uint16, uint16);
@@ -628,7 +628,7 @@ extern	status	udp_sendto(uid32, uint32, uint16, char *, int32);
 extern	status	udp_release(uid32);
 extern	void	udp_ntoh(struct netpacket *);
 extern	void	udp_hton(struct netpacket *);
-
+*/
 
 /* in file unsleep.c */
 extern	syscall	unsleep(pid32);

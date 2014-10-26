@@ -4,7 +4,7 @@
 #define	IP_THIS		0xffffffff	/* "this host" src IP address	*/
 #define	IP_ALLZEROS	0x00000000	/* The all-zeros IP address     */
 
-#define	IP_ICMP		1		/* ICMP protocol type for IP 	*/
+#define	IP_ICMP		58		/* ICMP protocol type for IP 	*/
 #define	IP_UDP		17		/* UDP protocol type for IP 	*/
 
 #define	IP_ASIZE	4		/* Bytes in an IP address	*/
@@ -12,6 +12,11 @@
 #define IP_VH		0x45 		/* IP version and hdr length 	*/
 
 #define	IP_OQSIZ	8		/* Size of IP output queue	*/
+
+extern	byte	ipllprefix[];
+extern	byte	ipunspec[];
+
+#define isipll(x)	(!memcmp(ipllprefix, x, 8))
 
 /* Queue of outgoing IP packets waiting for ipout process */
 

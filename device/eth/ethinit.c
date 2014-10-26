@@ -3,6 +3,7 @@
 #include <xinu.h>
 
 struct	ethcblk	ethertab[1];
+struct	network NetData;
 
 /*------------------------------------------------------------------------
  * eth_phy_read  -  Read a PHY register
@@ -151,7 +152,7 @@ int32	ethinit (
 	volatile struct eth_q_csreg *csrptr;	/* Ptr to CSR		*/
 	struct	eth_q_tx_desc *tx_descs;	/* Array of tx descs	*/
 	struct	eth_q_rx_desc *rx_descs;	/* Array of rx descs	*/
-	struct	netpacket *pktptr;		/* Pointer to a packet	*/
+	byte	*pktptr;		/* Pointer to a packet	*/
 	void	*temptr;			/* Temp. pointer	*/
 	uint32	retries;		 	/* Retry count for reset*/
 	int32	retval;
@@ -191,7 +192,10 @@ int32	ethinit (
 	/* Set the MAC Speed = 100Mbps, Full Duplex mode */
 	csrptr->maccr |= (ETH_QUARK_MACCR_RMIISPD100 |
 			  ETH_QUARK_MACCR_DM);
-	
+
+	/* Enable Jumbo frames */
+	csrptr->maccr |= ETH_QUARK_MACCR_JE;
+
 	/* Reset the MMC Counters */
 	csrptr->mmccr |= ETH_QUARK_MMC_CNTFREEZ | ETH_QUARK_MMC_CNTRST;
 	
@@ -228,7 +232,7 @@ int32	ethinit (
 	ethptr->txRing = (void *)(((uint32)temptr + 3) & (~3));
 
 	/* Allocate memory for transmit buffers */
-	ethptr->txBufs = (void *)getmem(sizeof(struct netpacket) *
+	ethptr->txBufs = (void *)getmem(9018 *
 					(ethptr->txRingSize+1));
 	if((int)ethptr->txBufs == SYSERR) {
 		return SYSERR;
@@ -237,11 +241,11 @@ int32	ethinit (
 
 	/* Pointers to initialize transmit descriptors */
 	tx_descs = (struct eth_q_tx_desc *)ethptr->txRing;
-	pktptr = (struct netpacket *)ethptr->txBufs;
+	pktptr = (byte *)ethptr->txBufs;
 
 	/* Initialize the transmit descriptors */
 	for(i = 0; i < ethptr->txRingSize; i++) {
-		tx_descs[i].buffer1 = (uint32)(pktptr + i);
+		tx_descs[i].buffer1 = (uint32)(pktptr + i*9018);
 	}
 
 	/* Create the output synchronization semaphore */
@@ -266,7 +270,7 @@ int32	ethinit (
 					(((uint32)temptr + 3) & (~3));
 
 	/* Allocate memory for the receive buffers */
-	ethptr->rxBufs = (void *)getmem(sizeof(struct netpacket) *
+	ethptr->rxBufs = (void *)getmem(9018 *
 						(ethptr->rxRingSize+1));
 	if((int)ethptr->rxBufs == SYSERR) {
 		return SYSERR;
@@ -279,14 +283,14 @@ int32	ethinit (
 	rx_descs = (struct eth_q_rx_desc *)ethptr->rxRing;
 
 	/* Pointer to data buffers */
-	pktptr = (struct netpacket *)ethptr->rxBufs;
+	pktptr = (byte *)ethptr->rxBufs;
 
 	/* Initialize the receive descriptors */
 	for(i = 0; i < ethptr->rxRingSize; i++) {
 
 		rx_descs[i].status   = ETH_QUARK_RDST_OWN;
-		rx_descs[i].buf1size = (uint32)sizeof(struct netpacket);
-		rx_descs[i].buffer1  = (uint32)(pktptr + i);
+		rx_descs[i].buf1size = 9018;
+		rx_descs[i].buffer1  = (uint32)(pktptr + i*9018);
 	}
 
 	/* Indicate end of ring on last descriptor */
@@ -314,6 +318,22 @@ int32	ethinit (
 
 	/* Start the Transmit and Receive Processes in the DMA */
 	csrptr->omr |= (ETH_QUARK_OMR_ST | ETH_QUARK_OMR_SR);
+
+	memset((char *)&NetData, NULLCH, sizeof(struct network));
+	int32 be;
+
+	for(be = 0; be < 96; be++) {
+		if(!memcmp(ethptr->devAddress, xinube_macs[be], 6))
+			break;
+	}
+	if(be >= 96) {
+		panic("Cannot find Ethernet MAC address in xinube_macs\n");
+	}
+
+	NetData.ipucast = 0x800a0300 + 101 + be;
+	NetData.ipbcast = 0x800a03ff;
+	NetData.coord = FALSE;
+	memcpy(NetData.ethucast, ethptr->devAddress, 6);
 
 	return OK;
 

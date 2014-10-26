@@ -9,9 +9,21 @@ process	main(void)
 {
 	/* Start the network */
 
-	netstart();
+	//netstart();
+	net_init();
 
-	nsaddr = 0x800a0c10;
+	//nsaddr = 0x800a0c10;
+
+	/*if(if_tab[0].if_eui64[7] == 121) {
+		while(TRUE) {
+			char c;
+			struct netpacket *pkt = getmem(PACKLEN);
+			memset(pkt, NULLCH, PACKLEN);
+			pkt->net_pandst[7] = 122;
+			write(ETHER0, pkt, 200);
+			read(CONSOLE, &c, 1);
+		}
+	}*/
 
 	kprintf("\n...creating a shell\n");
 	recvclr();
