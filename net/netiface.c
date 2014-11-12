@@ -5,34 +5,34 @@
 struct	ifentry if_tab[NIFACES];
 
 /*------------------------------------------------------------------------
- * netiface_init  -  Initialize the network interfaces
+ * netiface_init  -  Initializes all the network interfaces
  *------------------------------------------------------------------------
  */
-void	netiface_init ()
+void	netiface_init (void)
 {
-	int32	iface;		/* Index in the interface table	*/
-	struct	ifentry *ifptr;	/* Pointer to interface entry	*/
+	int32	iface;		/* Interface number	*/
+	struct	ifentry *ifptr;	/* Interface pointer	*/
+	intmask	mask;		/* Saved interrupt mask	*/
+
+	/* Ensure only one process accesses the interface table */
+
+	mask = disable();
 
 	for(iface = 0; iface < NIFACES; iface++) {
-
-		/* Get pointer to interface entry */
-
 		ifptr = &if_tab[iface];
-
-		/* Set the whole entry to zeros */
 
 		memset((char *)ifptr, NULLCH, sizeof(struct ifentry));
 
-		if(iface == 0) { /* 802.15.4 interface */
+		if(iface == 0) {
+			ifptr->if_type = IF_TYPE_RADIO;
 
-			ifptr->if_dev = ETHER0;
+			control(RADIO, ETH_CTRL_GET_MAC, (uint32)ifptr->if_eui64, 0);
 
-			control(ETHER0, ETH_CTRL_GET_MAC, (int32)ifptr->if_eui64, 0);
-
-			memcpy(ifptr->if_ipucast[0].ipaddr, ipllprefix, 16);
+			memcpy(ifptr->if_ipucast[0].ipaddr, ip_llprefix, 8);
 			memcpy(&ifptr->if_ipucast[0].ipaddr[8], ifptr->if_eui64, 8);
-			ifptr->if_ipucast[0].preflen = 64;
 			ifptr->if_nipucast = 1;
+
+			ifptr->if_state = IF_UP;
 		}
 	}
 }

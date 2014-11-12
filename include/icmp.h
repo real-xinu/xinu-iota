@@ -20,8 +20,9 @@
 
 struct	icmpentry {			/* entry in the ICMP table	*/
 	int32	icstate;		/* state of entry: free/used	*/
-	byte	icremip[16];		/* remote IP address		*/
+	int32	iciface;		/* interface index		*/
 	byte	iclocip[16];		/* local IP address		*/
+	byte	icremip[16];		/* remote IP address		*/
 	byte	ictype;			/* ICMP type			*/
 	byte	iccode;			/* ICMP code			*/
 	int32	ichead;			/* index of next packet to read	*/

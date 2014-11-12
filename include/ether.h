@@ -1,5 +1,7 @@
 /* ether.h */
 
+#define	RADIO ETHER0
+
 /* Ethernet packet format:
 
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -11,14 +13,24 @@
 typedef	unsigned char	Eaddr[ETH_ADDR_LEN];/* Physical Ethernet address*/
 
 /* Ethernet packet header */
-
+#pragma pack(2)
 struct	etherPkt {
 	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
 	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
 	uint16	type;			/* Ether type field		*/
-	byte	data[1];		/* Packet payload		*/
+	byte	dstbe;
+	byte	srcbe;
+/*	byte	ipvh;
+	byte	iptos;
+	uint16	iplen;
+	uint32	mbz1;
+	uint16	mbz2;
+	uint16	ipcksum;
+	uint32	ipsrc;
+	uint32	ipdst;*/
+	byte	data[1];
 };
-
+#pragma pack()
 #define	ETH_HDR_LEN		14	/* Length of Ethernet packet 	*/
 					/*   header			*/
 

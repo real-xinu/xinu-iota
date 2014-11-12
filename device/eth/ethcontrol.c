@@ -15,8 +15,7 @@ devcall	ethcontrol (
 {
 	struct	ethcblk *ethptr;	/* Ethertab entry pointer	*/
 	int32	retval = OK;		/* Return value of cntl function*/
-	int32	i;			/* Index in xinube_macs[]	*/
-	byte	eui64[8];		/* EUI64 Address		*/
+	int32	i;
 
 	ethptr = &ethertab[devptr->dvminor];
 
@@ -25,15 +24,18 @@ devcall	ethcontrol (
 		/* Get MAC address */
 
 		case ETH_CTRL_GET_MAC:
+			//memcpy((byte *)arg1, ethptr->devAddress,
+			//		ETH_ADDR_LEN);
 			for(i = 0; i < 96; i++) {
-				if(!memcmp(xinube_macs[i], ethptr->devAddress, 6))
+				if(!memcmp(ethptr->devAddress, xinube_macs[i], 6)) {
 					break;
+				}
 			}
-			memset(eui64, NULLCH, 8);
-			eui64[7] = i + 101;
-			/*memcpy((byte *)arg1, ethptr->devAddress,
-					ETH_ADDR_LEN);*/
-			memcpy((char *)arg1, eui64, 8);
+			if(i >= 96) {
+				panic("Cannot find MAC address in list\n");
+			}
+			memset((char *)arg1, 0, 8);
+			*((char *)arg1 + 7) = i + 101;
 			break;
 
 		/* Add a multicast address */

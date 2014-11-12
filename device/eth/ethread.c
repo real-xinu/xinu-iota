@@ -14,7 +14,8 @@ devcall	ethread	(
 {
 	struct	ethcblk *ethptr;	/* Ethertab entry pointer	*/
 	struct	eth_q_rx_desc *rdescptr;/* Pointer to the descriptor	*/
-	struct	pradpacket *pktptr;	/* Pointer to packet		*/
+	struct	netpacket *pktptr;	/* Pointer to packet		*/
+	struct	etherPkt *epktptr;
 	uint32	framelen = 0;		/* Length of the incoming frame	*/
 	bool8	valid_addr;
 	int32	i;
@@ -31,57 +32,35 @@ devcall	ethread	(
 
 		rdescptr = (struct eth_q_rx_desc *)ethptr->rxRing +
 							ethptr->rxHead;
-		pktptr = (struct pradpacket*)rdescptr->buffer1;
+		pktptr = (struct netpacket*)rdescptr->buffer1;
+		epktptr = (struct etherPkt *)pktptr;
 
-		if((memcmp(pktptr->prad_ethdst, ethptr->devAddress, 6) == 0) &&
-		   (ntohs(pktptr->prad_ethtype) == 0x0800) &&
-		   (pktptr->prad_ipvh == 0x45) &&
-		   (pktptr->prad_ipproto == PRAD_IPPROTO) &&
-		   (ntohl(pktptr->prad_ipdst) == NetData.ipucast) ) {
-		   	valid_addr = TRUE;
+		/* See if destination address is our unicast address */
+
+		if((!memcmp(epktptr->dst, ethptr->devAddress, 6)) &&
+		   (ntohs(epktptr->type) == 0)) {
+			valid_addr = TRUE;
+
+		/* See if destination address is the broadcast address */
+
 		}
 		else {
 			valid_addr = FALSE;
-		}
-
-		/* See if destination address is our unicast address */
-		/*
-		if(!memcmp(pktptr->net_ethdst, ethptr->devAddress, 6)) {
-			valid_addr = TRUE;
-		*/
-		/* See if destination address is the broadcast address */
-		/*
-		} else if(!memcmp(pktptr->net_ethdst,
-                                    NetData.ethbcast,6)) {
-            		valid_addr = TRUE;
-		*/
-		/* For multicast addresses, see if we should accept */
-		/*
-    		} else {
-			valid_addr = FALSE;
 			for(i = 0; i < (ethptr->ed_mcc); i++) {
-				if(memcmp(pktptr->net_ethdst,
+				if(memcmp(epktptr->dst,
 					ethptr->ed_mca[i], 6) == 0){
 					valid_addr = TRUE;
 					break;
 				}
 		        }
 		}
-		*/
+
 		if(valid_addr == TRUE){ /* Accept this packet */
 
-			int32	i;
-			char	*ptr = rdescptr->buffer1;
-			/*for(i = 0; i < 100; i++) {
-				kprintf("%x ", *ptr);
-				ptr++;
-			}
-			kprintf("\n");
-			*/
 			/* Get the length of the frame */
 
 			framelen = (rdescptr->status >> 16) & 0x00003FFF;
-			framelen = framelen - (14 + 20);
+			framelen = framelen - 14;
 
 			/* Only return len characters to caller */
 
@@ -91,7 +70,7 @@ devcall	ethread	(
 
 			/* Copy the packet into the caller's buffer */
 
-			memcpy(buf, (char *)rdescptr->buffer1 + 14 + 20, framelen);
+			memcpy(buf, (char *)epktptr->data, framelen);
 		}
 
         	/* Increment the head of the descriptor list */

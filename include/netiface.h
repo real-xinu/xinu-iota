@@ -1,39 +1,37 @@
 /* netiface.h */
 
-#define	EUI64_ADDR_LEN	8	/* Length in bytes of EUI64 address	*/
-
-#define	IF_NIPUCAST	5	/* No. of IPv6 unicast addresses	*/
-#define IF_NIPMCAST	5	/* No. of IPv6 multicast addresses	*/
-
-/* Interface IPv6 address structure */
+/* Format of Interface IP address */
 
 struct	ifipaddr {
-	byte	ipaddr[16];	/* IPv6 address	*/
-	uint32	preflen;		/* Prefix length*/
+	byte	ipaddr[16];
+	uint16	ippreflen;
 };
 
-#define	IF_DOWN	0	/* Interface is down	*/
-#define	IF_UP	1	/* Interface is up	*/
+/* Interface types */
 
-#define NIFACES	1	/* No. of interfaces	*/
+#define IF_TYPE_RADIO	1
 
-/* Network Interface structure */
+/* States of interface */
+
+#define IF_UP	1
+#define IF_DOWN	0
+
+#define IF_NIPUCAST	5
+#define IF_NIPMCAST	5
+
+#define NIFACES	1
+
+/* Format of Network Interface */
 
 struct	ifentry {
-	byte	if_state;	/* Interface State - UP / Down		*/
+	byte	if_state;	/* State of the interface	*/
+	byte	if_type;	/* Type of interface		*/
+	byte	if_eui64[8];	/* EUI64 address of interface	*/
 
-	byte	if_eui64[EUI64_ADDR_LEN]; /* Unique EUI64 address	*/
-
-	struct	ifipaddr if_ipucast[IF_NIPUCAST]; /* IPv6 Ucast addrs	*/
-	struct	ifipaddr if_ipmcast[IF_NIPMCAST]; /* IPv6 Mcast addrs	*/
-	byte	if_nipucast;	/* No. of valid IP ucast addresses	*/
-	byte	if_nipmcast;	/* No. of valid IP mcast addresses	*/
-
-	byte	if_iprouter;	/* Default IP router for interface	*/
-
-	uint32	if_mtu;		/* MTU for this interface		*/
-
-	uint32	if_dev;		/* Device ID of Radio			*/
+	struct	ifipaddr if_ipucast[IF_NIPUCAST];/* IP ucast addresses	*/
+	byte	if_nipucast;	/* No. of IP unicast addresses	*/
+	struct	ifipaddr if_ipmcast[IF_NIPMCAST];/* IP mcast addresses	*/
+	byte	if_nipmcast;	/* No. of IP multicast addresses*/
 };
 
 extern	struct ifentry if_tab[NIFACES];

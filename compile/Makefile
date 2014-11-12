@@ -29,14 +29,14 @@ DEFSFILE	=	.defs
 VERSIONFILE	=	version
 LDSCRIPT	=	ld.script
 MKVERS		=	$(TOPDIR)/compile/bin/mkvers
-REBUILDFLAGS	=	-s $(TOPDIR)/system  debug.c getutime.c gettime.c 	\
+REBUILDFLAGS	=	-s $(TOPDIR)/system  debug.c getutime.c gettime.c	\
 			-s $(TOPDIR)/lib			\
 			-s $(TOPDIR)/device/tty			\
 			-s $(TOPDIR)/device/nam			\
 			-s $(TOPDIR)/device/eth			\
 			-s $(TOPDIR)/net  'arp_dump*'  		\
 				'dhcp_dump*'  pxe.c		\
-			-s $(TOPDIR)/shell  'xsh_rdstest*' 'xsh_date*' 'xsh_arp*' 'xsh_ipaddr*' 'xsh_udp*'
+			-s $(TOPDIR)/shell  'xsh_rdstest*' 'xsh_arp*' 'xsh_date*' 'xsh_ipaddr*' 'xsh_ping*' 'xsh_udp*'
 
 INCLUDE		=	-I$(TOPDIR)/include
 DEFS		= 	-DBSDURG -DVERSION=\""`cat $(VERSIONFILE)`"\"

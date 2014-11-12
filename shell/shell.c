@@ -21,7 +21,7 @@ const	struct	cmdent	cmdtab[] = {
 	{"kill",	TRUE,	xsh_kill},
 	{"memdump",	FALSE,	xsh_memdump},
 	{"memstat",	FALSE,	xsh_memstat},
-	{"ping",	FALSE,	xsh_ping},
+	//{"ping",	FALSE,	xsh_ping},
 	{"ps",		FALSE,	xsh_ps},
 	{"sleep",	FALSE,	xsh_sleep},
 	//{"udp",		FALSE,	xsh_udpdump},

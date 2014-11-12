@@ -1,66 +1,54 @@
-/* net.c - netin */
+/* net.c - net_init, netin */
 
 #include <xinu.h>
-extern	process	icmp_echoproc(void);
+
 bpid32	netbufpool;
 
 /*------------------------------------------------------------------------
  * net_init  -  Initialize the network
  *------------------------------------------------------------------------
  */
-void	net_init ()
+void	net_init (void)
 {
+	char	procname[50];	/* Netin process name	*/
 	int32	iface;		/* Interface number	*/
-	char	netstr[20];	/* Process name		*/
 
-	/* Initialize the network interfaces */
+	/* Initialize the interfaces */
 
 	netiface_init();
 
-	/* Create network buffer pool */
+	/* Create the network buffer pool */
 
 	netbufpool = mkbufpool(PACKLEN, 20);
 	if((int32)netbufpool == SYSERR) {
 		panic("Cannot create network buffer pool\n");
 	}
 
-	ipoqueue.iqsem = semcreate(0);
-	if(ipoqueue.iqsem == SYSERR) {
-		panic("Cannot create IP output queue semaphore\n");
-	}
-	ipoqueue.iqhead = 0;
-	ipoqueue.iqtail = 0;
-
 	/* Create a netin process for each interface */
 
 	for(iface = 0; iface < NIFACES; iface++) {
 
-		sprintf(netstr, "netin(iface = %d)", iface);
-		resume(create(netin, NETSTK, NETPRIO, netstr, 1, iface));
+		if(if_tab[iface].if_state == IF_DOWN) {
+			continue;
+		}
+
+		sprintf(procname, "netin_%d", iface);
+		resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
 	}
-
-	/* Create the IP output process */
-
-	resume(create(ipout, NETSTK, NETPRIO, "ipout", 0, NULL));
-
-	resume(create(icmp_echoproc, 4096, NETPRIO, "icmp_echoproc", 0, NULL));
-
-	return;
 }
 
 /*------------------------------------------------------------------------
- * netin  -  Process that reads incoming packets
+ * netin  -  Network input process
  *------------------------------------------------------------------------
  */
 process	netin (
 	int32	iface
 	)
 {
-	struct	netpacket *pkt;		/* Packet pointer	*/
-	struct	if_entry  *ifptr;	/* Interface entry ptr	*/
-	int32	retval;
+	struct	ifentry *ifptr;	/* Pointer to interface	*/
+	struct	netpacket *pkt;	/* Pointer to packet	*/
 
-	if( (iface < 0) || (iface >= NIFACES) ) {
+	if((iface < 0) || (iface > NIFACES)) {
 		return SYSERR;
 	}
 
@@ -69,9 +57,21 @@ process	netin (
 	while(TRUE) {
 
 		pkt = (struct netpacket *)getbuf(netbufpool);
-		retval = read(ETHER0, (char *)pkt, 1576);
-		pkt->net_iface = iface;
-		ip_in(pkt);
+		if((int32)pkt == SYSERR) {
+			panic("netin cannot get buffer for packet\n");
+		}
+
+		read(RADIO, (char *)pkt, PACKLEN);
+
+		if((pkt->net_ipvtch&0xf0) == 0x60) {
+			kprintf("netin: incoming ipv6 packet\n");
+			pkt->net_iface = iface;
+			ip_in(pkt);
+			//freebuf((char *)pkt);
+		}
+		else {
+			freebuf((char *)pkt);
+		}
 	}
 
 	return OK;

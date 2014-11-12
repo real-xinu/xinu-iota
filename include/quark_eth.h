@@ -144,24 +144,3 @@ struct eth_q_rx_desc {
 
 #define ETH_QUARK_INIT_DELAY	500000		/* Delay in micro secs	*/
 #define ETH_QUARK_MAX_RETRIES	3		/* Max retries for init	*/
-
-#define PRAD_IPPROTO	100
-
-#pragma pack(2)
-struct	pradpacket {
-	byte	prad_ethdst[6];
-	byte	prad_ethsrc[6];
-	uint16	prad_ethtype;
-	byte	prad_ipvh;
-	byte	prad_iptos;
-	uint16	prad_iplen;
-	uint16	prad_ipid;
-	uint16	prad_ipfrag;
-	byte	prad_ipttl;
-	byte	prad_ipproto;
-	uint16	prad_ipcksum;
-	uint32	prad_ipsrc;
-	uint32	prad_ipdst;
-	byte	prad_data[9018-34];
-};
-#pragma pack()

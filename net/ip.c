@@ -1,183 +1,230 @@
-/* ip.c - ip_in */
+/* ip.c - ip_in, ip_recv, ip_hton, ip_ntoh */
 
 #include <xinu.h>
 
-byte	ipllprefix[16] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0,
-			  0, 0, 0, 0, 0, 0, 0, 0};
-byte	ipunspec[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+/* IP output queue */
+struct	iqentry ipoqueue;
 
-struct	iqentry ipoqueue;	/* Network output queue	*/
+/* IP link local prefix */
+byte	ip_llprefix[] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0,
+			 0, 0, 0, 0, 0, 0, 0, 0};
 
-/*------------------------------------------------------------------------
- * ip_local  -  Process packets destined for this node
- *------------------------------------------------------------------------
- */
-void	ip_local (
-	struct	netpacket *pkt
-	)
-{
-	switch(pkt->net_ipnh) {
+/* IP loopback address */
+byte	ip_loopback[] = {0, 0, 0, 0, 0, 0, 0, 0,
+			 0, 0, 0, 0, 0, 0, 0, 1};
 
-		case IP_ICMP:
-			icmp_in(pkt);
-			break;
-
-		default:
-			freebuf((char *)pkt);
-			break;
-	}
-}
+/* IP unspecified address */
+byte	ip_unspec[] = {0, 0, 0, 0, 0, 0, 0, 0,
+		       0, 0, 0, 0, 0, 0, 0, 0};
 
 /*------------------------------------------------------------------------
- * ip_in  -  Process incoming IP datagrams
+ * ip_in  -  Handle an incoming IP packet
  *------------------------------------------------------------------------
  */
 void	ip_in (
 	struct	netpacket *pkt
 	)
 {
-	int32	iface;		/* Incoming interface		*/
-	struct	ifentry *ifptr;	/* Pointer to if_tab entry	*/
-	uint32	longest;	/* Longest prefix match entry	*/
-	int32	i;		/* For loop index		*/
+	struct	ifentry *ifptr; /* Pointer to interface	*/
+	int32	i;		/* For loop index	*/
 
-	/* Get the incoming interface */
+	/* Check the incoming interface */
 
-	iface = pkt->net_iface;
-	if( (iface < 0) || (iface >= NIFACES) ) {
+	if((pkt->net_iface < 0) || (pkt->net_iface >= NIFACES)) {
 		freebuf((char *)pkt);
 		return;
 	}
 
-	ifptr = &if_tab[iface];
+	ifptr = &if_tab[pkt->net_iface];
 
-	/* Check version number */
+	/* Check IP version */
 
 	if((pkt->net_ipvtch & 0xf0) != 0x60) {
 		freebuf((char *)pkt);
 		return;
 	}
 
+	/* Convert IP fields to host byte order */
+
 	ip_ntoh(pkt);
 
-	/* Check the destination address */
+	/* Match destination against own IP addresses */
 
-	/*for(i = 0; i < 16; i++) {
-		kprintf("%x ", pkt->net_ipdst[i]);
-	}
-	kprintf("\n");
-	for(i = 0; i < 16; i++) {
-		kprintf("%x ", ifptr->if_ipucast[0].ipaddr[i]);
-	}
-	kprintf("\n");*/
-	longest = 0;
-	for(i = 0 ; i < ifptr->if_nipucast; i++) {
-		if(!memcmp(pkt->net_ipdst, ifptr->if_ipucast[i].ipaddr, 16)) {
-			//kprintf("ip match %d\n", i);
-			if(longest < ifptr->if_ipucast[i].preflen) {
-				longest = ifptr->if_ipucast[i].preflen;
-			}
+	for(i = 0; i < ifptr->if_nipucast; i++) {
+		if(memcmp(pkt->net_ipdst, ifptr->if_ipucast[i].ipaddr,
+							16) == 0) {
+			kprintf("ip_in: iface %d match %d\n", pkt->net_iface, i);
+			ip_recv(pkt);
+			return;
 		}
 	}
-	//kprintf("ip_in longest %d\n", longest);
-	if(longest != -1) {
-		ip_local(pkt);
+	kprintf("ip_in: no match\n");
+
+	/* Cannot forward link local packets */
+
+	if(isipllu(pkt->net_ipdst)) {
+		freebuf((char *)pkt);
 		return;
 	}
 
-	freebuf((char *)pkt);
+	/* Destination cannot be loopback */
+
+	if(isiplb(pkt->net_ipdst)) {
+		freebuf((char *)pkt);
+		return;
+	}
+}
+
+/*------------------------------------------------------------------------
+ * ip_recv  -  Handle packet destined for this node
+ *------------------------------------------------------------------------
+ */
+void	ip_recv (
+	struct	netpacket *pkt
+	)
+{
+	byte	nxthdr;		/* Next header value	*/
+	struct	netpacket *newpkt;/* Decapsulated pkt	*/
+	byte	*currptr;	/* Current pointer	*/
+
+	nxthdr = pkt->net_ipnh;
+	currptr = pkt->net_ipdata;
+
+	if(nxthdr == IP_EXT_HBH) {
+		if(ip_prochbh(pkt->net_ipdata) == SYSERR) {
+			freebuf((char *)pkt);
+			return;
+		}
+		currptr = currptr + (*(currptr+1))*8 + 8;
+	}
+
+	while(TRUE) {
+
+		switch(nxthdr) {
+
+		 case IP_EXT_DST:
+
+		 case IP_EXT_RH:
+
+		 case IP_EXT_FRG:
+		 	freebuf((char *)pkt);
+			return;
+
+		 case IP_IPV6:
+		 	newpkt = (struct netpacket *)getbuf(netbufpool);
+			if((int32)newpkt == SYSERR) {
+				freebuf((char *)pkt);
+				return;
+			}
+			memcpy((char *)&newpkt->net_ipvtch,
+			       (char *)currptr,
+			        pkt->net_iplen - (currptr-pkt->net_ipdata));
+			freebuf((char *)pkt);
+			ip_in(newpkt);
+			return;
+
+		 case IP_ICMPV6:
+		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
+			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
+			kprintf("ip_recv: calling icmp_in\n");
+			icmp_in(pkt);
+			return;
+
+		 case IP_UDP:
+		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
+			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
+			//udp_in(pkt);
+			return;
+
+		 default:
+			freebuf((char *)pkt);
+			return;
+		}
+	}
 }
 
 /*------------------------------------------------------------------------
  * ip_send  -  Send an IP packet
  *------------------------------------------------------------------------
  */
-status	ip_send (
-	struct	netpacket *pkt	/* Pointer to packet	*/
+int32	ip_send (
+	struct	netpacket *pkt	/* Pointer to packet buffer	*/
 	)
 {
-	if(isipll(pkt->net_ipdst)) { /* Link local destination */
+	struct	ifentry *ifptr;	/* Pointer to interface	*/
+	int32	iface;		/* Interface index	*/
 
-		memcpy(pkt->net_pandst, &pkt->net_ipdst[8], 8);
-		memcpy(pkt->net_pansrc, if_tab[0].if_eui64, 8);
+	iface = pkt->net_iface;
+	if((iface < 0) || (iface >= NIFACES)) {
+		freebuf((char *)pkt);
+	}
+
+	ifptr = &if_tab[iface];
+
+	if(isipllu(pkt->net_ipdst)) {
+		if(!memcmp(pkt->net_ipsrc, ip_unspec, 16)) {
+			memcpy(pkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+		}
+		memcpy(pkt->net_raddstaddr, &pkt->net_ipdst[8], 8);
+		memcpy(pkt->net_radsrcaddr, ifptr->if_eui64, 8);
 
 		ip_hton(pkt);
 
-		write(ETHER0, (char *)pkt, ntohs(pkt->net_iplen) + 40 + 22);
-
+		write(RADIO, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
 		freebuf((char *)pkt);
-
 		return OK;
 	}
-	else {
-		freebuf((char *)pkt);
 
-		return SYSERR;
-	}
+	freebuf((char *)pkt);
+	return SYSERR;
 }
 
 /*------------------------------------------------------------------------
- * ip_enqueue  -  Enqueue an IP packet for transmission
+ * ip_prochbh  -  Process the Hop-By-Hop extension header
  *------------------------------------------------------------------------
  */
-int32	ip_enqueue (
-	struct	netpacket *pkt
+int32	ip_prochbh (
+	byte	*hdr	/* Start of header	*/
 	)
 {
-	intmask	mask;	/* Saved interrupt mask	*/
+	byte	totallen;	/* Total header length	*/
+	byte	opttype;	/* Option type		*/
+	byte	optlen;		/* Option length	*/
+	byte	*optptr;	/* Option pointer	*/
+	byte	*hdrend;	/* One past header	*/
 
-	mask = disable();
+	totallen = (*(hdr + 1))*8 + 8;
+	hdrend = hdr + totallen;
 
-	if(semcount(ipoqueue.iqsem) >= IP_OQSIZ) {
-		freebuf((char *)pkt);
-		restore(mask);
-		return SYSERR;
-	}
+	while(optptr < hdrend) {
 
-	ipoqueue.iqbuf[ipoqueue.iqtail] = pkt;
-	ipoqueue.iqtail += 1;
-	if(ipoqueue.iqtail >= IP_OQSIZ) {
-		ipoqueue.iqtail = 0;
-	}
+		opttype = *optptr;
+		optlen = *(optptr + 1);
 
-	restore(mask);
+		switch (opttype) {
 
-	signal(ipoqueue.iqsem);
+		 case IP_OPT_PAD1:
+		 	optptr++;
+			break;
 
-	return OK;
-}
+		 case IP_OPT_PADN:
+		 	optptr = optptr + optlen;
+			break;
 
-/*------------------------------------------------------------------------
- * ipout  -  IP Output process
- *------------------------------------------------------------------------
- */
-process	ipout ()
-{
-	intmask	mask;		/* Saved interrupt mask	*/
-	struct	netpacket *pkt;	/* Pointer to packet	*/
-
-	while(TRUE) {
-
-		wait(ipoqueue.iqsem);
-
-		mask = disable();
-
-		pkt = ipoqueue.iqbuf[ipoqueue.iqhead];
-		ipoqueue.iqhead += 1;
-		if(ipoqueue.iqhead >= IP_OQSIZ) {
-			ipoqueue.iqhead = 0;
+		 default:
+		 	if((opttype & 0xc0) != 0x00) {
+				return SYSERR;
+			}
+			optptr = optptr + optlen;
+			break;
 		}
-
-		restore(mask);
-
-		ip_send(pkt);
 	}
 
 	return OK;
 }
 
 /*------------------------------------------------------------------------
- * ip_hton  -  Convert IP fields into network byte order
+ * ip_hton  -  Convert Ip fields in network byte order
  *------------------------------------------------------------------------
  */
 void	ip_hton (
@@ -189,7 +236,7 @@ void	ip_hton (
 }
 
 /*------------------------------------------------------------------------
- * ip_ntoh  -  Convert IP fields into host byte order
+ * ip_ntoh  -  Convert IP fields in host byte order
  *------------------------------------------------------------------------
  */
 void	ip_ntoh (
