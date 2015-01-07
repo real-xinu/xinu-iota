@@ -273,6 +273,89 @@ int32	icmp_recv (
 }
 
 /*------------------------------------------------------------------------
+ * icmp_recvn  -  Copy the data in incoming packet in user buffer
+ * 		  wait on multiple slots
+ *------------------------------------------------------------------------
+ */
+int32	icmp_recvn (
+	int32	slots[],/* Slot in icmp table	*/
+	uint32	nslots,	/* No. of slots		*/
+	char	*buf,	/* Ptr to user buffer	*/
+	uint32	*len,	/* Size of buffer	*/
+	uint32	timeout	/* Timeout in millisecs	*/
+	)
+{
+	struct	icmpentry *icptr;	/* Pointer to icmp table entry	*/
+	intmask	mask;			/* Saved interrupt mask		*/
+	struct	netpacket *pkt;		/* Pointer to a packet buffer	*/
+	umsg32	msg;			/* Message to be recvd.		*/
+	int32	retval;			/* Return value			*/
+	int32	i;			/* For loop index		*/
+
+	mask = disable();
+
+	for(i = 0; i < nslots; i++) {
+
+		if((slots[i] < 0) || (slots[i] >= ICMP_SLOTS)) {
+			restore(mask);
+			return SYSERR;
+		}
+		icptr = &icmptab[slots[i]];
+
+		if(icptr->icstate != ICMP_USED) {
+			restore(mask);
+			return SYSERR;
+		}
+	}
+
+	for(i = 0; i < nslots; i++) {
+		icptr = &icmptab[slots[i]];
+
+		if(icptr->iccount > 0) {
+			retval = i;
+			break;
+		}
+		icptr->icstate = ICMP_RECV;
+		icptr->icpid = getpid();
+	}
+
+	if(i >= nslots) {
+		recvclr();
+		msg = recvtime(timeout);
+		if((int32)msg == SYSERR) {
+			restore(mask);
+			return SYSERR;
+		}
+		if((int32)msg == TIMEOUT) {
+			restore(mask);
+			return TIMEOUT;
+		}
+		retval = msg;
+		icptr = &icmptab[msg];
+	}
+
+	pkt = icptr->icqueue[icptr->ichead];
+	icptr->ichead++;
+	if(icptr->ichead >= ICMP_QSIZ) {
+		icptr->ichead = 0;
+	}
+	icptr->iccount--;
+
+	if((*len) > (pkt->net_iplen - ICMP_HDR_LEN)) {
+		*len = pkt->net_iplen - ICMP_HDR_LEN;
+	}
+
+	memcpy(buf, (char *)pkt->net_icdata, *len);
+
+	for(i = 0; i < nslots; i++) {
+		icmptab[slots[i]].icstate = ICMP_USED;
+	}
+
+	restore(mask);
+	return retval;
+}
+
+/*------------------------------------------------------------------------
  * icmp_recvaddr  -  Copy the data from incoming packet in user buffer
  *------------------------------------------------------------------------
  */
@@ -339,6 +422,93 @@ int32	icmp_recvaddr (
 
 	restore(mask);
 	return len;
+}
+
+/*------------------------------------------------------------------------
+ * icmp_recvnaddr  -  Copy the data in incoming packet in user buffer
+ * 		  wait on multiple slots
+ *------------------------------------------------------------------------
+ */
+int32	icmp_recvnaddr (
+	int32	slots[],/* Slot in icmp table	*/
+	uint32	nslots,	/* No. of slots		*/
+	char	*buf,	/* Ptr to user buffer	*/
+	uint32	*len,	/* Size of buffer	*/
+	uint32	timeout,/* Timeout in millisecs	*/
+	struct	ipinfo *ipdata/* IP information	*/
+	)
+{
+	struct	icmpentry *icptr;	/* Pointer to icmp table entry	*/
+	intmask	mask;			/* Saved interrupt mask		*/
+	struct	netpacket *pkt;		/* Pointer to a packet buffer	*/
+	umsg32	msg;			/* Message to be recvd.		*/
+	int32	retval;			/* Return value			*/
+	int32	i;			/* For loop index		*/
+
+	mask = disable();
+
+	for(i = 0; i < nslots; i++) {
+
+		if((slots[i] < 0) || (slots[i] >= ICMP_SLOTS)) {
+			restore(mask);
+			return SYSERR;
+		}
+		icptr = &icmptab[slots[i]];
+
+		if(icptr->icstate != ICMP_USED) {
+			restore(mask);
+			return SYSERR;
+		}
+	}
+
+	for(i = 0; i < nslots; i++) {
+		icptr = &icmptab[slots[i]];
+
+		if(icptr->iccount > 0) {
+			retval = i;
+			break;
+		}
+		icptr->icstate = ICMP_RECV;
+		icptr->icpid = getpid();
+	}
+
+	if(i >= nslots) {
+		recvclr();
+		msg = recvtime(timeout);
+		if((int32)msg == SYSERR) {
+			restore(mask);
+			return SYSERR;
+		}
+		if((int32)msg == TIMEOUT) {
+			restore(mask);
+			return TIMEOUT;
+		}
+		retval = msg;
+		icptr = &icmptab[msg];
+	}
+
+	pkt = icptr->icqueue[icptr->ichead];
+	icptr->ichead++;
+	if(icptr->ichead >= ICMP_QSIZ) {
+		icptr->ichead = 0;
+	}
+	icptr->iccount--;
+
+	if((*len) > (pkt->net_iplen - ICMP_HDR_LEN)) {
+		*len = pkt->net_iplen - ICMP_HDR_LEN;
+	}
+
+	memcpy(buf, (char *)pkt->net_icdata, *len);
+	ipdata->iphl = pkt->net_iphl;
+	memcpy(ipdata->ipsrc, pkt->net_ipsrc, 16);
+	memcpy(ipdata->ipdst, pkt->net_ipdst, 16);
+
+	for(i = 0; i < nslots; i++) {
+		icmptab[slots[i]].icstate = ICMP_USED;
+	}
+
+	restore(mask);
+	return retval;
 }
 
 /*------------------------------------------------------------------------

@@ -12,39 +12,32 @@ process	main(void)
 
 	struct	netpacket *pkt;
 
-	if(if_tab[0].if_eui64[7] == 129) {
-		struct ipinfo ipdata;
-		memset(&ipdata, 0, sizeof(ipdata));
-		ipdata.iphl = 255;
-		memcpy(ipdata.ipsrc, ip_llprefix, 16);
-		ipdata.ipsrc[15] = 129;
-		memcpy(ipdata.ipdst, ip_llprefix, 16);
-		ipdata.ipdst[15] = 130;
-		icmp_send(0, 128, 0, &ipdata, "echo", 5);
+	if(if_tab[0].if_eui64[7] == 101) {
+		int32 slot[2];
+		int32	retval;
+		slot[0] = icmp_register(0, ip_unspec, ip_unspec, 1, 0);
+		slot[1] = icmp_register(0, ip_unspec, ip_unspec, 2, 0);
+		kprintf("slots: %d %d\n", slot[0], slot[1]);
+
+		char buf[100];
+		uint32 len=100;
+
+		while(1) {
+			retval = icmp_recvn(slot, 2, buf, &len, 200000);
+			kprintf("Recvd %d bytes from slot %d\n", len, retval);
+		}
 	}
-	else if(if_tab[0].if_eui64[7] == 130) {
-		int32 slot = icmp_register(0, ip_unspec, ip_unspec, 128, 0);
-		char buf[50];
+	else {
 		struct ipinfo ipdata;
-		memset(&ipdata, 0, sizeof(ipdata));
-		if(slot != SYSERR) {
-			int32 readcount = icmp_recvaddr(slot, buf, 10, 40000, &ipdata);
-			if(readcount > 0) {
-				kprintf("sender: ");
-				int32 i;
-				for(i = 0; i < 16; i += 2) {
-					kprintf("%04X:", htons(*((uint16 *)&ipdata.ipsrc[i])));
-				}
-				kprintf("\n");
-				kprintf("read: %s\n", buf);
-			}
-			else {
-				kprintf("icmp_recv failed with %d\n", readcount);
-			}
-		}
-		else {
-			kprintf("icmp_register failed\n");
-		}
+		memcpy(ipdata.ipsrc, ip_llprefix, 16);
+		ipdata.ipsrc[15] = 102;
+		memcpy(ipdata.ipdst, ip_llprefix, 16);
+		ipdata.ipdst[15] = 101;
+		ipdata.iphl = 255;
+
+		icmp_send(0, 1, 0, &ipdata, "hello", 5);
+		sleep(3);
+		icmp_send(0, 2, 0, &ipdata, "world", 5);
 	}
 
 	kprintf("\n...creating a shell\n");
