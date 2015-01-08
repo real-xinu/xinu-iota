@@ -58,7 +58,13 @@ devcall	ethwrite	(
 	epkt->ipcksum = 0;
 	epkt->ipsrc = htonl(0x800a0300+src);
 	epkt->ipdst = htonl(0x800a0300+dst);*/
-	memcpy(epkt->dst, xinube_macs[dst-101], 6);
+	byte bcast[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	if(!memcmp(pkt->net_raddstaddr, bcast, 8)) {
+		memset(epkt->dst, 0xff, 6);
+	}
+	else {
+		memcpy(epkt->dst, xinube_macs[dst-101], 6);
+	}
 	memcpy(epkt->src, ethptr->devAddress, 6);
 	epkt->type = htons(0);
 	epkt->dstbe = dst;

@@ -9,9 +9,49 @@ process	main(void)
 {
 
 	net_init();
+	byte ula[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+	byte all_rtr[16] = {0};
+	all_rtr[0] = 0xff;
+	all_rtr[1] = 0x02;
+	all_rtr[15] = 0x02;
 
 	struct	netpacket *pkt;
 
+	if(if_tab[0].if_eui64[7] == 101) {
+		if_tab[0].if_ndData.sendadv = TRUE;
+		memcpy(if_tab[0].if_ipucast[1].ipaddr, ula, 8);
+		memcpy(&if_tab[0].if_ipucast[1].ipaddr[8], if_tab[0].if_eui64, 8);
+		if_tab[0].if_nipucast++;
+		memcpy(if_tab[0].if_ipmcast[0].ipaddr, all_rtr, 16);
+		if_tab[0].if_nipmcast = 1;
+	}
+	if(if_tab[0].if_eui64[7] == 102) {
+		struct ipinfo ipdata;
+		memcpy(ipdata.ipsrc, ip_llprefix, 16);
+		ipdata.ipsrc[15] = 102;
+		memcpy(ipdata.ipdst, ip_llprefix, 16);
+		ipdata.ipdst[15] = 101;
+		ipdata.iphl = 255;
+		/*byte *buf = getmem(1000);
+		struct nd_rtradv *rtradv = buf;
+		rtradv->currhl = 255;
+		struct nd_pi *pio = rtradv->opts;
+		pio->type = ND_TYPE_PIO;
+		pio->len = 4;
+		pio->preflen = 64;
+		pio->a = 1;
+		memset(pio->prefix, 0, 16);
+		memcpy(pio->prefix, ula, 8);
+		icmp_send(0, ICMP_TYPE_RTRADV, 0, &ipdata, buf, sizeof(struct nd_rtradv)+sizeof(struct nd_pi));
+		sleep(2);
+		memcpy(ipdata.ipdst, ula, 8);
+		icmp_send(0, 1, 0, &ipdata, "hello", 5);*/
+		struct nd_rtrsol rtrsol;
+		memset(&rtrsol, 0, sizeof(rtrsol));
+		memcpy(ipdata.ipdst, all_rtr, 16);
+		icmp_send(0, ICMP_TYPE_RTRSOL, 0, &ipdata, &rtrsol, sizeof(rtrsol));
+	}
+/*
 	if(if_tab[0].if_eui64[7] == 101) {
 		int32 slot[2];
 		int32	retval;
@@ -39,7 +79,7 @@ process	main(void)
 		sleep(3);
 		icmp_send(0, 2, 0, &ipdata, "world", 5);
 	}
-
+*/
 	kprintf("\n...creating a shell\n");
 	recvclr();
 	resume(create(shell, 8192, 50, "shell", 1, CONSOLE));

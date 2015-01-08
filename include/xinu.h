@@ -21,6 +21,7 @@
 #include <lfilesys.h>
 #include <ether.h>
 #include <net.h>
+#include <nd.h>
 #include <netiface.h>
 #include <ip.h>
 /*#include <arp.h>

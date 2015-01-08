@@ -34,6 +34,8 @@ void	net_init (void)
 
 		sprintf(procname, "netin_%d", iface);
 		resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
+
+		nd_init(iface);
 	}
 }
 

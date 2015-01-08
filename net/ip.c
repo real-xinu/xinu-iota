@@ -58,6 +58,14 @@ void	ip_in (
 			return;
 		}
 	}
+
+	for(i = 0; i < ifptr->if_nipmcast; i++) {
+		if(!memcmp(pkt->net_ipdst, ifptr->if_ipmcast[i].ipaddr, 16)) {
+			kprintf("ip_in: iface %d match %d, mcast\n", pkt->net_iface, i);
+			ip_recv(pkt);
+			return;
+		}
+	}
 	kprintf("ip_in: no match\n");
 
 	/* Cannot forward link local packets */
@@ -161,7 +169,20 @@ int32	ip_send (
 
 	ifptr = &if_tab[iface];
 
-	if(isipllu(pkt->net_ipdst)) {
+	if(isipmc(pkt->net_ipdst)) {
+		if(!memcmp(pkt->net_ipsrc, ip_unspec, 16)) {
+			memcpy(pkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+		}
+		memset(pkt->net_raddstaddr, 0xff, 8);
+		memcpy(pkt->net_radsrcaddr, ifptr->if_eui64, 8);
+
+		ip_hton(pkt);
+		write(RADIO, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
+		freebuf((char *)pkt);
+		return OK;
+	}
+
+	//if(isipllu(pkt->net_ipdst)) {
 		if(!memcmp(pkt->net_ipsrc, ip_unspec, 16)) {
 			memcpy(pkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
 		}
@@ -173,7 +194,7 @@ int32	ip_send (
 		write(RADIO, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
 		freebuf((char *)pkt);
 		return OK;
-	}
+	//}
 
 	freebuf((char *)pkt);
 	return SYSERR;

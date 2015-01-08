@@ -53,6 +53,10 @@ devcall	ethread	(
 					break;
 				}
 		        }
+			byte bcast[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+			if(!memcmp(epktptr->dst, bcast, 6)) {
+				valid_addr = TRUE;
+			}
 		}
 
 		if(valid_addr == TRUE){ /* Accept this packet */

@@ -35,4 +35,6 @@ void	netiface_init (void)
 			ifptr->if_state = IF_UP;
 		}
 	}
+
+	restore(mask);
 }

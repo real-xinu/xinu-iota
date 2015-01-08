@@ -38,3 +38,4 @@ extern	byte ip_unspec[];		/* IPv6 unspecified address	*/
 
 #define	isipllu(x)	(memcmp((char *)(x), (char *)ip_llprefix, 8)==0)
 #define isiplb(x)	(memcmp((char *)(x), (char *)ip_loopback, 16)==0)
+#define isipmc(x)	((*x) == 0xff)

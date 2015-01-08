@@ -24,14 +24,15 @@ struct	ifipaddr {
 /* Format of Network Interface */
 
 struct	ifentry {
-	byte	if_state;	/* State of the interface	*/
-	byte	if_type;	/* Type of interface		*/
-	byte	if_eui64[8];	/* EUI64 address of interface	*/
+	byte	if_state;	/* State of the interface		*/
+	byte	if_type;	/* Type of interface			*/
+	byte	if_eui64[8];	/* EUI64 address of interface		*/
 
 	struct	ifipaddr if_ipucast[IF_NIPUCAST];/* IP ucast addresses	*/
-	byte	if_nipucast;	/* No. of IP unicast addresses	*/
+	byte	if_nipucast;	/* No. of IP unicast addresses		*/
 	struct	ifipaddr if_ipmcast[IF_NIPMCAST];/* IP mcast addresses	*/
-	byte	if_nipmcast;	/* No. of IP multicast addresses*/
+	byte	if_nipmcast;	/* No. of IP multicast addresses	*/
+	struct	nd_info	if_ndData;/* Neighbor Discovery information	*/
 };
 
 extern	struct ifentry if_tab[NIFACES];

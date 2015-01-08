@@ -450,12 +450,14 @@ int32	icmp_recvnaddr (
 	for(i = 0; i < nslots; i++) {
 
 		if((slots[i] < 0) || (slots[i] >= ICMP_SLOTS)) {
+			kprintf("icmp_recvnaddr: invalid slot[%d] %d\n", i, slots[i]);
 			restore(mask);
 			return SYSERR;
 		}
 		icptr = &icmptab[slots[i]];
 
 		if(icptr->icstate != ICMP_USED) {
+			kprintf("icmp_recvnaddr: slot[%d] state not used\n", i);
 			restore(mask);
 			return SYSERR;
 		}
@@ -476,10 +478,17 @@ int32	icmp_recvnaddr (
 		recvclr();
 		msg = recvtime(timeout);
 		if((int32)msg == SYSERR) {
+			kprintf("icmp_recvnaddr: invalid msg revcd\n");
+			for(i = 0; i < nslots; i++) {
+				icmptab[slots[i]].icstate = ICMP_USED;
+			}
 			restore(mask);
 			return SYSERR;
 		}
 		if((int32)msg == TIMEOUT) {
+			for(i = 0; i < nslots; i++) {
+				icmptab[slots[i]].icstate = ICMP_USED;
+			}
 			restore(mask);
 			return TIMEOUT;
 		}
