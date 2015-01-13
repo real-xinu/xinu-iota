@@ -50,6 +50,10 @@ process	main(void)
 		memset(&rtrsol, 0, sizeof(rtrsol));
 		memcpy(ipdata.ipdst, all_rtr, 16);
 		icmp_send(0, ICMP_TYPE_RTRSOL, 0, &ipdata, &rtrsol, sizeof(rtrsol));
+		memcpy(ipdata.ipdst, if_tab[0].if_ipucast[0].ipaddr, 16);
+		ipdata.ipdst[15] = 101;
+		sleep(2);
+		nd_reg_address(0, 1, ipdata.ipdst);
 	}
 /*
 	if(if_tab[0].if_eui64[7] == 101) {

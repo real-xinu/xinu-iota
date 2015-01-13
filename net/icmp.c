@@ -27,6 +27,8 @@ void	icmp_init (void)
 		icptr->ichead = icptr->ictail = 0;
 		icptr->iccount = 0;
 	}
+
+	restore(mask);
 }
 
 /*------------------------------------------------------------------------
@@ -63,6 +65,10 @@ int32	icmp_register (
 		   (icptr->ictype == type) &&
 		   (icptr->iccode == code)) {
 
+			if(!memcmp(icptr->icremip, remip, 16)) {
+				return SYSERR;
+			}
+			/*
 		   	if((!memcmp(icptr->iclocip, ip_unspec, 16)) ||
 			   (!memcmp(locip, ip_unspec, 16)) ||
 			   (!memcmp(icptr->iclocip, locip, 16))) {
@@ -74,6 +80,7 @@ int32	icmp_register (
 					return SYSERR;
 				}
 			}
+			*/
 		}
 	}
 
@@ -152,11 +159,13 @@ void	icmp_in (
 {
 	struct	icmpentry *icptr;	/* Pointer to icmp table entry	*/
 	intmask	mask;			/* Saved interrupt mask		*/
+	int32	found;			/* Index of matching ICMP entry	*/
 	int32	i;			/* For loop index		*/
 
 	kprintf("icmp_in: type %d code %d\n", pkt->net_ictype, pkt->net_iccode);
 	mask = disable();
 
+	found = -1;
 	for(i = 0; i < ICMP_SLOTS; i++) {
 		icptr = &icmptab[i];
 
@@ -167,40 +176,57 @@ void	icmp_in (
 		if((icptr->iciface == pkt->net_iface) &&
 		   (icptr->ictype == pkt->net_ictype) &&
 		   (icptr->iccode == pkt->net_iccode)) {
-
+			/*
 		   	if(memcmp(icptr->iclocip, ip_unspec, 16)) {
 				if(memcmp(icptr->iclocip, pkt->net_ipdst, 16)) {
 					continue;
 				}
 			}
+			*/
 
-			if(memcmp(icptr->icremip, ip_unspec, 16)) {
-				if(memcmp(icptr->icremip, pkt->net_ipsrc, 16)) {
+			if(!memcmp(icptr->icremip, ip_unspec, 16)) {
+				found = i;
+				continue;
+			}
+
+			if(!memcmp(icptr->icremip, pkt->net_ipsrc, 16)) {
+				found = i;
+				break;
+			}
+		}
+	}
+
+	/*
+	if(memcmp(icptr->icremip, ip_unspec, 16)) {
+		if(memcmp(icptr->icremip, pkt->net_ipsrc, 16)) {
 					continue;
 				}
 			}
+	*/
 
-			if(icptr->iccount >= ICMP_QSIZ) {
-				freebuf((char *)pkt);
-				restore(mask);
-				return;
-			}
+	if(found != -1) {
+		icptr = &icmptab[found];
 
-			icptr->icqueue[icptr->ictail] = pkt;
-			icptr->ictail++;
-			if(icptr->ictail >= ICMP_QSIZ) {
-				icptr->ictail = 0;
-			}
-			icptr->iccount++;
-
-			if((icptr->icstate == ICMP_RECV) &&
-			   (icptr->iccount == 1)) {
-			   	send(icptr->icpid, i);
-			}
-
+		if(icptr->iccount >= ICMP_QSIZ) {
+			freebuf((char *)pkt);
 			restore(mask);
 			return;
 		}
+
+		icptr->icqueue[icptr->ictail] = pkt;
+		icptr->ictail++;
+		if(icptr->ictail >= ICMP_QSIZ) {
+			icptr->ictail = 0;
+		}
+		icptr->iccount++;
+
+		if((icptr->icstate == ICMP_RECV) &&
+		   (icptr->iccount == 1)) {
+		   	send(icptr->icpid, found);
+		}
+
+		restore(mask);
+		return;
 	}
 
 	freebuf((char *)pkt);

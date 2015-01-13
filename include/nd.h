@@ -73,7 +73,7 @@ struct	nd_nbradv {
 struct	nd_llao {
 	byte	type;	/* Option type		*/
 	byte	len;	/* Option length	*/
-	byte	lla[14];/* Link Layer Address	*/
+	byte	lladdr[14];/* Link Layer Address*/
 };
 
 /* Format of Prefix Information option */
