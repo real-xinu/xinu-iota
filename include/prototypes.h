@@ -340,7 +340,7 @@ extern	devcall	namopen(struct dentry *, char *, char *);
 /* in file nd.c */
 
 extern	void	nd_init(int32);
-extern	process	nd_proc(int32);
+extern	process	nd_in(int32);
 
 /* in file newqueue.c */
 extern	qid16	newqueue(void);
