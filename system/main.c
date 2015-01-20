@@ -24,6 +24,18 @@ process	main(void)
 		if_tab[0].if_nipucast++;
 		memcpy(if_tab[0].if_ipmcast[0].ipaddr, all_rtr, 16);
 		if_tab[0].if_nipmcast = 1;
+		char buf;
+		read(CONSOLE, &buf, 1);
+		kprintf("sending nbr sol to 102\n");
+		struct ipinfo ipdata;
+		memcpy(ipdata.ipsrc, if_tab[0].if_ipucast[0].ipaddr, 16);
+		memcpy(ipdata.ipdst, ula, 8);
+		memset(&ipdata.ipdst[8], 0, 8);
+		ipdata.ipdst[15] = 102;
+		ipdata.iphl = 255;
+		struct nd_nbrsol nbrsol;
+		kprintf("calling icmp_send now\n");
+		icmp_send(0, ICMP_TYPE_NBRSOL, 0, &ipdata, (char *)&nbrsol, sizeof(nbrsol));
 	}
 	if(if_tab[0].if_eui64[7] == 102) {
 		struct ipinfo ipdata;

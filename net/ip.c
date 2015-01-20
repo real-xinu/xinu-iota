@@ -161,6 +161,8 @@ int32	ip_send (
 {
 	struct	ifentry *ifptr;	/* Pointer to interface	*/
 	int32	iface;		/* Interface index	*/
+	intmask	mask;		/* Saved interrupt mask	*/
+	int32	i;		/* For loop index	*/
 
 	iface = pkt->net_iface;
 	if((iface < 0) || (iface >= NIFACES)) {
@@ -182,7 +184,7 @@ int32	ip_send (
 		return OK;
 	}
 
-	//if(isipllu(pkt->net_ipdst)) {
+	if(isipllu(pkt->net_ipdst)) {
 		if(!memcmp(pkt->net_ipsrc, ip_unspec, 16)) {
 			memcpy(pkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
 		}
@@ -194,9 +196,35 @@ int32	ip_send (
 		write(RADIO, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
 		freebuf((char *)pkt);
 		return OK;
-	//}
+	}
 
+	kprintf("Looking in nbr cache\n");
+	mask = disable();
+	for(i = 0; i < ND_NC_SLOTS; i++) {
+		if(nd_ncache[i].state == ND_NCE_FREE) {
+			continue;
+		}
+		if(!memcmp(nd_ncache[i].ipaddr, pkt->net_ipdst, 16)) {
+			break;
+		}
+	}
+	if(i < ND_NC_SLOTS) {
+		kprintf("Foudn in nbr cache\n");
+		memcpy(pkt->net_raddstaddr, nd_ncache[i].eui64, 8);
+		memcpy(pkt->net_radsrcaddr, ifptr->if_eui64, 8);
+
+		ip_hton(pkt);
+
+		write(RADIO, (char *)pkt, 24+40+htons(pkt->net_iplen));
+		freebuf((char *)pkt);
+		restore(mask);
+		return OK;
+	}
+
+	kprintf("Not found in nbr cache\n");
 	freebuf((char *)pkt);
+
+	restore(mask);
 	return SYSERR;
 }
 

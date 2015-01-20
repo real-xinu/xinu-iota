@@ -389,10 +389,12 @@ void	nd_in_nbrsol (
 	mask = disable();
 
 	if(aro && (!sllao)) {
+		kprintf("nd_in_nbrsol: ARO without SLLAO\n");
 		aro = NULL;
 	}
 
 	if(aro) {
+		kprintf("nd_in_nbrsol: ARO included\n");
 		found = -1;
 		for(i = 0; i < ND_NC_SLOTS; i++) {
 			if(nd_ncache[i].state == ND_NCE_FREE) {
@@ -407,14 +409,17 @@ void	nd_in_nbrsol (
 		}
 		if(i < ND_NC_SLOTS) {
 			if(memcmp(nd_ncache[i].ipaddr, ipdata->ipsrc, 16)) {
+				kprintf("nd_in_nbrsol: Duplicate address\n");
 				aro_status = 1;
 			}
 			else if(aro->reglife == 0) {
+				kprintf("nd_in_nbrsol: removing entry\n");
 				memset((char *)&nd_ncache[i], 0, sizeof(struct nd_nce));
 				nd_ncache[i].state = ND_NCE_FREE;
 				aro_status = 0;
 			}
 			else {
+				kprintf("nd_in_nbrsol: updating entry\n");
 				nd_ncache[i].type = ND_NCE_REG;
 				nd_ncache[i].reglife = aro->reglife;
 				nd_ncache[i].timestamp = clktime;
@@ -431,9 +436,11 @@ void	nd_in_nbrsol (
 				}
 			}
 			if(found == -1) {
+				kprintf("nd_in_nbrsol: nbr cache full\n");
 				aro_status = 2;
 			}
 			else if(aro->reglife != 0) {
+				kprintf("nd_in_nbrsol: adding a new entry\n");
 				i = found;
 				nd_ncache[i].state = ND_NCE_STALE;
 				nd_ncache[i].type = ND_NCE_REG;
@@ -441,6 +448,7 @@ void	nd_in_nbrsol (
 				memcpy(nd_ncache[i].eui64, sllao->lladdr, 8);
 				nd_ncache[i].reglife = aro->reglife;
 				nd_ncache[i].timestamp = clktime;
+				aro_status = 0;
 			}
 			else {
 				aro_status = 0;
@@ -568,7 +576,7 @@ int32	nd_reg_address (
 	tries = 0;
 	while(tries < 3) {
 
-		memcpy(ipdata.ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+		memcpy(ipdata.ipsrc, ifptr->if_ipucast[index].ipaddr, 16);
 		memcpy(ipdata.ipdst, nbrip, 16);
 		ipdata.iphl = 255;
 
