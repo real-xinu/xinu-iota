@@ -17,7 +17,7 @@ process	main(void)
 
 	struct	netpacket *pkt;
 
-	if(if_tab[0].if_eui64[7] == 101) {
+	if(if_tab[0].if_eui64[7] == 111) {
 		if_tab[0].if_ndData.sendadv = TRUE;
 		memcpy(if_tab[0].if_ipucast[1].ipaddr, ula, 8);
 		memcpy(&if_tab[0].if_ipucast[1].ipaddr[8], if_tab[0].if_eui64, 8);
@@ -31,18 +31,18 @@ process	main(void)
 		memcpy(ipdata.ipsrc, if_tab[0].if_ipucast[0].ipaddr, 16);
 		memcpy(ipdata.ipdst, ula, 8);
 		memset(&ipdata.ipdst[8], 0, 8);
-		ipdata.ipdst[15] = 102;
+		ipdata.ipdst[15] = 112;
 		ipdata.iphl = 255;
 		struct nd_nbrsol nbrsol;
 		kprintf("calling icmp_send now\n");
 		icmp_send(0, ICMP_TYPE_NBRSOL, 0, &ipdata, (char *)&nbrsol, sizeof(nbrsol));
 	}
-	if(if_tab[0].if_eui64[7] == 102) {
+	if(if_tab[0].if_eui64[7] == 112) {
 		struct ipinfo ipdata;
 		memcpy(ipdata.ipsrc, ip_llprefix, 16);
-		ipdata.ipsrc[15] = 102;
+		ipdata.ipsrc[15] = 112;
 		memcpy(ipdata.ipdst, ip_llprefix, 16);
-		ipdata.ipdst[15] = 101;
+		ipdata.ipdst[15] = 111;
 		ipdata.iphl = 255;
 		/*byte *buf = getmem(1000);
 		struct nd_rtradv *rtradv = buf;
@@ -63,7 +63,7 @@ process	main(void)
 		memcpy(ipdata.ipdst, all_rtr, 16);
 		icmp_send(0, ICMP_TYPE_RTRSOL, 0, &ipdata, &rtrsol, sizeof(rtrsol));
 		memcpy(ipdata.ipdst, if_tab[0].if_ipucast[0].ipaddr, 16);
-		ipdata.ipdst[15] = 101;
+		ipdata.ipdst[15] = 111;
 		sleep(2);
 		nd_reg_address(0, 1, ipdata.ipdst);
 	}
