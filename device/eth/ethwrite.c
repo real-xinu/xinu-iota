@@ -1,6 +1,7 @@
 /* ethwrite.c - ethwrite */
 
 #include <xinu.h>
+extern	int32 beserver;
 
 /*------------------------------------------------------------------------
  * ethwrite  -  enqueue packet for transmission on Intel Quark Ethernet
@@ -64,7 +65,7 @@ devcall	ethwrite	(
 	}
 	else {
 		//memcpy(epkt->dst, xinube_macs[dst-101], 6);
-		memcpy(epkt->dst, xinube_macs[19], 6);
+		memcpy(epkt->dst, xinube_macs[beserver], 6);
 	}
 	memcpy(epkt->src, ethptr->devAddress, 6);
 	epkt->type = htons(0);

@@ -3,6 +3,7 @@
 #include <xinu.h>
 
 bpid32	netbufpool;
+int32	beserver;
 
 /*------------------------------------------------------------------------
  * net_init  -  Initialize the network
@@ -12,6 +13,7 @@ void	net_init (void)
 {
 	char	procname[50];	/* Netin process name	*/
 	int32	iface;		/* Interface number	*/
+	char	buf[10] = {0};
 
 	/* Initialize the interfaces */
 
@@ -22,6 +24,19 @@ void	net_init (void)
 	netbufpool = mkbufpool(PACKLEN, 20);
 	if((int32)netbufpool == SYSERR) {
 		panic("Cannot create network buffer pool\n");
+	}
+
+	while(TRUE) {
+		kprintf("Enter the backend number of the server: ");
+		memset(buf, 0, 10);
+		read(CONSOLE, buf, 10);
+		beserver = atoi(buf);
+		if((beserver < 101) || (beserver > 196)) {
+			kprintf("Invalid backend number, must be in range [101,196]\n");
+			continue;
+		}
+		beserver -= 101;
+		break;
 	}
 
 	/* Create a netin process for each interface */
