@@ -8,7 +8,8 @@
 
 #pragma pack(2)
 struct	netpacket	{
-	uint16		net_radfc;	/* Radio Frame control		*/
+	byte		net_radtype;	/* Radio Frame control		*/
+	byte		net_radflags;
 	byte		net_raddstpan[2];/* Radio destination PAN	*/
 	byte		net_raddstaddr[8];/* Radio destination EUI64	*/
 	byte		net_radsrcpan[2];/* Radio source PAN		*/
@@ -38,6 +39,17 @@ struct	netpacket	{
 	    byte	net_iccode;	/* ICMP code field (0 for ping)	*/
 	    uint16	net_iccksum;	/* ICMP message checksum	*/
 	    byte	net_icdata[1500-44];/* ICMP payload (1500-above)*/
+	   };
+	   struct {
+	    uint16	net_tcpsport;	/* TCP Source port		*/
+	    uint16	net_tcpdport;	/* TCP Destination port		*/
+	    int32	net_tcpseq;	/* TCP sequence number		*/
+	    int32	net_tcpack;	/* TCP Acknowledgement number	*/
+	    uint16	net_tcpcode;	/* TCP data offset and flags	*/
+	    uint16	net_tcpwindow;	/* TCP Window size		*/
+	    uint16	net_tcpcksum;	/* TCP Checksum			*/
+	    uint16	net_tcpurgptr;	/* TCP Urgent Pointer		*/
+	    byte	net_tcpdata[1500-40];/* TCP Data		*/
 	   };
 	  };
 	 };

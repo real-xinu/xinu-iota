@@ -54,7 +54,8 @@ devcall	ethread	(
 				}
 		        }
 			byte bcast[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-			if(!memcmp(epktptr->dst, bcast, 6)) {
+			if((!memcmp(epktptr->dst, bcast, 6)) &&
+			   (ntohs(epktptr->type) == 0)) {
 				valid_addr = TRUE;
 			}
 		}
@@ -64,7 +65,8 @@ devcall	ethread	(
 			/* Get the length of the frame */
 
 			framelen = (rdescptr->status >> 16) & 0x00003FFF;
-			framelen = framelen - 14;
+			kprintf("ethread: incoming frame length %d\n", framelen);
+			framelen = framelen - 14 - 2 - 4;
 
 			/* Only return len characters to caller */
 

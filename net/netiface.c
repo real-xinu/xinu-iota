@@ -25,8 +25,9 @@ void	netiface_init (void)
 
 		if(iface == 0) {
 			ifptr->if_type = IF_TYPE_RADIO;
+			ifptr->if_dev = RADIO0;
 
-			control(RADIO, ETH_CTRL_GET_MAC, (uint32)ifptr->if_eui64, 0);
+			control(ifptr->if_dev, RAD_CTRL_GET_EUI64, (uint32)ifptr->if_eui64, 0);
 
 			memcpy(ifptr->if_ipucast[0].ipaddr, ip_llprefix, 8);
 			memcpy(&ifptr->if_ipucast[0].ipaddr[8], ifptr->if_eui64, 8);

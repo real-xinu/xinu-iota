@@ -23,6 +23,10 @@ void	clkhandler()
 		count1000 = 1000;
 	}
 
+	if(tmpending && (--tmtab[tmhead].tm_remain) <= 0) {
+		tmfire();
+	}
+
 	/* Handle sleeping processes if any exist */
 
 	if(!isempty(sleepq)) {

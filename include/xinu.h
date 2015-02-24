@@ -19,11 +19,17 @@
 #include <rfilesys.h>
 #include <rdisksys.h>
 #include <lfilesys.h>
+#include <_6lowpan.h>
 #include <ether.h>
+#include <radio.h>
 #include <net.h>
 #include <nd.h>
 #include <netiface.h>
 #include <ip.h>
+#include <timer.h>
+#include <mq.h>
+#include <tcb.h>
+#include <tcp.h>
 /*#include <arp.h>
 #include <udp.h>
 #include <dhcp.h>*/

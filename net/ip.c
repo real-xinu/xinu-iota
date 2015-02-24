@@ -18,6 +18,41 @@ byte	ip_unspec[] = {0, 0, 0, 0, 0, 0, 0, 0,
 		       0, 0, 0, 0, 0, 0, 0, 0};
 
 /*------------------------------------------------------------------------
+ * ip_init  -  Initialize IP data structures
+ *------------------------------------------------------------------------
+ */
+int32	ip_init (void) {
+
+	intmask	mask;	/* Saved interrupt mask	*/
+
+	/* Ensure only one process accesses IP data */
+
+	mask = disable();
+
+	/* Initialize IP output queue head and tail */
+
+	ipoqueue.iqhead = ipoqueue.iqtail = 0;
+
+	/* Create a semaphore for queue management */
+
+	ipoqueue.iqsem = semcreate(IP_OQSIZ);
+	if(ipoqueue.iqsem == SYSERR) {
+		restore(mask);
+		return SYSERR;
+	}
+
+	/* Restore interrupts */
+
+	restore(mask);
+
+	/* Create an IP output process */
+
+	resume(create(ipout, NETSTK, NETPRIO, "IP output", 0, NULL));
+
+	return OK;
+}
+
+/*------------------------------------------------------------------------
  * ip_in  -  Handle an incoming IP packet
  *------------------------------------------------------------------------
  */
@@ -144,6 +179,12 @@ void	ip_recv (
 			//udp_in(pkt);
 			return;
 
+		 case IP_TCP:
+		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
+			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
+			tcp_in(pkt);
+			return;
+
 		 default:
 			freebuf((char *)pkt);
 			return;
@@ -179,7 +220,7 @@ int32	ip_send (
 		memcpy(pkt->net_radsrcaddr, ifptr->if_eui64, 8);
 
 		ip_hton(pkt);
-		write(RADIO, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
+		write(RADIO0, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
 		freebuf((char *)pkt);
 		return OK;
 	}
@@ -193,7 +234,7 @@ int32	ip_send (
 
 		ip_hton(pkt);
 
-		write(RADIO, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
+		write(RADIO0, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
 		freebuf((char *)pkt);
 		return OK;
 	}
@@ -215,7 +256,7 @@ int32	ip_send (
 
 		ip_hton(pkt);
 
-		write(RADIO, (char *)pkt, 24+40+htons(pkt->net_iplen));
+		write(RADIO0, (char *)pkt, 24+40+htons(pkt->net_iplen));
 		freebuf((char *)pkt);
 		restore(mask);
 		return OK;
@@ -267,6 +308,64 @@ int32	ip_prochbh (
 			optptr = optptr + optlen;
 			break;
 		}
+	}
+
+	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * ip_enqueue  -  Enqueue an IP datagram for transmission
+ *------------------------------------------------------------------------
+ */
+int32	ip_enqueue (
+	struct	netpacket *pkt
+	)
+{
+	intmask	mask;
+
+	mask = disable();
+
+	if(semcount(ipoqueue.iqsem) >= IP_OQSIZ) {
+		restore(mask);
+		return SYSERR;
+	}
+
+	ipoqueue.iqbuf[ipoqueue.iqtail] = pkt;
+	ipoqueue.iqtail += 1;
+	if(ipoqueue.iqtail >= IP_OQSIZ) {
+		ipoqueue.iqtail = 0;
+	}
+
+	signal(ipoqueue.iqsem);
+
+	restore(mask);
+	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * ipout  -  Process to transmit IP datagrams
+ *------------------------------------------------------------------------
+ */
+process	ipout(void) {
+
+	struct	netpacket *pkt;
+	intmask	mask;
+
+	while(TRUE) {
+
+		wait(ipoqueue.iqsem);
+
+		mask = disable();
+
+		pkt = ipoqueue.iqbuf[ipoqueue.iqhead];
+		ipoqueue.iqhead += 1;
+		if(ipoqueue.iqhead >= IP_OQSIZ) {
+			ipoqueue.iqhead = 0;
+		}
+
+		restore(mask);
+
+		ip_send(pkt);
 	}
 
 	return OK;

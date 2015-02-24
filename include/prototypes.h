@@ -391,6 +391,18 @@ extern	syscall	putc(did32, char);
 /* in file quark_irq.c */
 extern	int32	quark_irq_routing(void);
 
+/* in file radcontrol.c */
+extern	devcall	radcontrol(struct dentry *, int32, int32, int32);
+
+/* in file radinit.c */
+extern	int32	radinit(struct dentry *);
+
+/* in file radread.c */
+extern	int32	radread(struct dentry *, char *, int32);
+
+/* in file radwrite.c */
+extern	int32	radwrite(struct dentry *, char *, int32);
+
 /* in file ramclose.c */
 extern	devcall	ramclose(struct dentry *);
 

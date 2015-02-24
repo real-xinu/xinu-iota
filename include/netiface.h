@@ -26,6 +26,8 @@ struct	ifipaddr {
 struct	ifentry {
 	byte	if_state;	/* State of the interface		*/
 	byte	if_type;	/* Type of interface			*/
+	did32	if_dev;		/* Index in the device switch table	*/
+
 	byte	if_eui64[8];	/* EUI64 address of interface		*/
 
 	struct	ifipaddr if_ipucast[IF_NIPUCAST];/* IP ucast addresses	*/

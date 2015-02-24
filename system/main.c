@@ -18,6 +18,36 @@ process	main(void)
 	struct	netpacket *pkt;
 
 	if(if_tab[0].if_eui64[7] == 111) {
+		int32	slot = tcp_register(0, ip_unspec, 12345, 0);
+		if(slot == SYSERR) {
+			panic("Cannot register tcp slot\n");
+		}
+		int32	new;
+		int32	rv = tcp_recv(slot, &new, 4);
+		kprintf("New connection: %d\n", new);
+
+		tcp_send(new, "hello world!!!!", 16);
+		tcp_close(new);
+		while(1);
+	}
+	if(if_tab[0].if_eui64[7] == 112) {
+		//xsh_ps(0, NULL);
+		byte	remip[16];
+		memcpy(remip, ip_llprefix, 16);
+		remip[15] = 111;
+		int32	slot = tcp_register(0, remip, 12345, 1);
+		kprintf("main: -------------------------------------------registered %d\n", slot);
+		if(slot == SYSERR) {
+			panic("Cannot connect to server\n");
+		}
+		char buf[10] = {0};
+		kprintf("------------------------------main: calling tcp_recv\n");
+		int32	rv = tcp_recv(slot, buf, 10);
+		kprintf("Received from server: %s\n", buf);
+		tcp_close(slot);
+		while(1);
+	}
+	if(if_tab[0].if_eui64[7] == 111) {
 		if_tab[0].if_ndData.sendadv = TRUE;
 		memcpy(if_tab[0].if_ipucast[1].ipaddr, ula, 8);
 		memcpy(&if_tab[0].if_ipucast[1].ipaddr[8], if_tab[0].if_eui64, 8);

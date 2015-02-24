@@ -19,6 +19,10 @@ void	net_init (void)
 
 	netiface_init();
 
+	ip_init();
+
+	tcp_init();
+
 	/* Create the network buffer pool */
 
 	netbufpool = mkbufpool(PACKLEN, 20);
@@ -78,7 +82,7 @@ process	netin (
 			panic("netin cannot get buffer for packet\n");
 		}
 
-		read(RADIO, (char *)pkt, PACKLEN);
+		read(RADIO0, (char *)pkt, PACKLEN);
 
 		if((pkt->net_ipvtch&0xf0) == 0x60) {
 			kprintf("netin: incoming ipv6 packet\n");

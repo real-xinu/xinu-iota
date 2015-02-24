@@ -40,6 +40,14 @@ eth:
 		-w ethwrite	-s ioerr	-n ethcontrol
 		-intr ethdispatch
 
+/* type of a radio device */
+rad:
+	on eth
+		-i radinit	-o ioerr	-c ioerr
+		-r radread	-g ioerr	-p ioerr
+		-w radwrite	-s ioerr	-n radcontrol
+		-intr ioerr
+
 /* type of a remote disk system device */
 /*rds:
 	on udp
@@ -119,6 +127,9 @@ nam:
 
    /* Physical Ethernet (raw packet transfer) */
    ETHER0 is eth   on quark_eth csr 0 -irq 0053
+
+   /* Physical Radio device */
+   RADIO0 is rad   on eth csr 0 -irq 0
 
    /* Define a namespace device */
    NAMESPACE is nam on top
