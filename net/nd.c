@@ -39,6 +39,8 @@ void	nd_init (
 		nd_ncache[i].state = ND_NCE_FREE;
 	}
 
+	restore(mask);
+
 	resume(create(nd_in, ND_PROCSSIZE, ND_PROCPRIO, "nd_in", 1, iface));
 }
 

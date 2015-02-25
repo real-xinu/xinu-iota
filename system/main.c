@@ -7,8 +7,8 @@ extern uint32 nsaddr;
 
 process	main(void)
 {
-
 	net_init();
+
 	byte ula[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 	byte all_rtr[16] = {0};
 	all_rtr[0] = 0xff;
@@ -17,7 +17,11 @@ process	main(void)
 
 	struct	netpacket *pkt;
 
-	if(if_tab[0].if_eui64[7] == 111) {
+	char cmd[5];
+	kprintf("Enter command [s or c]: ");
+	read(CONSOLE, cmd, 5);
+	if(cmd[0] == 's') {
+	//if(if_tab[0].if_eui64[7] == 111) {
 		int32	slot = tcp_register(0, ip_unspec, 12345, 0);
 		if(slot == SYSERR) {
 			panic("Cannot register tcp slot\n");
@@ -30,11 +34,17 @@ process	main(void)
 		tcp_close(new);
 		while(1);
 	}
-	if(if_tab[0].if_eui64[7] == 112) {
+	else {
+	//if(if_tab[0].if_eui64[7] == 112) {
 		//xsh_ps(0, NULL);
 		byte	remip[16];
 		memcpy(remip, ip_llprefix, 16);
-		remip[15] = 111;
+		byte	server[5];
+		kprintf("Enter server's backend number: ");
+		read(CONSOLE, &server, 5);
+		server[3] = 0;
+		remip[15] = atoi(server);
+		//remip[15] = 111;
 		int32	slot = tcp_register(0, remip, 12345, 1);
 		kprintf("main: -------------------------------------------registered %d\n", slot);
 		if(slot == SYSERR) {
