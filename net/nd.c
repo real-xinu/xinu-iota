@@ -114,8 +114,6 @@ process	nd_in (
 			nd_in_nbradv(iface, (struct nd_nbradv *)msgbuf, buflen, &ipdata);
 		}
 		else {
-			kprintf("nd_in: retval %d\n", retval);
-			kprintf("nd_in: %d %d %d %d\n", slots[0], slots[1], slots[2], slots[3]);
 			panic("nd_in: Unknown message type");
 		}
 	}
