@@ -4,7 +4,7 @@
 
 bpid32	netbufpool;
 int32	beserver;
-
+extern	process nd_timer(void);
 /*------------------------------------------------------------------------
  * net_init  -  Initialize the network
  *------------------------------------------------------------------------
@@ -43,6 +43,10 @@ void	net_init (void)
 		break;
 	}
 
+	/* Create the ND timer process */
+
+	resume(create(nd_timer, NETSTK, NETPRIO+10, "nd_timer", 0, NULL));
+
 	/* Create a netin process for each interface */
 
 	for(iface = 0; iface < NIFACES; iface++) {
@@ -53,9 +57,9 @@ void	net_init (void)
 
 		sprintf(procname, "netin_%d", iface);
 		resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
-
-		nd_init(iface);
 	}
+
+	resume(create(rawin, NETSTK, NETPRIO+1, "rawin", 0, NULL));
 }
 
 /*------------------------------------------------------------------------
@@ -68,6 +72,7 @@ process	netin (
 {
 	struct	ifentry *ifptr;	/* Pointer to interface	*/
 	struct	netpacket *pkt;	/* Pointer to packet	*/
+	int32	i;
 
 	if((iface < 0) || (iface > NIFACES)) {
 		return SYSERR;
@@ -77,12 +82,24 @@ process	netin (
 
 	while(TRUE) {
 
+		wait(ifptr->isem);
+
+		pkt = ifptr->pktbuf[ifptr->head];
+		ifptr->head++;
+		if(ifptr->head >= 10) {
+			ifptr->head = 0;
+		}
+
+		/*
 		pkt = (struct netpacket *)getbuf(netbufpool);
 		if((int32)pkt == SYSERR) {
 			panic("netin cannot get buffer for packet\n");
 		}
 
 		read(RADIO0, (char *)pkt, PACKLEN);
+		*/
+
+		kprintf("IN: "); pdump(pkt);
 
 		if((pkt->net_ipvtch&0xf0) == 0x60) {
 			kprintf("netin: incoming ipv6 packet\n");

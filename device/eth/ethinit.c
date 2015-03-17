@@ -298,6 +298,12 @@ int32	ethinit (
 		return SYSERR;
 	}
 
+	ethptr->rxHead = ethptr->rxTail = 0;
+	ethptr->txHead = ethptr->txTail = 0;
+
+	/* Pass all multicast */
+	csrptr->macff |= 0x00000010;
+
 	/* Enable the Transmit and Receive Interrupts */
 	csrptr->ier = (	ETH_QUARK_IER_NIE |
 			ETH_QUARK_IER_TIE |

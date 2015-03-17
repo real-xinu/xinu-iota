@@ -46,6 +46,7 @@ struct	iqentry	{
 extern	struct	iqentry	ipoqueue;	/* Network output queue		*/
 
 extern	byte ip_llprefix[];		/* IPv6 Link local prefix	*/
+extern	byte ip_solmc[];		/* IPv6 solicited node mcast	*/
 extern	byte ip_loopback[];		/* IPv6 Loopback address	*/
 extern	byte ip_unspec[];		/* IPv6 unspecified address	*/
 

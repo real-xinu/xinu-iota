@@ -1,7 +1,5 @@
 /* ether.h */
 
-#define	RADIO ETHER0
-
 /* Ethernet packet format:
 
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -46,6 +44,8 @@ struct	etherPkt {
 #define	ETH_BUF_SIZE		2048	/* A multiple of 16 greater 	*/
 					/*   than the max packet 	*/
 					/*   size (for cache alignment)	*/
+
+#define	ETH_IPV6		0x86dd
 
 /* State of the Ethernet interface */
 

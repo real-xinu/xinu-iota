@@ -3,6 +3,8 @@
 #include <xinu.h>
 
 struct	icmpentry icmptab[ICMP_SLOTS];
+uint16	icmp_cksum(struct netpacket *);
+int32	icmp_send(int32, byte, byte, struct ipinfo *, char *, int32);
 
 /*------------------------------------------------------------------------
  * icmp_init  -  Initialize the ICMP table
@@ -158,13 +160,24 @@ void	icmp_in (
 	)
 {
 	struct	icmpentry *icptr;	/* Pointer to icmp table entry	*/
+	struct	ipinfo ipdata;		/* IP information struct	*/
 	intmask	mask;			/* Saved interrupt mask		*/
 	int32	found;			/* Index of matching ICMP entry	*/
 	int32	i;			/* For loop index		*/
 
 	kprintf("icmp_in: type %d code %d\n", pkt->net_ictype, pkt->net_iccode);
 	mask = disable();
-
+	/*
+	if((pkt->net_ictype == ICMP_ECHOREQST) && (pkt->net_iccode == 0)) {
+		memcpy(ipdata.ipdst, pkt->net_ipsrc, 16);
+		memcpy(ipdata.ipsrc, ip_unspec, 16);
+		ipdata.iphl = 255;
+		icmp_send(pkt->net_iface, ICMP_ECHOREPLY, 0, &ipdata, pkt->net_icdata, pkt->net_iplen-ICMP_HDR_LEN);
+		freebuf((char *)pkt);
+		restore(mask);
+		return;
+	}
+	*/
 	found = -1;
 	for(i = 0; i < ICMP_SLOTS; i++) {
 		icptr = &icmptab[i];
@@ -441,6 +454,7 @@ int32	icmp_recvaddr (
 		len = pkt->net_iplen - ICMP_HDR_LEN;
 	}
 
+	kprintf("icmp_recvaddr: copying %d bytes\n", len);
 	memcpy(buf, (char *)pkt->net_icdata, len);
 	ipdata->iphl = pkt->net_iphl;
 	memcpy(ipdata->ipsrc, pkt->net_ipsrc, 16);
@@ -493,7 +507,7 @@ int32	icmp_recvnaddr (
 		icptr = &icmptab[slots[i]];
 
 		if(icptr->iccount > 0) {
-			retval = i;
+			retval = slots[i];
 			break;
 		}
 		icptr->icstate = ICMP_RECV;
@@ -556,9 +570,10 @@ int32	icmp_send (
 	byte	code,	/* ICMP code		*/
 	struct	ipinfo *ipdata,/* IP information*/
 	char	*buf,	/* Data to be sent	*/
-	uint32	len	/* Length of data	*/
+	int32	len	/* Length of data	*/
 	)
 {
+	uint16	cksum;
 	struct	netpacket *pkt;	/* Pointer to packet buffer	*/
 
 	if((iface < 0) || (iface >= NIFACES)) {
@@ -581,11 +596,66 @@ int32	icmp_send (
 
 	pkt->net_ictype = type;
 	pkt->net_iccode = code;
+	pkt->net_iccksum = 0;
 
 	memcpy(pkt->net_icdata, buf, len);
 
+	cksum = icmp_cksum(pkt);
+	pkt->net_iccksum = htons(cksum);
+
 	pkt->net_iface = iface;
 
+	kprintf("icmp_send: calling ip_send\n");
 	ip_send(pkt);
 	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * icmp_cksum  -  Compute ICMP checksum
+ *------------------------------------------------------------------------
+ */
+uint16	icmp_cksum (
+	struct	netpacket *pkt
+	)
+{
+	uint32	sum;
+	uint16	cksum, *ptr16;
+	int32	icmplen, i;
+
+	struct {
+		byte	ipsrc[16];
+		byte	ipdst[16];
+		uint32	icmplen;
+		byte	pad[3];
+		byte	ipnh;
+	} pseudo;
+
+	icmplen = pkt->net_iplen;
+	memcpy(pseudo.ipsrc, pkt->net_ipsrc, 16);
+	memcpy(pseudo.ipdst, pkt->net_ipdst, 16);
+	pseudo.icmplen = htonl(pkt->net_iplen);
+	memset(pseudo.pad, 0, 3);
+	pseudo.ipnh = IP_ICMPV6;
+
+	sum = 0;
+	ptr16 = (uint16 *)&pseudo;
+	for(i = 0; i < 20; i++) {
+		sum += htons(*ptr16);
+		ptr16++;
+	}
+
+	if(icmplen%2) {
+		pkt->net_ipdata[icmplen] = 0;
+		icmplen++;
+	}
+
+	ptr16 = (uint16 *)&pkt->net_ictype;
+	for(i = 0; i < (icmplen/2); i++) {
+		sum += htons(*ptr16);
+		ptr16++;
+	}
+
+	cksum = (sum&0xffff) + ((sum>>16)&0xffff);
+
+	return (~cksum);
 }

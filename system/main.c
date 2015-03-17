@@ -14,14 +14,14 @@ process	main(void)
 	all_rtr[0] = 0xff;
 	all_rtr[1] = 0x02;
 	all_rtr[15] = 0x02;
-
+#if 0
 	struct	netpacket *pkt;
 
 	char cmd[5];
 	kprintf("Enter command [s or c]: ");
 	read(CONSOLE, cmd, 5);
 	if(cmd[0] == 's') {
-	//if(if_tab[0].if_eui64[7] == 111) {
+	//if(if_tab[0].if_hwucast[7] == 111) {
 		int32	slot = tcp_register(0, ip_unspec, 12345, 0);
 		if(slot == SYSERR) {
 			panic("Cannot register tcp slot\n");
@@ -35,7 +35,7 @@ process	main(void)
 		while(1);
 	}
 	else {
-	//if(if_tab[0].if_eui64[7] == 112) {
+	//if(if_tab[0].if_hwucast[7] == 112) {
 		//xsh_ps(0, NULL);
 		byte	remip[16];
 		memcpy(remip, ip_llprefix, 16);
@@ -57,10 +57,10 @@ process	main(void)
 		tcp_close(slot);
 		while(1);
 	}
-	if(if_tab[0].if_eui64[7] == 111) {
+	if(if_tab[0].if_hwucast[7] == 111) {
 		if_tab[0].if_ndData.sendadv = TRUE;
 		memcpy(if_tab[0].if_ipucast[1].ipaddr, ula, 8);
-		memcpy(&if_tab[0].if_ipucast[1].ipaddr[8], if_tab[0].if_eui64, 8);
+		memcpy(&if_tab[0].if_ipucast[1].ipaddr[8], if_tab[0].if_hwucast, 8);
 		if_tab[0].if_nipucast++;
 		memcpy(if_tab[0].if_ipmcast[0].ipaddr, all_rtr, 16);
 		if_tab[0].if_nipmcast = 1;
@@ -77,7 +77,7 @@ process	main(void)
 		kprintf("calling icmp_send now\n");
 		icmp_send(0, ICMP_TYPE_NBRSOL, 0, &ipdata, (char *)&nbrsol, sizeof(nbrsol));
 	}
-	if(if_tab[0].if_eui64[7] == 112) {
+	if(if_tab[0].if_hwucast[7] == 112) {
 		struct ipinfo ipdata;
 		memcpy(ipdata.ipsrc, ip_llprefix, 16);
 		ipdata.ipsrc[15] = 112;
@@ -108,7 +108,7 @@ process	main(void)
 		nd_reg_address(0, 1, ipdata.ipdst);
 	}
 /*
-	if(if_tab[0].if_eui64[7] == 101) {
+	if(if_tab[0].if_hwucast[7] == 101) {
 		int32 slot[2];
 		int32	retval;
 		slot[0] = icmp_register(0, ip_unspec, ip_unspec, 1, 0);
@@ -136,6 +136,22 @@ process	main(void)
 		icmp_send(0, 2, 0, &ipdata, "world", 5);
 	}
 */
+#endif
+	struct	ipinfo ipdata;
+	char	buf[50] = {0};
+	byte	ipdst[] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0,
+				0x2, 0x24, 0xe8, 0xff, 0xfe, 0x3a, 0xb0, 0x73};
+	memcpy(ipdata.ipdst, ipdst, 16);
+	memcpy(ipdata.ipsrc, if_tab[1].if_ipucast[0].ipaddr, 16);
+	ipdata.iphl = 255;
+
+	kprintf("Sending packet to ");
+	ip_print(ipdata.ipdst);
+	kprintf("\n");
+	icmp_send(1, 128, 0, &ipdata, buf, 50);
+	sleep(50);
+	icmp_send(1, 128, 0, &ipdata, buf, 50);
+
 	kprintf("\n...creating a shell\n");
 	recvclr();
 	resume(create(shell, 8192, 50, "shell", 1, CONSOLE));

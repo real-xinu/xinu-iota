@@ -2,7 +2,6 @@
 
 #include <xinu.h>
 
-struct	nd_nce nd_ncache[ND_NC_SLOTS];
 byte	nd_msgbuf1[500];
 byte	nd_msgbuf2[500];
 
@@ -33,10 +32,16 @@ void	nd_init (
 	ndptr->isrouter = TRUE;
 	ndptr->sendadv = FALSE;
 	ndptr->currhl = 255;
+	ndptr->reachable = 30000;
+	ndptr->retrans = 1000;
 
 	for(i = 0; i < ND_NC_SLOTS; i++) {
-		memset((char *)&nd_ncache[i], 0, sizeof(struct nd_nce));
-		nd_ncache[i].state = ND_NCE_FREE;
+		memset((char *)&ifptr->if_ncache[i], 0, sizeof(struct nd_nce));
+		ifptr->if_ncache[i].state = ND_NCE_FREE;
+		ifptr->if_ncache[i].waitsem = semcreate(1);
+		if(ifptr->if_ncache[i].waitsem == SYSERR) {
+			panic("nd_init: cannot create semaphore");
+		}
 	}
 
 	restore(mask);
@@ -74,8 +79,10 @@ process	nd_in (
 	   	panic("nd_in: Error while registering icmp slots");
 	}
 
+	msgbuf = getbuf(netbufpool);
 	while(TRUE) {
-		msgbuf = nd_msgbuf1;
+		//msgbuf = nd_msgbuf1;
+		//msgbuf = getbuf(netbufpool);
 		buflen = 500;
 		retval = icmp_recvnaddr(slots,	/* ICMP slots to listen on	*/
 					4,	/* No. of ICMP slots		*/
@@ -104,9 +111,12 @@ process	nd_in (
 		}
 		else if(retval == slots[3]) {
 			kprintf("Incoming nbradv\n");
+			nd_in_nbradv(iface, (struct nd_nbradv *)msgbuf, buflen, &ipdata);
 		}
 		else {
-			panic("nd_in: Unknown message type\n");
+			kprintf("nd_in: retval %d\n", retval);
+			kprintf("nd_in: %d %d %d %d\n", slots[0], slots[1], slots[2], slots[3]);
+			panic("nd_in: Unknown message type");
 		}
 	}
 
@@ -190,7 +200,7 @@ void	nd_in_rtrsol (
 	sllao = (struct nd_llao *)rtradv->opts;
 	sllao->type = ND_TYPE_SLLAO;
 	sllao->len = 2;
-	memcpy(sllao->lladdr, ifptr->if_eui64, 8);
+	memcpy(sllao->lladdr, ifptr->if_hwucast, 8);
 	len += sizeof(struct nd_llao);
 
 	pio = (struct nd_pio *)(sllao + 1);
@@ -296,7 +306,7 @@ void	nd_in_rtradv (
 			else if(ifptr->if_nipucast < IF_NIPUCAST) {
 				i = ifptr->if_nipucast;
 				memcpy(ifptr->if_ipucast[i].ipaddr, pio->prefix, 8);
-				memcpy(&ifptr->if_ipucast[i].ipaddr[8], ifptr->if_eui64, 8);
+				memcpy(&ifptr->if_ipucast[i].ipaddr[8], ifptr->if_hwucast, 8);
 				ifptr->if_nipucast++;
 				kprintf("Added a new IP ucast address\n");
 			}
@@ -322,6 +332,7 @@ void	nd_in_nbrsol (
 	)
 {
 	struct	ifentry *ifptr;	/* Pointer to interface		*/
+	struct	nd_nce *ncptr;	/* Pointer to nbr cache entry	*/
 	struct	nd_nbradv *nbradv;/* Pointer to nbr adv		*/
 	struct	nd_llao *sllao;	/* Pointer to SLLAO		*/
 	struct	nd_llao *tllao;	/* Pointer to TLLAO		*/
@@ -331,6 +342,7 @@ void	nd_in_nbrsol (
 	byte	*optend;	/* Pointer to end of message	*/
 	int32	found;		/* Empty NC index		*/
 	byte	aro_status;	/* ARO return status		*/
+	int32	ncslot;		/* Empty nbr cache slot		*/
 	intmask	mask;		/* Saved interrupt mask		*/
 	int32	i;		/* For loop index		*/
 
@@ -338,6 +350,12 @@ void	nd_in_nbrsol (
 	   (ipdata->iphl != 255) ||
 	   (isipmc(nbrsol->tgtaddr))) {
 	   	return;
+	}
+
+	if(isipunspec(ipdata->ipsrc)) {
+		if(memcmp(ipdata->ipdst, ip_solmc, 13)) {
+			return;
+		}
 	}
 
 	ifptr = &if_tab[iface];
@@ -399,39 +417,39 @@ void	nd_in_nbrsol (
 		kprintf("nd_in_nbrsol: ARO included\n");
 		found = -1;
 		for(i = 0; i < ND_NC_SLOTS; i++) {
-			if(nd_ncache[i].state == ND_NCE_FREE) {
+			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
 				if(found == -1) {
 					found = i;
 				}
 				continue;
 			}
-			if(!memcmp(nd_ncache[i].eui64, sllao->lladdr, 8)) {
+			if(!memcmp(ifptr->if_ncache[i].hwucast, sllao->lladdr, 8)) {
 				break;
 			}
 		}
 		if(i < ND_NC_SLOTS) {
-			if(memcmp(nd_ncache[i].ipaddr, ipdata->ipsrc, 16)) {
+			if(memcmp(ifptr->if_ncache[i].ipaddr, ipdata->ipsrc, 16)) {
 				kprintf("nd_in_nbrsol: Duplicate address\n");
 				aro_status = 1;
 			}
 			else if(aro->reglife == 0) {
 				kprintf("nd_in_nbrsol: removing entry\n");
-				memset((char *)&nd_ncache[i], 0, sizeof(struct nd_nce));
-				nd_ncache[i].state = ND_NCE_FREE;
+				memset((char *)&ifptr->if_ncache[i], 0, sizeof(struct nd_nce));
+				ifptr->if_ncache[i].state = ND_NCE_FREE;
 				aro_status = 0;
 			}
 			else {
 				kprintf("nd_in_nbrsol: updating entry\n");
-				nd_ncache[i].type = ND_NCE_REG;
-				nd_ncache[i].reglife = aro->reglife;
-				nd_ncache[i].timestamp = clktime;
+				ifptr->if_ncache[i].type = ND_NCE_REG;
+				ifptr->if_ncache[i].reglife = aro->reglife;
+				//ifptr->if_ncache[i].timestamp = clktime;
 				aro_status = 0;
 			}
 		}
 		else {
 			if(found == -1) {
 				for(i = 0; i < ND_NC_SLOTS; i++) {
-					if(nd_ncache[i].type == ND_NCE_GRB) {
+					if(ifptr->if_ncache[i].type == ND_NCE_GRB) {
 						found = i;
 						break;
 					}
@@ -444,12 +462,12 @@ void	nd_in_nbrsol (
 			else if(aro->reglife != 0) {
 				kprintf("nd_in_nbrsol: adding a new entry\n");
 				i = found;
-				nd_ncache[i].state = ND_NCE_STALE;
-				nd_ncache[i].type = ND_NCE_REG;
-				memcpy(nd_ncache[i].ipaddr, ipdata->ipsrc, 16);
-				memcpy(nd_ncache[i].eui64, sllao->lladdr, 8);
-				nd_ncache[i].reglife = aro->reglife;
-				nd_ncache[i].timestamp = clktime;
+				ifptr->if_ncache[i].state = ND_NCE_STALE;
+				ifptr->if_ncache[i].type = ND_NCE_REG;
+				memcpy(ifptr->if_ncache[i].ipaddr, ipdata->ipsrc, 16);
+				memcpy(ifptr->if_ncache[i].hwucast, sllao->lladdr, 8);
+				ifptr->if_ncache[i].reglife = aro->reglife;
+				//ifptr->if_ncache[i].timestamp = clktime;
 				aro_status = 0;
 			}
 			else {
@@ -457,8 +475,39 @@ void	nd_in_nbrsol (
 			}
 		}
 	}
+	else if((!isipunspec(ipdata->ipsrc)) && (sllao)) { /* No ARO, normal ND */
+		kprintf("nd_in_nbrsol: normal Nbr sol.\n");
+		ncslot = -1;
+		for(i = 0; i < ND_NC_SLOTS; i++) {
+			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
+				ncslot = (ncslot == -1) ? i : ncslot;
+				continue;
+			}
+			if(!memcmp(ifptr->if_ncache[i].ipaddr, ipdata->ipsrc, 16)) {
+				break;
+			}
+		}
+		if(i >= ND_NC_SLOTS) {
+			if(ncslot != -1) {
+				ncptr = &ifptr->if_ncache[ncslot];
+				memcpy(ncptr->ipaddr, ipdata->ipsrc, 16);
+				memcpy(ncptr->hwucast, sllao->lladdr, ifptr->if_halen);
+				ncptr->state = ND_NCE_STALE;
+				ncptr->type = ND_NCE_GRB;
+				kprintf("nd_in_nbrsol: added "); ip_print(ncptr->ipaddr);
+				kprintf(" to the nbr cache\n");
+			}
+		}
+		else {
+			ncptr = &ifptr->if_ncache[i];
+			if(memcmp(ncptr->hwucast, sllao->lladdr, ifptr->if_halen)) {
+				memcpy(ncptr->hwucast, sllao->lladdr, ifptr->if_halen);
+				ncptr->state = ND_NCE_STALE;
+			}
+		}
+	}
 
-	nbradv = (struct nd_nbradv *)nd_msgbuf2;
+	nbradv = (struct nd_nbradv *)getbuf(netbufpool);
 	nbradv->res1 = 0;
 	nbradv->r = 1;
 	nbradv->s = 1;
@@ -467,9 +516,9 @@ void	nd_in_nbrsol (
 
 	tllao = (struct nd_llao *)nbradv->opts;
 	tllao->type = ND_TYPE_TLLAO;
-	tllao->len = 2;
-	memcpy(tllao->lladdr, ifptr->if_eui64, 8);
-	len += sizeof(struct nd_llao);
+	tllao->len = (ifptr->if_halen == 6) ? 1 : 2;
+	memcpy(tllao->lladdr, ifptr->if_hwucast, ifptr->if_halen);
+	len += (tllao->len)*8;
 
 	if(aro) {
 		newaro = (struct nd_aro *)(tllao + 1);
@@ -480,8 +529,9 @@ void	nd_in_nbrsol (
 		len += sizeof(struct nd_aro);
 	}
 
-	if(aro_status == 1) {
+	if((aro) && (aro_status == 1)) {
 		if(!sllao) {
+			freebuf((char *)nbradv);
 			restore(mask);
 			return;
 		}
@@ -497,6 +547,131 @@ void	nd_in_nbrsol (
 	restore(mask);
 
 	icmp_send(iface, ICMP_TYPE_NBRADV, 0, ipdata, (char *)nbradv, len);
+	freebuf((char *)nbradv);
+}
+
+/*------------------------------------------------------------------------
+ * nd_in_nbradv  -  Handle incoming Neighbor Advertisements
+ *------------------------------------------------------------------------
+ */
+void	nd_in_nbradv (
+	int32	iface,
+	struct	nd_nbradv *nbradv,
+	int32	len,
+	struct	ipinfo *ipdata
+	)
+{
+	struct	ifentry *ifptr;
+	struct	nd_nce *ncptr;
+	struct	nd_llao *tllao;
+	byte	*optptr, *optend;
+	int32	optlen;
+	intmask	mask;
+	int32	i;
+
+	if(nbradv == NULL) {
+		return;
+	}
+
+	if((iface < 0) || (iface >= NIFACES)) {
+		return;
+	}
+	ifptr = &if_tab[iface];
+
+	if((ipdata->iphl != 255) ||
+	   (len < 20) ||
+	   (isipmc(nbradv->tgtaddr)) ||
+	   ((isipmc(ipdata->ipdst)) && (nbradv->s))) {
+		return;
+	}
+
+	mask = disable();
+	for(i = 0; i < ND_NC_SLOTS; i++) {
+		ncptr = &ifptr->if_ncache[i];
+		if(ncptr->state == ND_NCE_FREE) {
+			continue;
+		}
+		if(!memcmp(ncptr->ipaddr, nbradv->tgtaddr, 16)) {
+			break;
+		}
+	}
+	if(i >= ND_NC_SLOTS) {
+		restore(mask);
+		return;
+	}
+
+	optptr = nbradv->opts;
+	optend = (byte *)(optptr + len - sizeof(struct nd_nbradv));
+	tllao = NULL;
+	while(optptr < optend) {
+
+		optlen = (*(optptr+1))*8;
+		if(optlen == 0) {
+			restore(mask);
+			return;
+		}
+
+		switch(*optptr) {
+
+		 case ND_TYPE_TLLAO:
+			 tllao = (struct nd_llao *)optptr;
+			 optptr += optlen;
+			 break;
+
+		 default:
+			 optptr += optlen;
+			 break;
+		}
+	}
+
+	if(ncptr->state == ND_NCE_INCOM) {
+		if(!tllao) {
+			restore(mask);
+			return;
+		}
+		memcpy(ncptr->hwucast, tllao->lladdr, ifptr->if_halen);
+		if(nbradv->s) {
+			ncptr->state = ND_NCE_REACH;
+			ncptr->ttl = ifptr->if_ndData.reachable;
+		}
+		else {
+			ncptr->state = ND_NCE_STALE;
+		}
+		send(ncptr->pid, OK);
+		restore(mask);
+		return;
+	}
+
+	if((nbradv->o == 0) && (tllao) && (memcmp(ncptr->hwucast, tllao->lladdr, ifptr->if_halen))) {
+		if(ncptr->state == ND_NCE_REACH) {
+			ncptr->state = ND_NCE_STALE;
+		}
+		else {
+			restore(mask);
+			return;
+		}
+	}
+
+	if((nbradv->o == 1) ||
+	   ((tllao) && (!memcmp(ncptr->hwucast, tllao->lladdr, ifptr->if_halen))) ||
+	   (tllao == NULL)) {
+		if(tllao) {
+			if(memcmp(ncptr->hwucast, tllao->lladdr, ifptr->if_halen)) {
+				memcpy(ncptr->hwucast, tllao->lladdr, ifptr->if_halen);
+				if(!nbradv->s) {
+					ncptr->state = ND_NCE_STALE;
+				}
+			}
+		}
+		if(nbradv->s) {
+			kprintf("neighbor "); ip_print(ncptr->ipaddr);
+			kprintf(" moved to REACHABLE\n");
+			ncptr->state = ND_NCE_REACH;
+			ncptr->ttl = ifptr->if_ndData.reachable;
+		}
+	}
+
+	restore(mask);
 }
 
 /*------------------------------------------------------------------------
@@ -567,13 +742,13 @@ int32	nd_reg_address (
 	sllao = (struct nd_llao *)nbrsol->opts;
 	sllao->type = ND_TYPE_SLLAO;
 	sllao->len = 2;
-	memcpy(sllao->lladdr, ifptr->if_eui64, 8);
+	memcpy(sllao->lladdr, ifptr->if_hwucast, 8);
 
 	aro = (struct nd_aro *)(sllao + 1);
 	aro->type = ND_TYPE_ARO;
 	aro->len = 2;
 	aro->reglife = 1;
-	memcpy(aro->eui64, ifptr->if_eui64, 8);
+	memcpy(aro->eui64, ifptr->if_hwucast, 8);
 
 	tries = 0;
 	while(tries < 3) {
@@ -616,13 +791,13 @@ int32	nd_reg_address (
 	if(!isipllu(nbrip)) {
 		found = -1;
 		for(i = 0; i < ND_NC_SLOTS; i++) {
-			if(nd_ncache[i].state == ND_NCE_FREE) {
+			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
 				if(found == -1) {
 					found = i;
 				}
 				continue;
 			}
-			if(!memcmp(nd_ncache[i].ipaddr, nbrip, 16)) {
+			if(!memcmp(ifptr->if_ncache[i].ipaddr, nbrip, 16)) {
 				break;
 			}
 		}
@@ -671,18 +846,18 @@ int32	nd_reg_address (
 	if(tllao) {
 		if(found != -1) {
 			i = found;
-			if(nd_ncache[i].state == ND_NCE_FREE) {
-				nd_ncache[i].state = ND_NCE_REACH;
-				nd_ncache[i].type = ND_NCE_GRB;
-				memcpy(nd_ncache[i].ipaddr, nbrip, 16);
-				memcpy(nd_ncache[i].eui64, tllao->lladdr, 8);
-				nd_ncache[i].reglife = 1;
-				nd_ncache[i].timestamp = clktime;
+			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
+				ifptr->if_ncache[i].state = ND_NCE_REACH;
+				ifptr->if_ncache[i].type = ND_NCE_GRB;
+				memcpy(ifptr->if_ncache[i].ipaddr, nbrip, 16);
+				memcpy(ifptr->if_ncache[i].hwucast, tllao->lladdr, 8);
+				ifptr->if_ncache[i].reglife = 1;
+				//ifptr->if_ncache[i].timestamp = clktime;
 			}
 			else {
-				nd_ncache[i].state = ND_NCE_REACH;
-				nd_ncache[i].reglife = 1;
-				nd_ncache[i].timestamp = clktime;
+				ifptr->if_ncache[i].state = ND_NCE_REACH;
+				ifptr->if_ncache[i].reglife = 1;
+				//ifptr->if_ncache[i].timestamp = clktime;
 			}
 		}
 	}
@@ -697,4 +872,278 @@ int32	nd_reg_address (
 	else {
 		return SYSERR;
 	}
+}
+
+/*------------------------------------------------------------------------
+ * nd_resolve_eth  -  Resolve IPv6 address into Ethernet address
+ *------------------------------------------------------------------------
+ */
+int32	nd_resolve_eth (
+	int32	iface,
+	byte	*ip,
+	byte	*hwucast
+	)
+{
+	struct	ifentry *ifptr;	/* Pointer to interface	*/
+	struct	nd_nce *ncptr;
+	struct	ipinfo ipdata1, ipdata2;
+	struct	nd_nbrsol *nbrsol;
+	struct	nd_nbradv *nbradv;
+	struct	nd_llao *sllao, *tllao;
+	intmask	mask;		/* Saved interrupt mask	*/
+	//int32	slot;		/* Slot in ICMP table	*/
+	int32	ncslot;		/* Slot in Nbr cache	*/
+	byte	*optptr, *optend, optlen;
+	bool8	opterr = FALSE;
+	int32	retval, tries, msglen;
+	int32	i;		/* For loop index	*/
+
+	kprintf("nd_resolve_eth: \n");
+	if(ip == NULL || hwucast == NULL) {
+		return SYSERR;
+	}
+
+	if((iface < 0) || (iface >= NIFACES)) {
+		kprintf("nd_resolve_eth: invalid interface %d\n", iface);
+		return SYSERR;
+	}
+
+	mask = disable();
+	ifptr = &if_tab[iface];
+
+	if(ifptr->if_state == IF_DOWN || ifptr->if_type != IF_TYPE_ETH) {
+		kprintf("nd_resolve_eth: interface %d down\n", iface);
+		restore(mask);
+		return SYSERR;
+	}
+
+	ncslot = -1;
+	for(i = 0; i < ND_NC_SLOTS;) {
+		if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
+			ncslot = ncslot == -1 ? i : ncslot;
+			i++;
+			continue;
+		}
+		if(!memcmp(ip, ifptr->if_ncache[i].ipaddr, 16)) {
+			if(ifptr->if_ncache[i].state == ND_NCE_INCOM) {
+				wait(ifptr->if_ncache[i].waitsem);
+				i = 0;
+				continue;
+			}
+			else {
+				break;
+			}
+		}
+		i++;
+	}
+	if(i < ND_NC_SLOTS) {
+		ncptr = &ifptr->if_ncache[i];
+		kprintf("nd_resolve_eth: found slot in neighbor cache\n");
+		ip_print(ifptr->if_ncache[i].ipaddr);
+		kprintf("\n");
+		memcpy(hwucast, ifptr->if_ncache[i].hwucast, 6);
+		if(ifptr->if_ncache[i].state == ND_NCE_STALE) {
+			ncptr->state = ND_NCE_DELAY;
+			ncptr->ttl = 5000;
+		}
+		restore(mask);
+		return OK;
+	}
+
+	if(ncslot == -1) {
+		kprintf("nd_resolve_eth: no empty slots\n");
+		restore(mask);
+		return SYSERR;
+	}
+
+	ifptr->if_ncache[ncslot].state = ND_NCE_INCOM;
+	memcpy(ifptr->if_ncache[ncslot].ipaddr, ip, 16);
+	ifptr->if_ncache[ncslot].pid = getpid();
+	semreset(ifptr->if_ncache[ncslot].waitsem, 1);
+	wait(ifptr->if_ncache[ncslot].waitsem);
+
+	memcpy(ipdata1.ipdst, ip_solmc, 13);
+	memcpy(&ipdata1.ipdst[13], &ip[13], 3);
+	memcpy(ipdata1.ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+	ipdata1.iphl = 255;
+
+	nbrsol = (struct nd_nbrsol *)getbuf(netbufpool);
+	nbrsol->res = 0;
+	memcpy(nbrsol->tgtaddr, ip, 16);
+	msglen = sizeof(struct nd_nbrsol);
+
+	sllao = (struct nd_llao *)nbrsol->opts;
+	sllao->type = ND_TYPE_SLLAO;
+	sllao->len = 1;
+	memcpy(sllao->lladdr, ifptr->if_hwucast, 6);
+	msglen += 8;
+
+	tries = 0;
+	while(tries < 3) {
+
+		tries++;
+
+		retval = icmp_send(iface, ICMP_TYPE_NBRSOL, 0, &ipdata1, (char *)nbrsol, msglen);
+		if(retval == SYSERR) {
+			signal(ifptr->if_ncache[ncslot].waitsem);
+			freebuf((char *)nbrsol);
+			restore(mask);
+			return SYSERR;
+		}
+
+		retval = recvtime(ifptr->if_ndData.retrans);
+		if(retval == TIMEOUT) {
+			continue;
+		}
+		else {
+			break;
+		}
+	}
+
+	if(ifptr->if_ncache[ncslot].state == ND_NCE_REACH) {
+		kprintf("nd_resolve_eth: "); ip_print(ifptr->if_ncache[ncslot].ipaddr);
+		kprintf(" moved to REACHABLE\n");
+		memcpy(hwucast, ifptr->if_ncache[ncslot].hwucast, 6);
+		signal(ifptr->if_ncache[ncslot].waitsem);
+		freebuf((char *)nbrsol);
+		restore(mask);
+		return OK;
+	}
+
+	ifptr->if_ncache[ncslot].state = ND_NCE_FREE;
+	signal(ifptr->if_ncache[ncslot].waitsem);
+	freebuf((char *)nbrsol);
+	restore(mask);
+	return SYSERR;
+}
+
+/*------------------------------------------------------------------------
+ * nd_nud  -  Perform Neighbor Unreachability Detection
+ *------------------------------------------------------------------------
+ */
+process	nd_nud (
+	int32	iface,	/* Interface index	*/
+	int32	slot	/* Slot in nbr cache	*/
+	)
+{
+	struct	ifentry *ifptr;
+	struct	nd_nce *ncptr;
+	struct	nd_nbrsol *nbrsol;
+	struct	ipinfo ipdata;
+	int32	tries;
+	intmask	mask;
+
+	if((iface < 0) || (iface >= NIFACES)) {
+		return SYSERR;
+	}
+
+	if((slot < 0) || (slot >= ND_NC_SLOTS)) {
+		return SYSERR;
+	}
+
+	mask = disable();
+	ifptr = &if_tab[iface];
+	ncptr = &ifptr->if_ncache[slot];
+
+	if(ncptr->state != ND_NCE_PROBE) {
+		restore(mask);
+		return SYSERR;
+	}
+
+	nbrsol = (struct nd_nbrsol *)getbuf(netbufpool);
+	tries = 0;
+	while(tries < 3) {
+
+		tries++;
+
+		nbrsol->res = 0;
+		memcpy(nbrsol->tgtaddr, ncptr->ipaddr, 16);
+
+		memcpy(ipdata.ipdst, ncptr->ipaddr, 16);
+		memcpy(ipdata.ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+		ipdata.iphl = 255;
+
+		icmp_send(iface, ICMP_TYPE_NBRSOL, 0, &ipdata, (char *)nbrsol, sizeof(struct nd_nbrsol));
+
+		sleepms(ifptr->if_ndData.retrans);
+
+		if(ncptr->state == ND_NCE_REACH) {
+			break;
+		}
+	}
+
+	if(ncptr->state != ND_NCE_REACH) {
+		memset((char *)ncptr, 0, sizeof(struct nd_nce));
+		ncptr->state = ND_NCE_FREE;
+	}
+
+	freebuf((char *)nbrsol);
+	restore(mask);
+	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * nd_timer  -  Periodic ND process to cleanup neighbor cache
+ *------------------------------------------------------------------------
+ */
+process	nd_timer (void) {
+
+	struct	ifentry *ifptr;
+	struct	nd_nce *ncptr;
+	int32	iface;
+	intmask	mask;
+	int32	i;
+
+	while(TRUE) {
+
+		mask = disable();
+		for(iface = 0; iface < NIFACES; iface++) {
+
+			ifptr = &if_tab[iface];
+			if(ifptr->if_state == IF_DOWN) {
+				continue;
+			}
+
+			for(i = 0; i < ND_NC_SLOTS; i++) {
+				ncptr = &ifptr->if_ncache[i];
+				if(ncptr->state == ND_NCE_FREE) {
+					continue;
+				}
+
+				if(ncptr->ttl > 0) {
+					if(--ncptr->ttl > 0) {
+						continue;
+					}
+				}
+
+				if(ncptr->state == ND_NCE_REACH) {
+					kprintf("neighbor "); ip_print(ncptr->ipaddr);
+					kprintf(" moved to STALE\n");
+					ncptr->state = ND_NCE_STALE;
+					continue;
+				}
+				if(ncptr->state == ND_NCE_DELAY) {
+					kprintf("neighbor "); ip_print(ncptr->ipaddr);
+					kprintf(" moved to PROBE\n");
+					ncptr->state = ND_NCE_PROBE;
+					resume(create(nd_nud, NETSTK, NETPRIO, "nd_nud", 2, iface, i));
+					/*
+					resume(create(nd_resolve_eth,
+							NETSTK,
+							NETPRIO,
+							"nd_resolve_eth",
+							3,
+							iface,
+							ncptr->ipaddr,
+							ncptr->hwucast));
+					*/
+					continue;
+				}
+			}
+		}
+		restore(mask);
+		sleepms(1);
+	}
+
+	return OK;
 }

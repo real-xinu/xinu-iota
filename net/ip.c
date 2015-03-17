@@ -9,6 +9,9 @@ struct	iqentry ipoqueue;
 byte	ip_llprefix[] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0,
 			 0, 0, 0, 0, 0, 0, 0, 0};
 
+/* IP solicited node multicast prefix */
+byte	ip_solmc[] = {0xff, 0x02, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 1, 0xff, 0, 0, 0};
 /* IP loopback address */
 byte	ip_loopback[] = {0, 0, 0, 0, 0, 0, 0, 0,
 			 0, 0, 0, 0, 0, 0, 0, 1};
@@ -201,6 +204,73 @@ int32	ip_send (
 	)
 {
 	struct	ifentry *ifptr;	/* Pointer to interface	*/
+	uint16	cksum;		/* Checksum		*/
+	int32	iface;		/* Interface index	*/
+	intmask	mask;		/* Saved interrupt mask	*/
+	int32	retval;		/* Return value		*/
+	int32	i;		/* For loop index	*/
+
+	if(pkt == NULL) {
+		return SYSERR;
+	}
+
+	mask = disable();
+
+	iface = pkt->net_iface;
+	if((iface < 0) || (iface >= NIFACES)) {
+		kprintf("ip_send: invalid interface %d\n", iface);
+		freebuf((char *)pkt);
+		return SYSERR;
+	}
+
+	ifptr = &if_tab[iface];
+	if(ifptr->if_state == IF_DOWN) {
+		kprintf("ip_send: interface %d down\n", iface);
+		freebuf((char *)pkt);
+		return SYSERR;
+	}
+
+	if(isipllu(pkt->net_ipdst) || isipmc(pkt->net_ipdst)) {
+		if(isipunspec(pkt->net_ipsrc)) {
+			memcpy(pkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+		}
+	}
+
+	switch(pkt->net_ipnh) {
+	
+	 case IP_ICMPV6:
+		 pkt->net_iccksum = 0;
+		 cksum = icmp_cksum(pkt);
+		 pkt->net_iccksum = htons(cksum);
+		 break;
+	}
+
+	if(ifptr->if_type == IF_TYPE_RADIO) {
+		retval = ip_send_rad(pkt);
+		restore(mask);
+		return retval;
+	}
+	else if(ifptr->if_type == IF_TYPE_ETH) {
+		kprintf("ip_send: calling ip_send_eth\n");
+		retval = ip_send_eth(pkt);
+		restore(mask);
+		return retval;
+	}
+	
+	freebuf((char *)pkt);
+	restore(mask);
+	return SYSERR;
+}
+
+/*------------------------------------------------------------------------
+ * ip_send_rad  -  Send an IP packet over the RADIO interface
+ *------------------------------------------------------------------------
+ */
+int32	ip_send_rad (
+	struct	netpacket *pkt	/* Pointer to packet buffer	*/
+	)
+{
+	struct	ifentry *ifptr;	/* Pointer to interface	*/
 	int32	iface;		/* Interface index	*/
 	intmask	mask;		/* Saved interrupt mask	*/
 	int32	i;		/* For loop index	*/
@@ -210,18 +280,25 @@ int32	ip_send (
 		freebuf((char *)pkt);
 	}
 
+	mask = disable();
+
 	ifptr = &if_tab[iface];
+	if(ifptr->if_type != IF_TYPE_RADIO) {
+		restore(mask);
+		return SYSERR;
+	}
 
 	if(isipmc(pkt->net_ipdst)) {
 		if(!memcmp(pkt->net_ipsrc, ip_unspec, 16)) {
 			memcpy(pkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
 		}
 		memset(pkt->net_raddstaddr, 0xff, 8);
-		memcpy(pkt->net_radsrcaddr, ifptr->if_eui64, 8);
+		memcpy(pkt->net_radsrcaddr, ifptr->if_hwucast, 8);
 
 		ip_hton(pkt);
 		write(RADIO0, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
 		freebuf((char *)pkt);
+		restore(mask);
 		return OK;
 	}
 
@@ -230,29 +307,29 @@ int32	ip_send (
 			memcpy(pkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
 		}
 		memcpy(pkt->net_raddstaddr, &pkt->net_ipdst[8], 8);
-		memcpy(pkt->net_radsrcaddr, ifptr->if_eui64, 8);
+		memcpy(pkt->net_radsrcaddr, ifptr->if_hwucast, 8);
 
 		ip_hton(pkt);
 
 		write(RADIO0, (char *)pkt, 24+40+ntohs(pkt->net_iplen));
 		freebuf((char *)pkt);
+		restore(mask);
 		return OK;
 	}
 
 	kprintf("Looking in nbr cache\n");
-	mask = disable();
 	for(i = 0; i < ND_NC_SLOTS; i++) {
-		if(nd_ncache[i].state == ND_NCE_FREE) {
+		if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
 			continue;
 		}
-		if(!memcmp(nd_ncache[i].ipaddr, pkt->net_ipdst, 16)) {
+		if(!memcmp(ifptr->if_ncache[i].ipaddr, pkt->net_ipdst, 16)) {
 			break;
 		}
 	}
 	if(i < ND_NC_SLOTS) {
 		kprintf("Foudn in nbr cache\n");
-		memcpy(pkt->net_raddstaddr, nd_ncache[i].eui64, 8);
-		memcpy(pkt->net_radsrcaddr, ifptr->if_eui64, 8);
+		memcpy(pkt->net_raddstaddr, ifptr->if_ncache[i].hwucast, 8);
+		memcpy(pkt->net_radsrcaddr, ifptr->if_hwucast, 8);
 
 		ip_hton(pkt);
 
@@ -267,6 +344,84 @@ int32	ip_send (
 
 	restore(mask);
 	return SYSERR;
+}
+
+/*------------------------------------------------------------------------
+ * ip_send_eth  -  Send an IP packet over Ethernet interface
+ *------------------------------------------------------------------------
+ */
+int32	ip_send_eth (
+	struct	netpacket *pkt
+	)
+{
+	struct	ifentry *ifptr;	/* Pointer to interface	*/
+	int32	iface;		/* Index interface	*/
+	intmask	mask;		/* Saved interrupt mask	*/
+	int32	pktlen;		/* Length of packet	*/
+	int32	retval;		/* Return value		*/
+	int32	i;		/* For loop index	*/
+
+	if(pkt == NULL) {
+		return SYSERR;
+	}
+
+	mask = disable();
+
+	iface = pkt->net_iface;
+	if((iface < 0) || (iface >= NIFACES)) {
+		kprintf("ip_send_eth: invalide interface %d\n", iface);
+		restore(mask);
+		freebuf((char *)pkt);
+		return SYSERR;
+	}
+
+	ifptr = &if_tab[iface];
+	if(ifptr->if_type != IF_TYPE_ETH) {
+		kprintf("ip_send_eth: interface %d, not ethernet\n", iface);
+		freebuf((char*)pkt);
+		restore(mask);
+		return SYSERR;
+	}
+
+	if(isipmc(pkt->net_ipdst)) {
+		memcpy(pkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+		pkt->net_ethdst[0] = 0x33;
+		pkt->net_ethdst[1] = 0x33;
+		memcpy(&pkt->net_ethdst[2], &pkt->net_ipdst[13], 4);
+		memcpy(pkt->net_ethsrc, ifptr->if_hwucast, 6);
+		pkt->net_ethtype = htons(ETH_IPV6);
+
+		pktlen = 14 + 40 + pkt->net_iplen;
+		ip_hton(pkt);
+
+		kprintf("OUT: "); pdump(pkt);
+		pkt->net_ethpad[0] = 0;
+		write(ifptr->if_dev, (char *)pkt, pktlen);
+		freebuf((char *)pkt);
+		restore(mask);
+		return OK;
+	}
+
+	kprintf("ip_send_eth: calling nd_resolve\n");
+	retval = nd_resolve_eth(pkt->net_iface, pkt->net_ipdst, pkt->net_ethdst);
+	if((retval == SYSERR) || (retval == TIMEOUT)) {
+		restore(mask);
+		return SYSERR;
+	}
+
+	memcpy(pkt->net_ethsrc, ifptr->if_hwucast, 6);
+	pkt->net_ethtype = htons(ETH_IPV6);
+
+	pktlen = 14 + 40 + pkt->net_iplen;
+	ip_hton(pkt);
+
+	kprintf("OUT: "); pdump(pkt);
+	pkt->net_ethpad[0] = 0;
+	write(ifptr->if_dev, (char *)pkt, pktlen);
+	freebuf((char *)pkt);
+	restore(mask);
+
+	return OK;
 }
 
 /*------------------------------------------------------------------------
@@ -393,4 +548,48 @@ void	ip_ntoh (
 {
 	pkt->net_ipfll = ntohs(pkt->net_ipfll);
 	pkt->net_iplen = ntohs(pkt->net_iplen);
+}
+
+/*------------------------------------------------------------------------
+ * ip_print  -  Print IPv6 address in compressed form
+ *------------------------------------------------------------------------
+ */
+void	ip_print (
+	byte	*ip
+	)
+{
+	int32	i;
+	uint16	*ptr16;
+
+	if(ip == NULL) {
+		return;
+	}
+
+	ptr16 = (uint16 *)ip;
+
+	while((i < 8) && ((*ptr16)!=0)) {
+		kprintf("%X", htons(*ptr16));
+		i++;
+		ptr16++;
+		if(i <= 7) {
+			kprintf(":");
+		}
+	}
+
+	if((i < 8) && ((*ptr16)==0)) {
+		kprintf(":");
+		while((i < 8) && ((*ptr16)==0)) {
+			i++;
+			ptr16++;
+		}
+	}
+
+	while(i < 8) {
+		kprintf("%X", htons(*ptr16));
+		i++;
+		ptr16++;
+		if(i <= 7) {
+			kprintf(":");
+		}
+	}
 }

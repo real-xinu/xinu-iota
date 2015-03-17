@@ -28,7 +28,11 @@ int32	radread (
 	if(count == SYSERR) {
 		return SYSERR;
 	}
-	kprintf("incoming pkt.. %d\n", count);
+	if(pkt->rad_data[0] == 0) {
+		memcpy(buf, pkt->rad_data, count+8);
+		return count;
+	}
+
 	npkt = (struct netpacket *)buf;
 
 	hptr += 3;
@@ -59,12 +63,6 @@ int32	radread (
 	uend += count - (cend-pkt->rad_data);
 	count = uend - (byte *)buf;
 	*/
-	int32	i;
-	kprintf("IN: ");
-	for(i = 0; i < count; i++) {
-		kprintf("%x ", (byte)buf[i]);
-	}
-	kprintf("\n");
 
 	//memcpy(buf, (char *)pkt, len < count ? len : count);
 
@@ -72,4 +70,44 @@ int32	radread (
 	signal(radptr->isem);
 
 	return len < count ? len : count;
+}
+
+process	rawin (void) {
+
+	struct	netpacket *pkt;
+	struct	ifentry *ifptr;
+	int32	retval;
+
+	while(TRUE) {
+
+		pkt = getbuf(netbufpool);
+		if((int32)pkt == SYSERR) {
+			continue;
+		}
+
+		retval = read(RADIO0, (char *)pkt, sizeof(struct netpacket));
+		if(retval == SYSERR) {
+			panic("rawin: radio read failed");
+		}
+
+		if(pkt->net_ethpad[0] == 0) {
+			ifptr = &if_tab[IF_ETH];
+		}
+		else {
+			ifptr = &if_tab[IF_RADIO];
+		}
+
+		if(semcount(ifptr->isem) > 10) {
+			freebuf((char *)pkt);
+			continue;
+		}
+		ifptr->pktbuf[ifptr->tail] = pkt;
+		ifptr->tail++;
+		if(ifptr->tail >= 10) {
+			ifptr->tail = 0;
+		}
+		signal(ifptr->isem);
+	}
+
+	return OK;
 }

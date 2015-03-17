@@ -109,13 +109,14 @@ struct	nd_aro {
 struct	nd_nce {
 	byte	state;	/* NCE State		*/
 	byte	type;	/* NCE Type		*/
+	pid32	pid;	/* PID of waiting proc	*/
+	sid32	waitsem;/* Semaphore of entry	*/
 	byte	ipaddr[16];/* NCE IP address	*/
-	byte	eui64[8];/* NCE EUI64 address	*/
+	byte	hwucast[8];
+			/* NCE EUI64 address	*/
 	uint32	reglife;/* NCE lifetime		*/
-	uint32	timestamp;/* NCE timestamp	*/
+	uint32	ttl;	/* NCE time to live	*/
 };
-
-extern	struct nd_nce nd_ncache[];
 
 struct	nd_info {
 	bool8	isrouter;

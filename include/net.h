@@ -8,12 +8,22 @@
 
 #pragma pack(2)
 struct	netpacket	{
-	byte		net_radtype;	/* Radio Frame control		*/
-	byte		net_radflags;
-	byte		net_raddstpan[2];/* Radio destination PAN	*/
-	byte		net_raddstaddr[8];/* Radio destination EUI64	*/
-	byte		net_radsrcpan[2];/* Radio source PAN		*/
-	byte		net_radsrcaddr[8];/* Radio source EUI64		*/
+	union {
+	 struct {
+	  byte		net_radtype;	/* Radio Frame control		*/
+	  byte		net_radflags;
+	  byte		net_raddstpan[2];/* Radio destination PAN	*/
+	  byte		net_raddstaddr[8];/* Radio destination EUI64	*/
+	  byte		net_radsrcpan[2];/* Radio source PAN		*/
+	  byte		net_radsrcaddr[8];/* Radio source EUI64		*/
+	 };
+	 struct {
+	  byte		net_ethpad[8];
+	  byte		net_ethdst[6];
+	  byte		net_ethsrc[6];
+	  uint16	net_ethtype;
+	 };
+	};
 	union {
 	 byte		net_radie[1500];/* Radio Information elements	*/
 	 struct {

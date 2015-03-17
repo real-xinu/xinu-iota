@@ -26,6 +26,8 @@ devcall	ethcontrol (
 		case ETH_CTRL_GET_MAC:
 			//memcpy((byte *)arg1, ethptr->devAddress,
 			//		ETH_ADDR_LEN);
+			memcpy((char *)arg1, ethptr->devAddress, 6);
+			/*
 			for(i = 0; i < 96; i++) {
 				if(!memcmp(ethptr->devAddress, xinube_macs[i], 6)) {
 					break;
@@ -36,6 +38,7 @@ devcall	ethcontrol (
 			}
 			memset((char *)arg1, 0, 8);
 			*((char *)arg1 + 7) = i + 101;
+			*/
 			break;
 
 		/* Add a multicast address */

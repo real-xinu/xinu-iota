@@ -16,6 +16,13 @@
 #define	ICMP_ECHOREPLY	129		/* ICMP Echo Reply message	*/
 #define ICMP_ECHOREQST	128		/* ICMP Echo Request message	*/
 
+/* Format of ICMPv6 echo packets */
+
+struct	icmp_echo {
+	uint16	id;	/* Identifier	*/
+	uint16	seq;	/* Sequence no.	*/
+};
+
 /* table of processes that are waiting for ping replies */
 
 struct	icmpentry {			/* entry in the ICMP table	*/

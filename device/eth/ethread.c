@@ -37,8 +37,9 @@ devcall	ethread	(
 
 		/* See if destination address is our unicast address */
 
-		if((!memcmp(epktptr->dst, ethptr->devAddress, 6)) &&
-		   (ntohs(epktptr->type) == 0)) {
+		//if((!memcmp(epktptr->dst, ethptr->devAddress, 6)) &&
+		//   (ntohs(epktptr->type) == 0)) {
+		if((ntohs(epktptr->type) == 0) || (ntohs(epktptr->type) == 0x86dd)) {
 			valid_addr = TRUE;
 
 		/* See if destination address is the broadcast address */
@@ -65,8 +66,13 @@ devcall	ethread	(
 			/* Get the length of the frame */
 
 			framelen = (rdescptr->status >> 16) & 0x00003FFF;
-			kprintf("ethread: incoming frame length %d\n", framelen);
-			framelen = framelen - 14 - 2 - 4;
+
+			if(ntohs(epktptr->type)==0) {
+				framelen = framelen - 14 - 2 - 4;
+			}
+			else {
+				framelen -= 4;
+			}
 
 			/* Only return len characters to caller */
 
@@ -76,7 +82,14 @@ devcall	ethread	(
 
 			/* Copy the packet into the caller's buffer */
 
-			memcpy(buf, (char *)epktptr->data, framelen);
+			if(ntohs(epktptr->type)==0) {
+				memcpy(buf, (char *)epktptr->data, framelen);
+				*buf = 1;
+			}
+			else {
+				memcpy(buf+8, (char *)epktptr, framelen);
+				*buf = 0;
+			}
 		}
 
         	/* Increment the head of the descriptor list */
