@@ -153,11 +153,8 @@ int32	tcp_register (
 		       && tcbptr->tcb_state != TCB_CWAIT) {
 			tcbptr->tcb_readers++;
 			signal (tcbptr->tcb_mutex);
-			kprintf("tcp_register: waiting for rblock, state %d\n", tcbptr->tcb_state);
 			wait (tcbptr->tcb_rblock);
-			kprintf("tcp_register: got rblock\n");
 			wait (tcbptr->tcb_mutex);
-			kprintf("tcp_register: got mutex\n");
 		}
 		if ((state = tcbptr->tcb_state) == TCB_CLOSED) {
 			tcbunref (tcbptr);

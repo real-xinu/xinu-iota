@@ -15,7 +15,6 @@ int32	tcpsynrcvd(
 
 	if (!(pkt->net_tcpcode & TCPF_ACK)
 	    || pkt->net_tcpseq != tcbptr->tcb_rnext) {
-	    	//kprintf("tcpsynrcvd: no ack or bad seq\n");
 		return SYSERR;
 	}
 

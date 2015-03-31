@@ -20,16 +20,18 @@ int32	radread (
 
 	radptr = &radtab[devptr->dvminor];
 
-	wait(radptr->isem);
+	//wait(radptr->isem);
 	pkt = (struct radpacket *)getbuf(radptr->inPool);
 	hptr = pkt->rad_data;
 
 	count = read(ETHER0, (char *)pkt->rad_data, RAD_PKT_SIZE);
 	if(count == SYSERR) {
+		freebuf((char *)pkt);
 		return SYSERR;
 	}
 	if(pkt->rad_data[0] == 0) {
 		memcpy(buf, pkt->rad_data, count+8);
+		freebuf((char *)pkt);
 		return count;
 	}
 
@@ -67,7 +69,7 @@ int32	radread (
 	//memcpy(buf, (char *)pkt, len < count ? len : count);
 
 	freebuf(pkt);
-	signal(radptr->isem);
+	//signal(radptr->isem);
 
 	return len < count ? len : count;
 }

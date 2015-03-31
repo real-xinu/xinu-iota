@@ -17,7 +17,6 @@ void	tcp_in(
 	struct	tcb	*tcbptr;	/* Ptr to TCB entry		*/
 	int32	found = -1;
 
-	kprintf("tcp_in..\n");
 	/* Get pointers to Ethernet header, IP header and TCP header */
 
 	len = pkt->net_iplen;
@@ -29,8 +28,7 @@ void	tcp_in(
 		freebuf ((char *)pkt);
 		return;
 	}*/
-/*DEBUG*/ //kprintf("\nIN: seq %x, ackseq %x\n", pkt->net_tcpseq, pkt->net_tcpack);
-	//pdumph(pkt);
+/*DEBUG*///pdumph(pkt);
 
 	/* Validate header lengths */
 	/*
@@ -94,7 +92,6 @@ void	tcp_in(
 	#endif
 	if(found != -1) {
 		entry = found;
-		kprintf("tcp_in: match slot %d\n", entry);
 	} else {
 
 		/* No match - send a reset and drop the packet */

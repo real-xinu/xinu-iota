@@ -13,6 +13,7 @@ devcall	ethread	(
 	)
 {
 	struct	ethcblk *ethptr;	/* Ethertab entry pointer	*/
+	struct	eth_q_csreg *csrptr;	/* Quark ethernet CSR pointer	*/
 	struct	eth_q_rx_desc *rdescptr;/* Pointer to the descriptor	*/
 	struct	netpacket *pktptr;	/* Pointer to packet		*/
 	struct	etherPkt *epktptr;
@@ -21,6 +22,7 @@ devcall	ethread	(
 	int32	i;
 
 	ethptr = &ethertab[devptr->dvminor];
+	csrptr = (struct eth_q_csreg *)devptr->dvcsr;
 
 	while(1) {
 
@@ -112,6 +114,7 @@ devcall	ethread	(
 		/* Indicate that the descriptor is ready for DMA input */
 
 		rdescptr->status = ETH_QUARK_RDST_OWN;
+		csrptr->rpdr = 1;
 
 		if(valid_addr == TRUE) {
 			break;

@@ -17,7 +17,7 @@ int32	tcp_recv(
 	int32		j;		/* Counter used during copy	*/
 	int32		curlen;		/* Amount of data available	*/
 	pid32		child;		/* Process ID of child		*/
-	kprintf("tcp_recv:\n");
+
 	if((slot < 0) || (slot >= Ntcp)) {
 		return SYSERR;
 	}
@@ -31,7 +31,6 @@ int32	tcp_recv(
 	wait (Tcp.tcpmutex);
 
 	if (tcbptr->tcb_state == TCB_FREE) {
-		kprintf("tcp_recv: error1\n");
 		signal (Tcp.tcpmutex);
 		return SYSERR;
 	}
@@ -70,9 +69,7 @@ int32	tcp_recv(
 		if (child == SYSERR){
 			return SYSERR;
 		} else {
-			kprintf("tcp_recv: waiting for rblock\n");
 			wait(tcbtab[child].tcb_rblock);
-			kprintf("tcp_recv: got rblock\n");
 			*(int *)data = child;
 		}
 		return OK;
@@ -82,7 +79,6 @@ int32	tcp_recv(
 
 	i = 0;
 	while (i < len) {
-		kprintf("tcp_read: reading..\n");
 		/* Handle read after FIN */
 
 		if ((tcbptr->tcb_flags & TCBF_FINSEEN)
@@ -101,7 +97,6 @@ int32	tcp_recv(
 		if (tcbptr->tcb_rblen == 0) {
 			tcbptr->tcb_readers++;
 			signal (tcbptr->tcb_mutex);
-			kprintf("tcp_recv: waiting for data..\n");
 			wait (tcbptr->tcb_rblock);
 			wait (tcbptr->tcb_mutex);
 		}
@@ -109,7 +104,6 @@ int32	tcp_recv(
 		/* Compute current data length */
 
 		curlen = min(len - i, tcbptr->tcb_rblen);
-		kprintf("tcp_recv: got %d bytes\n", curlen);
 		if (tcbptr->tcb_flags & TCBF_RPUSHOK)
 			curlen = min (curlen,
 				      tcbptr->tcb_rpush - tcbptr->tcb_rbseq);
@@ -133,7 +127,7 @@ int32	tcp_recv(
 			break;
 		}
 	}
-	kprintf("tcp_read: done\n");
+
 	tcbunref (tcbptr);
 	signal (tcbptr->tcb_mutex);
 

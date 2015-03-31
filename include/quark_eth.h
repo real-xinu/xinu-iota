@@ -109,6 +109,7 @@ struct eth_q_tx_desc {
 	uint16	buf2size;	/* Size of buffer 2	*/
 	uint32	buffer1;	/* Address of buffer 1	*/
 	uint32	buffer2;	/* Address of buffer 2	*/
+	//uint32	pad[4];
 };
 
 #define ETH_QUARK_TDCS_OWN	0x80000000	/* Descrip. owned by DMA*/
@@ -126,6 +127,7 @@ struct eth_q_rx_desc {
 	uint16	buf2size;	/* Size of buffer 2	*/
 	uint32	buffer1;	/* Address of buffer 1	*/
 	uint32	buffer2;	/* Address of buffer 2	*/
+	//uint32	pad[4];
 };
 #define	rdctl1	buf1size	/* Buffer 1 size field has control bits too */
 #define	rdctl2	buf2size	/* Buffer 2 size field has control bits too */

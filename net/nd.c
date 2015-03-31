@@ -106,11 +106,9 @@ process	nd_in (
 			nd_in_rtradv(iface, (struct nd_rtradv *)msgbuf, buflen, &ipdata);
 		}
 		else if(retval == slots[2]) {
-			kprintf("Incoming nbrsol\n");
 			nd_in_nbrsol(iface, (struct nd_nbrsol *)msgbuf, buflen, &ipdata);
 		}
 		else if(retval == slots[3]) {
-			kprintf("Incoming nbradv\n");
 			nd_in_nbradv(iface, (struct nd_nbradv *)msgbuf, buflen, &ipdata);
 		}
 		else {
@@ -306,7 +304,6 @@ void	nd_in_rtradv (
 				memcpy(ifptr->if_ipucast[i].ipaddr, pio->prefix, 8);
 				memcpy(&ifptr->if_ipucast[i].ipaddr[8], ifptr->if_hwucast, 8);
 				ifptr->if_nipucast++;
-				kprintf("Added a new IP ucast address\n");
 			}
 			break;
 
@@ -474,7 +471,6 @@ void	nd_in_nbrsol (
 		}
 	}
 	else if((!isipunspec(ipdata->ipsrc)) && (sllao)) { /* No ARO, normal ND */
-		kprintf("nd_in_nbrsol: normal Nbr sol.\n");
 		ncslot = -1;
 		for(i = 0; i < ND_NC_SLOTS; i++) {
 			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
@@ -896,13 +892,11 @@ int32	nd_resolve_eth (
 	int32	retval, tries, msglen;
 	int32	i;		/* For loop index	*/
 
-	kprintf("nd_resolve_eth: \n");
 	if(ip == NULL || hwucast == NULL) {
 		return SYSERR;
 	}
 
 	if((iface < 0) || (iface >= NIFACES)) {
-		kprintf("nd_resolve_eth: invalid interface %d\n", iface);
 		return SYSERR;
 	}
 
@@ -910,7 +904,6 @@ int32	nd_resolve_eth (
 	ifptr = &if_tab[iface];
 
 	if(ifptr->if_state == IF_DOWN || ifptr->if_type != IF_TYPE_ETH) {
-		kprintf("nd_resolve_eth: interface %d down\n", iface);
 		restore(mask);
 		return SYSERR;
 	}
@@ -936,9 +929,6 @@ int32	nd_resolve_eth (
 	}
 	if(i < ND_NC_SLOTS) {
 		ncptr = &ifptr->if_ncache[i];
-		kprintf("nd_resolve_eth: found slot in neighbor cache\n");
-		ip_print(ifptr->if_ncache[i].ipaddr);
-		kprintf("\n");
 		memcpy(hwucast, ifptr->if_ncache[i].hwucast, 6);
 		if(ifptr->if_ncache[i].state == ND_NCE_STALE) {
 			ncptr->state = ND_NCE_DELAY;
@@ -949,7 +939,6 @@ int32	nd_resolve_eth (
 	}
 
 	if(ncslot == -1) {
-		kprintf("nd_resolve_eth: no empty slots\n");
 		restore(mask);
 		return SYSERR;
 	}
@@ -1117,6 +1106,7 @@ process	nd_timer (void) {
 				if(ncptr->state == ND_NCE_REACH) {
 					kprintf("neighbor "); ip_print(ncptr->ipaddr);
 					kprintf(" moved to STALE\n");
+					//ncptr->ttl = 100;
 					ncptr->state = ND_NCE_STALE;
 					continue;
 				}

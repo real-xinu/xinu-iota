@@ -13,7 +13,7 @@ interrupt	ethhandler(void)
 	struct	eth_q_tx_desc *tdescptr;/* Pointer to tx descriptor	*/
 	struct	eth_q_rx_desc *rdescptr;/* Pointer to rx descriptor	*/
 	volatile uint32	sr;		/* Copy of status register	*/
-	uint32	count;			/* Variable used to count pkts	*/
+	int32	count;			/* Variable used to count pkts	*/
 
 	ethptr = &ethertab[devtab[ETHER0].dvminor];
 
@@ -87,12 +87,23 @@ interrupt	ethhandler(void)
 		rdescptr = (struct eth_q_rx_desc *)ethptr->rxRing +
 							ethptr->rxTail;
 
-		count = 0;	/* Start packet count at zero */
+		//count = 0;	/* Start packet count at zero */
+		count = semcount(ethptr->isem);
+		int32	remain;
+		if(count < 0) {
+			remain = ethptr->rxRingSize;
+		}
+		else {
+			remain = ethptr->rxRingSize - count;
+		}
+
+		count = 0;
 
 		/* Repeat until we have received		*/
 		/* maximum no. packets that can fit in queue 	*/
 
-		while(count <= ethptr->rxRingSize) {
+		//while(count <= ethptr->rxRingSize) {
+		while(count < remain) {
 
 			/* If the descriptor is owned by the DMA, stop */
 

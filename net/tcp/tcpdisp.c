@@ -55,7 +55,7 @@ void	tcpdisp(
 /*DEBUG*/	"tcpestd","tcpfin1","tcpfin2","tcpcwait","tcpclosing",
 /*DEBUG*/	"tcplastack","tcptwait"};
 
-	kprintf("tcpdisp..\n");
+	//kprintf("tcpdisp..\n");
 
 	/* Obtain the state from the TCB */
 
@@ -73,23 +73,18 @@ void	tcpdisp(
 		else if (pkt->net_tcpseq >= tcbptr->tcb_rnext
 		    && pkt->net_tcpseq <= tcbptr->tcb_rnext + tcbptr->tcb_rwnd)
 			tcpabort (tcbptr);
-		kprintf("tcpdisp: return 1\n");
 		return;
 	}
 
 	/* Handle an incoming ACK */
-	kprintf("tcpdisp: tcpcode %x\n", pkt->net_tcpcode);
-	kprintf("tcpack %d suna %d snext %d\n", pkt->net_tcpack, tcbptr->tcb_suna, tcbptr->tcb_snext);
 	if(pkt->net_tcpcode & TCPF_ACK) {
 		if (pkt->net_tcpack < tcbptr->tcb_suna
 	    	|| pkt->net_tcpack > tcbptr->tcb_snext) {
 			if (state <= TCB_SYNRCVD) {
 				tcpreset (pkt);
 			} else {
-				kprintf("tcpdisp: calling tcpack\n");
 				tcpack (tcbptr, TRUE);
 			}
-			kprintf("tcpdisp: return 2\n");
 			return; 
 		}
 	}
@@ -108,7 +103,7 @@ void	tcpdisp(
 
 	/* Dispatch processing according to the state of the TCB */
 
-/*DEBUG*/ kprintf("tcpdisp: dispatching to %s\n",dnames[state]);
+/*DEBUG*/ //kprintf("tcpdisp: dispatching to %s\n",dnames[state]);
 	(tcpstatesw[state]) (tcbptr, pkt);
 
 	return;

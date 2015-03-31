@@ -91,7 +91,6 @@ void	ip_in (
 	for(i = 0; i < ifptr->if_nipucast; i++) {
 		if(memcmp(pkt->net_ipdst, ifptr->if_ipucast[i].ipaddr,
 							16) == 0) {
-			kprintf("ip_in: iface %d match %d\n", pkt->net_iface, i);
 			ip_recv(pkt);
 			return;
 		}
@@ -99,12 +98,10 @@ void	ip_in (
 
 	for(i = 0; i < ifptr->if_nipmcast; i++) {
 		if(!memcmp(pkt->net_ipdst, ifptr->if_ipmcast[i].ipaddr, 16)) {
-			kprintf("ip_in: iface %d match %d, mcast\n", pkt->net_iface, i);
 			ip_recv(pkt);
 			return;
 		}
 	}
-	kprintf("ip_in: no match\n");
 
 	/* Cannot forward link local packets */
 
@@ -119,6 +116,8 @@ void	ip_in (
 		freebuf((char *)pkt);
 		return;
 	}
+
+	freebuf((char *)pkt);
 }
 
 /*------------------------------------------------------------------------
@@ -172,7 +171,6 @@ void	ip_recv (
 		 case IP_ICMPV6:
 		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
 			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
-			kprintf("ip_recv: calling icmp_in\n");
 			icmp_in(pkt);
 			return;
 
@@ -180,11 +178,13 @@ void	ip_recv (
 		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
 			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
 			//udp_in(pkt);
+			freebuf((char *)pkt);
 			return;
 
 		 case IP_TCP:
 		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
 			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
+			tcp_ntoh(pkt);
 			tcp_in(pkt);
 			return;
 
@@ -218,14 +218,12 @@ int32	ip_send (
 
 	iface = pkt->net_iface;
 	if((iface < 0) || (iface >= NIFACES)) {
-		kprintf("ip_send: invalid interface %d\n", iface);
 		freebuf((char *)pkt);
 		return SYSERR;
 	}
 
 	ifptr = &if_tab[iface];
 	if(ifptr->if_state == IF_DOWN) {
-		kprintf("ip_send: interface %d down\n", iface);
 		freebuf((char *)pkt);
 		return SYSERR;
 	}
@@ -243,6 +241,13 @@ int32	ip_send (
 		 cksum = icmp_cksum(pkt);
 		 pkt->net_iccksum = htons(cksum);
 		 break;
+	
+	 case IP_TCP:
+		 tcp_hton(pkt);
+		 pkt->net_tcpcksum = 0;
+		 cksum = tcp_cksum(pkt);
+		 pkt->net_tcpcksum = htons(cksum);
+		 break;
 	}
 
 	if(ifptr->if_type == IF_TYPE_RADIO) {
@@ -251,7 +256,6 @@ int32	ip_send (
 		return retval;
 	}
 	else if(ifptr->if_type == IF_TYPE_ETH) {
-		kprintf("ip_send: calling ip_send_eth\n");
 		retval = ip_send_eth(pkt);
 		restore(mask);
 		return retval;
@@ -317,7 +321,6 @@ int32	ip_send_rad (
 		return OK;
 	}
 
-	kprintf("Looking in nbr cache\n");
 	for(i = 0; i < ND_NC_SLOTS; i++) {
 		if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
 			continue;
@@ -327,7 +330,6 @@ int32	ip_send_rad (
 		}
 	}
 	if(i < ND_NC_SLOTS) {
-		kprintf("Foudn in nbr cache\n");
 		memcpy(pkt->net_raddstaddr, ifptr->if_ncache[i].hwucast, 8);
 		memcpy(pkt->net_radsrcaddr, ifptr->if_hwucast, 8);
 
@@ -339,7 +341,6 @@ int32	ip_send_rad (
 		return OK;
 	}
 
-	kprintf("Not found in nbr cache\n");
 	freebuf((char *)pkt);
 
 	restore(mask);
@@ -369,7 +370,6 @@ int32	ip_send_eth (
 
 	iface = pkt->net_iface;
 	if((iface < 0) || (iface >= NIFACES)) {
-		kprintf("ip_send_eth: invalide interface %d\n", iface);
 		restore(mask);
 		freebuf((char *)pkt);
 		return SYSERR;
@@ -377,7 +377,6 @@ int32	ip_send_eth (
 
 	ifptr = &if_tab[iface];
 	if(ifptr->if_type != IF_TYPE_ETH) {
-		kprintf("ip_send_eth: interface %d, not ethernet\n", iface);
 		freebuf((char*)pkt);
 		restore(mask);
 		return SYSERR;
@@ -402,7 +401,6 @@ int32	ip_send_eth (
 		return OK;
 	}
 
-	kprintf("ip_send_eth: calling nd_resolve\n");
 	retval = nd_resolve_eth(pkt->net_iface, pkt->net_ipdst, pkt->net_ethdst);
 	if((retval == SYSERR) || (retval == TIMEOUT)) {
 		restore(mask);
@@ -481,6 +479,7 @@ int32	ip_enqueue (
 	mask = disable();
 
 	if(semcount(ipoqueue.iqsem) >= IP_OQSIZ) {
+		freebuf((char *)pkt);
 		restore(mask);
 		return SYSERR;
 	}

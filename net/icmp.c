@@ -165,7 +165,6 @@ void	icmp_in (
 	int32	found;			/* Index of matching ICMP entry	*/
 	int32	i;			/* For loop index		*/
 
-	kprintf("icmp_in: type %d code %d\n", pkt->net_ictype, pkt->net_iccode);
 	mask = disable();
 	/*
 	if((pkt->net_ictype == ICMP_ECHOREQST) && (pkt->net_iccode == 0)) {
@@ -307,6 +306,7 @@ int32	icmp_recv (
 
 	memcpy(buf, (char *)pkt->net_icdata, len);
 
+	freebuf((char *)pkt);
 	restore(mask);
 	return len;
 }
@@ -390,6 +390,7 @@ int32	icmp_recvn (
 		icmptab[slots[i]].icstate = ICMP_USED;
 	}
 
+	freebuf((char *)pkt);
 	restore(mask);
 	return retval;
 }
@@ -432,6 +433,7 @@ int32	icmp_recvaddr (
 		while((int32)msg != slot) {
 			msg = recvtime(timeout);
 			if((int32)msg == TIMEOUT) {
+				icptr->icstate = ICMP_USED;
 				restore(mask);
 				return TIMEOUT;
 			}
@@ -454,12 +456,12 @@ int32	icmp_recvaddr (
 		len = pkt->net_iplen - ICMP_HDR_LEN;
 	}
 
-	kprintf("icmp_recvaddr: copying %d bytes\n", len);
 	memcpy(buf, (char *)pkt->net_icdata, len);
 	ipdata->iphl = pkt->net_iphl;
 	memcpy(ipdata->ipsrc, pkt->net_ipsrc, 16);
 	memcpy(ipdata->ipdst, pkt->net_ipdst, 16);
 
+	freebuf((char *)pkt);
 	restore(mask);
 	return len;
 }
@@ -490,14 +492,12 @@ int32	icmp_recvnaddr (
 	for(i = 0; i < nslots; i++) {
 
 		if((slots[i] < 0) || (slots[i] >= ICMP_SLOTS)) {
-			kprintf("icmp_recvnaddr: invalid slot[%d] %d\n", i, slots[i]);
 			restore(mask);
 			return SYSERR;
 		}
 		icptr = &icmptab[slots[i]];
 
 		if(icptr->icstate != ICMP_USED) {
-			kprintf("icmp_recvnaddr: slot[%d] state not used\n", i);
 			restore(mask);
 			return SYSERR;
 		}
@@ -518,7 +518,6 @@ int32	icmp_recvnaddr (
 		recvclr();
 		msg = recvtime(timeout);
 		if((int32)msg == SYSERR) {
-			kprintf("icmp_recvnaddr: invalid msg revcd\n");
 			for(i = 0; i < nslots; i++) {
 				icmptab[slots[i]].icstate = ICMP_USED;
 			}
@@ -556,6 +555,7 @@ int32	icmp_recvnaddr (
 		icmptab[slots[i]].icstate = ICMP_USED;
 	}
 
+	freebuf((char *)pkt);
 	restore(mask);
 	return retval;
 }
@@ -605,7 +605,6 @@ int32	icmp_send (
 
 	pkt->net_iface = iface;
 
-	kprintf("icmp_send: calling ip_send\n");
 	ip_send(pkt);
 	return OK;
 }

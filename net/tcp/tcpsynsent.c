@@ -41,7 +41,7 @@ int32	tcpsynsent(
 	tcbptr->tcb_rnext = tcbptr->tcb_rbseq = ++pkt->net_tcpseq;
 	tcbptr->tcb_rwnd = tcbptr->tcb_ssthresh = pkt->net_tcpwindow;
 	pkt->net_tcpcode &= ~TCPF_SYN;
-	kprintf("tcpsynsent: rnext = %d\n", tcbptr->tcb_rnext);
+
 	/* Send an ACK */
 
 	tcpdata (tcbptr, pkt);

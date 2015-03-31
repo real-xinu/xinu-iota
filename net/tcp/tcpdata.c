@@ -43,7 +43,6 @@ int32	tcpdata(
 	/* If the reader cannot read this, RST it */
 
 	if (tcbptr->tcb_flags & TCBF_RDDONE && datalen) {
-		//kprintf("tcpdata: error1\n");
 		tcpreset (pkt);
 		return SYSERR;
 	}
@@ -52,7 +51,6 @@ int32	tcpdata(
 
 	if (SEQ_CMP (pkt->net_tcpseq + datalen + codelen,
 		     tcbptr->tcb_rbseq) <= 0) {
-		//kprintf("tcpdata: error2, tcpseq %x, datalen %d, codelen %d, rbseq %x\n", pkt->net_tcpseq, datalen, codelen, tcbptr->tcb_rbseq);
 		tcbptr->tcb_flags |= TCBF_NEEDACK;
 		return SYSERR;
 	}
@@ -61,9 +59,6 @@ int32	tcpdata(
 
 	if (SEQ_CMP (pkt->net_tcpseq + datalen + codelen,
 		     tcbptr->tcb_rbseq + tcbptr->tcb_rbsize) > 0) {
-		//kprintf("tcpdata: error3, tcpseq %x, datalen %d, codelen %d, rbseq %x, rbsize %d\n", pkt->net_tcpseq, datalen, codelen, tcbptr->tcb_rbseq, tcbptr->tcb_rbsize);
-		//kprintf("%d\n", SEQ_CMP(pkt->net_tcpseq+datalen+codelen,tcbptr->tcb_rbseq+tcbptr->tcb_rbsize));
-		//kprintf("%d\n", SEQ_CMP(pkt->net_tcpseq+datalen+codelen,tcbptr->tcb_rbseq+tcbptr->tcb_rbsize) > 0);
 		tcbptr->tcb_flags |= TCBF_NEEDACK;
 		return SYSERR;
 	}
@@ -102,10 +97,8 @@ int32	tcpdata(
 			tcbptr->tcb_rblen = endseq - tcbptr->tcb_rbseq;
 
 			tcbptr->tcb_rnext = endseq + codelen;
-			kprintf("tcpdata: tcp_rnext = %x\n", tcbptr->tcb_rnext);
 		}
 	} else {
-		//kprintf("tcpdata: out of order segment\n");
 		/* We should deal with out-of-order segments */
 	}
 

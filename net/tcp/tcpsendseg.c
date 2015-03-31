@@ -39,8 +39,6 @@ void	tcpsendseg(
 		pkt->net_iplen += 4;
 	}
 
-	//kprintf("tcpsendseg: tcpcode %x\n", pkt->net_tcpcode);
-
 	data = ((char *)&pkt->net_tcpsport + TCP_HLEN(pkt));
 	for (i = 0; i < len; i++) {
 		data[i] = tcbptr->tcb_sbuf[(tcbptr->tcb_sbdata + offset + i)
@@ -61,11 +59,7 @@ void	tcpsendseg(
 		tcbptr->tcb_rttseq = pkt->net_tcpseq;
 		tcbptr->tcb_rtttime = (int)ctr1000;
 	}
-	//kprintf("OUT: seq %x ackseq %x\n", pkt->net_tcpseq, pkt->net_tcpack);
-	//pdumph(pkt);
-	//kprintf("calling ip_send\n");
-	//ip_send (pkt);
-	//ip_send(pkt);
+
 	ip_enqueue(pkt);
 	return;
 }

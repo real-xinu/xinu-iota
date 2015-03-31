@@ -14,6 +14,80 @@ process	main(void)
 	all_rtr[0] = 0xff;
 	all_rtr[1] = 0x02;
 	all_rtr[15] = 0x02;
+
+	int32	lslot, nslot, retval;
+	byte	serverip[16];
+
+	resume(create(shell, 8192, 1, "shell", 1, CONSOLE));
+
+	int32	pingslot;
+	char	buf[100];
+/*
+	pingslot = icmp_register(IF_ETH, ip_unspec, ip_unspec, ICMP_ECHOREQST, 0);
+	if(pingslot == SYSERR) {
+		panic("icmp_register failed");
+	}
+	while(TRUE) {
+		int32	rv;
+		struct	ipinfo ipdata;
+
+		rv = icmp_recvaddr(pingslot, buf, 100, 3000, &ipdata);
+		if(rv == SYSERR) {
+			panic("icmp_recvaddr");
+		}
+		if(rv == TIMEOUT) {
+			continue;
+		}
+		memcpy(ipdata.ipdst, ipdata.ipsrc, 16);
+		memcpy(ipdata.ipsrc, if_tab[1].if_ipucast[0].ipaddr, 16);
+		ipdata.iphl = 255;
+
+		rv = icmp_send(IF_ETH, ICMP_ECHOREPLY, 0, &ipdata, buf, rv);
+		if(rv == SYSERR) {
+			panic("icmp_send");
+		}
+	}
+*/
+	memcpy(serverip, ip_llprefix, 16);
+	serverip[8] = 0x2;
+	serverip[9] = 0x24;
+	serverip[10] = 0xe8;
+	serverip[11] = 0xff;
+	serverip[12] = 0xfe;
+	serverip[13] = 0x3a;
+	serverip[14] = 0xb0;
+	serverip[15] = 0x73;
+#if 0
+	int32	slot = tcp_register(IF_ETH, serverip, 12345, 1);
+	if(slot == SYSERR) {
+		panic("Cannot connect");
+	}
+	/*
+	while((retval = tcp_recv(slot, buf, 10)) != 0) {
+		buf[9] = NULLCH;
+		kprintf("%s", buf);
+	}
+	*/
+	kprintf("main: calling tcp_close\n");
+	tcp_close(slot);
+
+	return OK;
+#endif
+	lslot = tcp_register(IF_ETH, ip_unspec, 12345, 0);
+	if(lslot == SYSERR) {
+		panic("tcp passive open failed");
+	}
+
+	while(1) {
+
+		retval = tcp_recv(lslot, &nslot, 4);
+		if(retval == SYSERR) {
+			panic("cannot accept tcp connections");
+		}
+
+		//while((retval = tcp_recv(nslot, buf, 10)) != 0);
+		tcp_close(nslot);
+	}
 #if 0
 	struct	netpacket *pkt;
 
@@ -137,7 +211,7 @@ process	main(void)
 	}
 */
 #endif
-	struct	ipinfo ipdata;
+/*	struct	ipinfo ipdata;
 	char	buf[50] = {0};
 	byte	ipdst[] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0,
 				0x2, 0x24, 0xe8, 0xff, 0xfe, 0x3a, 0xb0, 0x73};
@@ -155,7 +229,7 @@ process	main(void)
 	kprintf("\n...creating a shell\n");
 	recvclr();
 	resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
-
+*/
 	/* Wait for shell to exit and recreate it */
 
 	while (TRUE) {

@@ -18,7 +18,7 @@ void	pdump (
 		return;
 	}
 
-	kprintf("Ethernet (");
+	kprintf("Eth (");
 	for(i = 0; i < 5; i++) {
 		kprintf("%02x:", pkt->net_ethsrc[i]);
 	}
@@ -74,7 +74,12 @@ void	pdump (
 		 break;
 
 		case IP_TCP:
-		 kprintf("TCP (%d) -> (%d) ", ntohs(pkt->net_tcpsport), ntohs(pkt->net_tcpdport));
+		 kprintf("TCP (%d) -> (%d) ", htons(pkt->net_tcpsport), htons(pkt->net_tcpdport));
+		 uint16 code = ntohs(pkt->net_tcpcode);
+		 if(code & TCPF_SYN) kprintf("syn ");
+		 if(code & TCPF_FIN) kprintf("fin ");
+		 kprintf("seq 0x%x ", ntohl(pkt->net_tcpseq));
+		 if(code & TCPF_ACK) kprintf("ack %x ", ntohl(pkt->net_tcpack));
 		 break;
 
 		default:

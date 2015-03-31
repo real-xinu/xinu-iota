@@ -25,7 +25,7 @@ void	net_init (void)
 
 	/* Create the network buffer pool */
 
-	netbufpool = mkbufpool(PACKLEN, 20);
+	netbufpool = mkbufpool(PACKLEN, 40);
 	if((int32)netbufpool == SYSERR) {
 		panic("Cannot create network buffer pool\n");
 	}
@@ -102,7 +102,6 @@ process	netin (
 		kprintf("IN: "); pdump(pkt);
 
 		if((pkt->net_ipvtch&0xf0) == 0x60) {
-			kprintf("netin: incoming ipv6 packet\n");
 			pkt->net_iface = iface;
 			ip_in(pkt);
 			//freebuf((char *)pkt);

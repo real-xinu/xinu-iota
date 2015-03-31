@@ -45,7 +45,7 @@ int32	tcp_init(void)
 
 	Tcp.tcpcmdq = mqcreate (10);
 
-	resume(create(tcp_out, 8192, 500, "tcp_out", 0, NULL));
+	resume(create(tcp_out, 8192, 499, "tcp_out", 0, NULL));
 
 	return OK;
 }

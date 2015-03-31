@@ -17,13 +17,6 @@ struct netpacket *tcpalloc(
 
 	pkt = (struct netpacket *) getbuf(netbufpool);
 
-	/* Set Ethernet type */
-
-	/* Fill in Ethernet header */
-	#if 0
-	memcpy((char *)pkt->net_ethsrc, NetData.ethucast, ETH_ADDR_LEN);
-	pkt->net_ethtype = 0x0800;	/* Type is IP */
-	#endif
 	/* Fill in IP header */
 
 	pkt->net_ipvtch = 0x60;		/* IP version and traffic class	*/
@@ -52,7 +45,7 @@ struct netpacket *tcpalloc(
 		pkt->net_tcpcode |= TCPF_ACK;
 		pkt->net_tcpack = tcbptr->tcb_rnext;
 	}
-	kprintf("tcpalloc: tcp ack %d\n", pkt->net_tcpack);
+
 	/* Set the window advertisement */
 
 	pkt->net_tcpwindow = tcbptr->tcb_rbsize - tcbptr->tcb_rblen;

@@ -1,4 +1,4 @@
-/* tcpcksum.c  -  cksum, tcpcksum */
+/* tcp_cksum.c  -  cksum, tcp_cksum */
 
 #include <xinu.h>
 
@@ -32,17 +32,18 @@ static	uint16	localcksum(
 }
 
 /*------------------------------------------------------------------------
- *  tcpcksum  -  compute the TCP checksum for a packet with IP header
+ *  tcp_cksum  -  compute the TCP checksum for a packet with IP header
  *		 in host byte order and TCP in network byte order
  *------------------------------------------------------------------------
  */
-uint16	tcpcksum(
+uint16	tcp_cksum(
 	struct netpacket *pkt		/* Pointer to packet	*/
 	)
 {
 	uint32	sum;			/* Computed checksum		*/
+	uint16	cksum;			/* Final checksum		*/
 	uint16	*ptr;			/* Walks along the segment	*/
-	uint16	len;			/* Length of the TCP segment	*/
+	uint32	len;			/* Length of the TCP segment	*/
 	int32	i;			/* Counts 16-bit items in IP	*/
 					/*   source and dest. addrs.	*/
 	struct {			/* Pseudo header		*/
@@ -66,12 +67,12 @@ uint16	tcpcksum(
 	pseudo.zeros[1]    = 0;
 	pseudo.zeros[2]    = 0;
 	pseudo.ipnh = pkt->net_ipnh;
-	pseudo.tcplen  = htons(len);
+	pseudo.tcplen  = htonl(len);
 
 	/* Adjust the length to an even number for the computation */
 
 	if (len % 2) {
-		*( ((char *)pkt) + len ) = NULLCH;
+		pkt->net_ipdata[len] = 0;
 		len++;
 	}
 
@@ -82,7 +83,7 @@ uint16	tcpcksum(
 	/* Add in the "pseudo header" values */
 
 	ptr = (uint16 *)&pseudo;
-	for (i = 0; i < 6; i++) {
+	for (i = 0; i < 20; i++) {
 		sum += htons(*ptr);
 		ptr++;
 	}
@@ -93,9 +94,9 @@ uint16	tcpcksum(
 
 	/* Add overflow */
 
-	sum = (sum & 0xffff) + (sum >> 16);
+	cksum = (sum & 0xffff) + (sum >> 16);
 
 	/* return 16 bits of the value */
 
-	return ~((sum & 0xffff) + (sum >> 16)) & 0xffff;
+	return (~cksum);
 }

@@ -19,7 +19,7 @@ int32	tcpxmit(
 	tcpseq		seq;		/* sequence number		*/
 
 	sent = 0;
-	kprintf("tcpxmit..\n");
+
 	/* Send as many segments as we can */
 
 	while (1) {
@@ -29,7 +29,7 @@ int32	tcpxmit(
 		len = tcpnextseg (tcbptr, &offset);
 		seq = tcbptr->tcb_suna + offset;
 		code = codelen = 0;
-		//kprintf("len = %d, seq = %d\n", len, seq);
+
 		/* The Following handles each code bit */
 
 		/* SYN */
@@ -78,14 +78,13 @@ int32	tcpxmit(
 		if ( ( (len + codelen) == 0 )
 		    || ( (pipe + len + codelen) >= tcbptr->tcb_cwnd ) ) {
 			if (sent == 0) {
-				kprintf("calling tcpack\n");
 				tcpack (tcbptr, FALSE);
 			}
 			return OK;
 		}
 
 		/* Send a segment */
-		kprintf("calling tcpsendseg, code %x\n", code);
+
 		tcpsendseg (tcbptr, offset, len, code);
 
 		if (SEQ_CMP(tcbptr->tcb_snext, seq + len + codelen) < 0) {
