@@ -73,8 +73,13 @@ void	pdump (
 		 }
 		 break;
 
+		case IP_UDP:
+		 kprintf("UDP (%d) -> (%d) ", ntohs(pkt->net_udpsport), ntohs(pkt->net_udpdport));
+		 kprintf("len %d ", ntohs(pkt->net_udplen));
+		 break;
+
 		case IP_TCP:
-		 kprintf("TCP (%d) -> (%d) ", htons(pkt->net_tcpsport), htons(pkt->net_tcpdport));
+		 kprintf("TCP (%d) -> (%d) ", ntohs(pkt->net_tcpsport), ntohs(pkt->net_tcpdport));
 		 uint16 code = ntohs(pkt->net_tcpcode);
 		 if(code & TCPF_SYN) kprintf("syn ");
 		 if(code & TCPF_FIN) kprintf("fin ");

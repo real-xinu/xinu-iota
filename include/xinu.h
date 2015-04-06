@@ -26,6 +26,7 @@
 #include <nd.h>
 #include <netiface.h>
 #include <ip.h>
+#include <udp.h>
 #include <timer.h>
 #include <mq.h>
 #include <tcb.h>

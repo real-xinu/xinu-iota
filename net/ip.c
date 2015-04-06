@@ -177,8 +177,8 @@ void	ip_recv (
 		 case IP_UDP:
 		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
 			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
-			//udp_in(pkt);
-			freebuf((char *)pkt);
+			udp_ntoh(pkt);
+			udp_in(pkt);
 			return;
 
 		 case IP_TCP:
@@ -247,6 +247,13 @@ int32	ip_send (
 		 pkt->net_tcpcksum = 0;
 		 cksum = tcp_cksum(pkt);
 		 pkt->net_tcpcksum = htons(cksum);
+		 break;
+
+	 case IP_UDP:
+		 udp_hton(pkt);
+		 pkt->net_udpcksum = 0;
+		 cksum = udp_cksum(pkt);
+		 pkt->net_udpcksum = ntohs(cksum);
 		 break;
 	}
 

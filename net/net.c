@@ -21,6 +21,8 @@ void	net_init (void)
 
 	ip_init();
 
+	udp_init();
+
 	tcp_init();
 
 	/* Create the network buffer pool */
