@@ -9,7 +9,7 @@
  *------------------------------------------------------------------------
  */
 syscall	sleep(
-	  uint32	delay		/* Time to delay in seconds	*/
+	  int32	delay		/* Time to delay in seconds	*/
 	)
 {
 	if (delay > MAXSECONDS) {
@@ -24,7 +24,7 @@ syscall	sleep(
  *------------------------------------------------------------------------
  */
 syscall	sleepms(
-	  uint32	delay		/* Time to delay in msec.	*/
+	  int32	delay		/* Time to delay in msec.	*/
 	)
 {
 	intmask	mask;			/* Saved interrupt mask		*/
