@@ -23,6 +23,7 @@
 #include <ticc1200.h>
 #include <ether.h>
 #include <radio.h>
+#include <wsserver.h>
 #include <gpio.h>
 #include <net.h>
 #include <ip.h>

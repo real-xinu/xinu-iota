@@ -42,7 +42,8 @@ REBUILDFLAGS	=	-s $(TOPDIR)/system  debug.c 	\
 			-s $(TOPDIR)/device/rad			\
 			-s $(TOPDIR)/net  'arp_dump*'  		\
 				'dhcp_dump*'  pxe.c		\
-			-s $(TOPDIR)/shell  'xsh_rdstest*'
+			-s $(TOPDIR)/shell  'xsh_rdstest*'	\
+			-s $(TOPDIR)/wsserver
 
 INCLUDE		=	-I$(TOPDIR)/include
 DEFS		= 	-DBSDURG -DVERSION=\""`cat $(VERSIONFILE)`"\"
