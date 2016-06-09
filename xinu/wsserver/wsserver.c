@@ -17,10 +17,12 @@ process	wsserver ()
 	uint32 timeout = 600000;
 	struct c_msg ctlpkt;
 
+	printf("=== Started Wi-SUN testbed server ===\n");
+
 	/* Register UDP port for use by server */
 	slot = udp_register(0, 0, serverport);
 	if (slot == SYSERR) {
-		kprintf("emulation server could not get UDP port %d\n", serverport);
+		printf("emulation server could not get UDP port %d\n", serverport);
 		return 1;
 	}
 
@@ -32,10 +34,10 @@ process	wsserver ()
 		if (retval == TIMEOUT) {
 			continue;
 		} else if (retval == SYSERR) {
-			kprintf("WARNING: UDP receive error in emulation server\n");
+			printf("WARNING: UDP receive error in emulation server\n");
 			continue; /* may be better to have the server terminate? */
 		} else {
-			kprintf("Control msg: len %d type %d\n",
+			printf("Control msg: len %d type %d\n",
 					ntohl(ctlpkt.clength), ntohl(ctlpkt.cmsgtyp));
 			/* TODO: Actual processing (ctl server does nothing for now) */
 		}
