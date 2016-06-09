@@ -608,6 +608,9 @@ extern	void	wakeup(void);
 /* in file write.c */
 extern	syscall	write(did32, char *, uint32);
 
+/* in file wsserver.c */
+extern	process	wsserver(void);
+
 /* in file xdone.c */
 extern	void	xdone(void);
 

@@ -59,17 +59,25 @@ process	main(void)
 
 	lp_send(&pkt);
 
+  /*
 	kprintf("\n...creating a shell\n");
 	recvclr();
 	resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
+  */
+
+  kprintf("\n...creating testbed server process\n");
+  recvclr();
+  resume(create(wsserver, 8192, 50, "wsserver", 1, CONSOLE));
 
 	/* Wait for shell to exit and recreate it */
 
+  /*
 	while (TRUE) {
 		receive();
 		sleepms(200);
 		kprintf("\n\nMain process recreating shell\n\n");
 		resume(create(shell, 4096, 20, "shell", 1, CONSOLE));
 	}
+  */
 	return OK;
 }
