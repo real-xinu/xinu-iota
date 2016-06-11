@@ -1,6 +1,6 @@
 #include "headers.h"
 
-#define SRV_IP   "128.10.136.187"
+//#define SRV_IP   "128.10.136.187"
 #define BUFLEN 2048
 #define PORT 55000
 #define ERR -1
@@ -198,7 +198,7 @@ void print_topology(struct c_msg buf)
  *
  *
  ******************************************************/
-int server_discovery()
+int server_discovery(const char *SRV_IP)
 {
 
     char *recvbuf;
@@ -280,7 +280,7 @@ int server_discovery()
 }
 
 
-void udp_process()
+void udp_process(const char *SRV_IP)
 {
 
     char *recvbuf;
@@ -370,8 +370,16 @@ void udp_process()
 
 int main(int argc, char **argv)
 {
-    if (server_discovery() == 1)
-        udp_process();
+    if(argc != 2)
+    {
+     printf("Usage: %s <ip address of testbed server>\n", argv[0]);
+     return ERR;
+
+    }
+    const char *SRV_IP = argv[1];
+    
+    if (server_discovery(SRV_IP) == 1)
+        udp_process(SRV_IP);
     else
         printf("The Testbed server is not discovered.\n");
 
