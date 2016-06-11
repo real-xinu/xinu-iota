@@ -246,14 +246,6 @@ int server_discovery()
     }
 
 
-    if (inet_aton(SRV_IP, &si_other.sin_addr)==0)
-    {
-        fprintf(stderr, "inet_aton() failed\n");
-        exit(1);
-    }
-
-
-
     while(1)
     {
 
@@ -333,13 +325,6 @@ void udp_process()
 	                                                              receive any response from the testbed server */
     {
         error_handler("socket Option for timeout can not be set");
-    }
-
-
-    if (inet_aton(SRV_IP, &si_other.sin_addr)==0)
-    {
-        fprintf(stderr, "inet_aton() failed\n");
-        exit(1);
     }
 
 
