@@ -102,33 +102,7 @@ process stomgmt()
      }    
   }
 
-/*
 
-  while(TRUE)
-  {
-     int32 retval;
-     retval = udp_recv(udp_id, recvbuff, sizeof(struct c_msg), 100);
-     
-     struct c_msg *mgmt_msg;
-     struct c_msg *reply;
-     mgmt_msg = (struct c_msg *)recvbuff;
-     int32 mgm_msgtyp =  ntohl(mgmt_msg->cmsgtyp);
-          
-     if ((retval > 0))
-     {
-       reply = cmsg_handler(mgm_msgtyp);  //Call c_msg handler 
-       kprintf("reply: %d\n", ntohl(reply->cmsgtyp));
-       sendbuff = (char *)reply; 
-       status stat = udp_send(udp_id, sendbuff, sizeof(struct c_msg));
-       if(stat > 0)
-       {
-           kprintf("The reply from testbed server is sent to mgmt server\n");
-
-       }
-     }
-
-  }
-*/
 }
 
 
@@ -137,81 +111,15 @@ int32  stonode_init()
 {
 
     resume(create(stomgmt, 8192, 30, "stomgmt", 0, NULL));
-    /*struct etherPkt *msg;
-    msg = (struct etherPkt *)getbuf(netbufpool);
-    int32  msglen, retval;
-    msglen  = ETH_HDR_LEN;*/
-
-    /* fill out Ethernet packet fields */
-    /*memset(msg, 0, sizeof(msg));
-    memcpy(msg->src, NetData.ethucast, ETH_ADDR_LEN);
-    memcpy(msg->dst, NetData.ethbcast, ETH_ADDR_LEN);
-    msg->type = htons(ETH_TYPE_A);
-    msg->amsgtyp = htonl(A_RESTART);*/
-
-
-    /* send packet over Ethernet */
-    /*retval = write(ETHER0,(char *)msg, msglen);
-    if(retval == SYSERR)
-    {
-         return SYSERR;
-
-    }else
-    {        
-         return OK;
-
-    }*/
+   
     return OK;
 
 }
 
-int32 node_assign(struct netpacket *pkt)
-{
-    struct etherPkt *assign_msg;
-    assign_msg = (struct etherPkt *)getbuf(netbufpool);
-    int32 msglen, retval;
-    msglen = ETH_HDR_LEN;
 
-    /*fill out the Ethernet packet fields */
-    memset(assign_msg, 0, sizeof(assign_msg));
-    memcpy(assign_msg->src, NetData.ethucast, ETH_ADDR_LEN);
-    memcpy(assign_msg->dst, pkt->net_ethsrc, ETH_ADDR_LEN);
-    assign_msg->type = htons(ETH_TYPE_A);
-    assign_msg->amsgtyp = htons(A_ASSIGN);
-    assign_msg->anodeid = htonl(1);
-
-    retval = write(ETHER0, (char *)assign_msg, msglen);
-    return retval;
-
-
-}
 void stonode(struct netpacket *pkt)
 {
-   struct etherPkt *server_msg;
-   int32 retval;
-   server_msg = (struct etherPkt *)pkt->net_udpdata;
-   int32 amsgtyp = ntohs(server_msg->amsgtyp);
-
-   switch(amsgtyp)
-   {
-     case A_JOIN:
-	     kprintf("Join message is received\n");
-	     retval = node_assign(pkt);
-	     if (retval == OK)
-	     {
-                kprintf("Assign message is sent\n");
-
-	     }
-	     break;
-     case A_ACK:
-	     kprintf("ACK is received\n");
-	     break;
-     case A_ERR:
-             break;
-
-
-   }
-  
+ 
 
 }
 
