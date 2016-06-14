@@ -76,10 +76,49 @@ struct etherPkt *create_etherPkt()
     memset(msg, 0, sizeof(msg));
 
     return msg;
-
-
-
 }
+
+void dump_topology_test()
+{
+    char *filename = "Topology-K10.0";
+
+    /* Open topology file from server */
+    int32 fd = open(RFILESYS, filename, "ro");
+    if (fd == SYSERR) {
+        printf("WARNING: Could not open topology file for reading\n");
+        return;
+    }
+
+    /* Get size of topology file so we know how much to read */
+    int32 size = control(RFILESYS, RFS_CTL_SIZE, 0, 0);
+    if (size == SYSERR) {
+        printf("WARNING: Could not get topology file size\n");
+        close(fd);
+        return;
+    }
+
+    printf("~> Topology is %d bytes (%d nodes)\n", size, size / 6);
+
+    char *buff = (char *) getmem(size);
+    int32 status = read(fd, buff, size);
+    if (status == SYSERR) {
+        printf("WARNING: Could not read topology file contents\n");
+        close(fd);
+        return;
+    }
+
+    printf("~> Topology file contents read into buffer:\n");
+    int i;
+    for (i = 0; i < size; i++) {
+        if (i % 6 == 0) printf("\t%d: ", i / 6);
+        printf("%02x ", buff[i]);
+        if (i % 6 == 5) printf("\n");
+    }
+
+    close(fd);
+    freemem(buff, size);
+}
+    
 
 /*------------------------------------------------------------------------
  * wsserver  -  Server to manage the Wi-SUN emulation testbed
@@ -96,6 +135,8 @@ process	wsserver ()
     struct c_msg ctlpkt;
 
     printf("=== Started Wi-SUN testbed server ===\n");
+
+    dump_topology_test();
 
     /* Register UDP port for use by server */
     slot = udp_register(0, 0, serverport);
