@@ -4,6 +4,10 @@
 #include <stdio.h>
 
 int32 nodeid = 0;
+#define PORT 55000
+#define TIME_OUT 600000
+struct t_entry topo[MAXNODES];
+int32 nnodes = 0;
 /*-----------------------------------------------------------
  * controle message handler is used to
  * call appropiate function based on message
@@ -51,7 +55,7 @@ struct c_msg * cmsg_handler(int32 mgm_msgtyp)
         break;
     case C_TOP_REQ:
         printf("Message type is %d\n", C_TOP_REQ);
-        cmsg_reply->cmsgtyp = htonl(C_OK);
+        cmsg_reply = toporeply();
         break;
     case C_NEW_TOP:
         printf("Message type is %d\n", C_NEW_TOP);
@@ -74,29 +78,59 @@ struct etherPkt *create_etherPkt()
     struct etherPkt *msg;
     msg = (struct etherPkt *)getmem(sizeof(struct etherPkt));
     memset(msg, 0, sizeof(msg));
-
     return msg;
 }
 
-/* TEST FUNCTION for reading and printing a topology */
-/* This is meant to show how the functions in wstopology.c can be used */
-void dump_topology_test()
+/*-----------------------------------------------------------------------
+*Use the remote file system to open and read a topology database file named Top.0
+-------------------------------------------------------------------------*/
+status init_topo(char *filename)
 {
-    char *filename = "Topology-K10.0";
 
     char *buff;
-    int nodes;
-    int status = read_topology(filename, &buff, &nodes);
-    if (status == SYSERR) {
-        printf("WARNING: Could not read topology file\n");
-        return;
+    uint32 size;
+    int status = read_topology(filename, &buff, &size);
+    if (status == SYSERR)
+    {
+        kprintf("WARNING: Could not read topology file\n");
+        
+
     }
 
-    printf("~> Raw topology info for %d nodes:\n", nodes);
-    print_raw_topology(buff, nodes);
-    freemem(buff, nodes * ETH_ADDR_LEN);
+    nnodes = topo_update(buff, size, topo);
+    freemem(buff, size);
+
+    return OK;
+
 }
-    
+
+/*-------------------------------------------------------------------
+ * Create a topo reply message as a response of topo request message 
+ * --------------------------------------------------------------------*/
+struct c_msg *toporeply()
+{
+    struct c_msg *topo_reply;
+    topo_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+    int32 i, j;
+
+    topo_reply->cmsgtyp = htonl(C_TOP_REPLY);
+    topo_reply->topnum = htonl(nnodes);
+    for (i=0; i<nnodes; i++)
+    {
+        topo_reply->topdata[i].t_nodeid = htonl(topo[i].t_nodeid);
+        topo_reply->topdata[i].t_status = htonl(topo[i].t_status);
+
+        for (j=0; j<6; j++)
+        {
+            topo_reply->topdata[i].t_neighbors[j] = topo[i].t_neighbors[j];
+
+        }
+
+    }
+
+    return topo_reply;
+}
+
 
 /*------------------------------------------------------------------------
  * wsserver  -  Server to manage the Wi-SUN emulation testbed
@@ -104,23 +138,21 @@ void dump_topology_test()
  */
 process	wsserver ()
 {
-    uint16 serverport = 55000;
+    uint16 serverport = PORT;
     int32 slot;
     int32 retval;
     uint32 remip;
     uint16 remport;
-    uint32 timeout = 600000;
+    uint32 timeout = TIME_OUT;
     struct c_msg ctlpkt;
 
     printf("=== Started Wi-SUN testbed server ===\n");
-
-    dump_topology_test();
 
     /* Register UDP port for use by server */
     slot = udp_register(0, 0, serverport);
     if (slot == SYSERR)
     {
-        printf("testbed server could not get UDP port %d\n", serverport);
+        kprintf("testbed server could not get UDP port %d\n", serverport);
         return 1;
     }
 
@@ -136,13 +168,13 @@ process	wsserver ()
         }
         else if (retval == SYSERR)
         {
-            printf("WARNING: UDP receive error in testbed server\n");
+            kprintf("WARNING: UDP receive error in testbed server\n");
             continue; /* may be better to have the server terminate? */
         }
         else
         {
             int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
-            printf("* => Got control message %d\n", mgm_msgtyp);
+            kprintf("* => Got control message %d\n", mgm_msgtyp);
 
             struct c_msg *replypkt = cmsg_handler(mgm_msgtyp);
 
@@ -150,12 +182,12 @@ process	wsserver ()
                                        (char *) replypkt, sizeof(struct c_msg));
             if (sndval == SYSERR)
             {
-                printf("WARNING: UDP send error in testbed server\n");
+                kprintf("WARNING: UDP send error in testbed server\n");
             }
             else
             {
                 int32 reply_msgtyp = ntohl(replypkt->cmsgtyp);
-                printf("* <= Replied with %d\n", reply_msgtyp);
+                kprintf("* <= Replied with %d\n", reply_msgtyp);
             }
 
             freemem((char *) replypkt, sizeof(struct c_msg));
@@ -163,36 +195,10 @@ process	wsserver ()
     }
 }
 
-/*------------------------------------------------------------------------
- * Send a broadcast message to nodes and wait to receive join messages
- * from them.
- * -----------------------------------------------------------------------*/
-status wsserver_init()
-{
-    struct etherPkt *msg;
-    int32 retval;
 
-    msg = create_etherPkt();
-    /* fill out Ethernet packet fields */
-    memcpy(msg->src, NetData.ethucast, ETH_ADDR_LEN);
-    memcpy(msg->dst, NetData.ethbcast, ETH_ADDR_LEN);
-    msg->type = htons(ETH_TYPE_A);
-    msg->amsgtyp = htonl(A_RESTART);  /*restart message */
-
-    /*send packet over Ethernet */
-
-    retval = write(ETHER0, (char *)msg, sizeof(struct etherPkt));
-    if(retval >0)
-        return OK;
-
-    else
-        return SYSERR;
-
-}
 
 /*-------------------------------------------------------------------------
  * Send error message as a response to a node.
- *
  * --------------------------------------------------------------------------*/
 status wsserver_senderr(struct netpacket *pkt)
 {
@@ -220,7 +226,6 @@ status wsserver_senderr(struct netpacket *pkt)
  * Send assign message as a response of JOIN message from a
  * node.
  * ----------------------------------------------------------*/
-
 status wsserver_assign(struct netpacket *pkt)
 {
     struct etherPkt *assign_msg;
@@ -233,9 +238,8 @@ status wsserver_assign(struct netpacket *pkt)
     assign_msg->type = htons(ETH_TYPE_A);
     assign_msg->amsgtyp = htonl(A_ASSIGN);  /*Assign message */
     assign_msg->anodeid = htonl(nodeid);
-
     retval = write(ETHER0, (char *)assign_msg, sizeof(struct etherPkt));
-    if(retval > 0)
+    if(retval > 0)  
         return OK;
     else
         return SYSERR;
@@ -258,15 +262,18 @@ void amsg_handler(struct netpacket *pkt)
         kprintf("--->Join message is received\n");
         retval = wsserver_assign(pkt);
         if (retval == OK)
+	{
             kprintf("<-Assign message is sent\n");
+	    nodeid++;
+	}
         break;
 
     case A_ACK:
         kprintf("--->ACK message is recevied\n");
         break;
     case A_ERR:
-	kprintf("--->Error message is received\n");
-	break;
+        kprintf("--->Error message is received\n");
+        break;
 
     }
 

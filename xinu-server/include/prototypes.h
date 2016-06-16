@@ -611,11 +611,12 @@ extern	syscall	write(did32, char *, uint32);
 /* in file wsserver.c */
 extern	process	wsserver(void);
 extern void amsg_handler(struct netpacket *);
+struct c_msg *toporeply();
 
 /* in file wstopology.c */
-extern status read_topology(char *, char **, int *);
-extern void print_raw_topology(char *, int);
-
+extern status read_topology(char *, char **, uint32 *);
+extern int32 topo_update(char *, uint32, struct t_entry *);
+extern status init_topo(char *);
 /* in file xdone.c */
 extern	void	xdone(void);
 

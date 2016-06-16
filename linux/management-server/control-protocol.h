@@ -12,6 +12,9 @@
 /* Definition of message types */
 #include "compatibility.h"
 
+#define MAX_NODES  46
+#define File_Name_Size  50
+
 #define	C_RESTART	0	/* A message sent to the testbed server	*/
 				/*  that requests the server to restart.*/
 
@@ -157,18 +160,18 @@ struct	c_msg	{
 
 		struct	{		/* PING_REPLY */
 			int32	pingnum; /* Count of entries that follow*/
-			struct	p_entry	pingdata[];
+			struct	p_entry	pingdata[MAX_NODES];
 			
 		};
 
 		struct	{		/* TOP_REPLY */
 			int32	topnum; /* Count of entries that follow	*/
-			struct	t_entry	topdata[];
+			struct	t_entry	topdata[MAX_NODES];
 		};
 
 		struct	{		/* NEW_TOP */
 			int32	flen;	/* Length of the name in bytes	*/
-			byte	fname[];/* File name to use		*/
+			byte	fname[File_Name_Size];/* File name to use		*/
 		};
 
 		uint32	uptime;		/* TS_RESP (amount of time the	*/

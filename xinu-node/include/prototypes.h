@@ -610,7 +610,7 @@ extern	syscall	write(did32, char *, uint32);
 
 /* in file wsserver.*/
 extern void amsg_handler(struct netpacket *);
-extern status wsnode_join(struct netpacket *);
+extern status wsnode_join();
 extern status wsnode_sendack(struct netpacket *);
 /* in file xdone.c */
 extern	void	xdone(void);

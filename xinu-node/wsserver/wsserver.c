@@ -21,13 +21,19 @@ struct etherPkt *create_etherPkt(struct netpacket *pkt)
 
 }
 /*------------------------------------------------
- * Send join message after receiving restart message
- * from the testbed server.
+ * Send a join broadcast message when the node boots up.
  * -------------------------------------------------*/
-status wsnode_join(struct netpacket *pkt)
+status wsnode_join()
 {
     struct etherPkt *join_msg;
-    join_msg = create_etherPkt(pkt);
+    //join_msg = create_etherPkt(pkt);
+    join_msg= (struct etherPkt *)getmem(sizeof(struct etherPkt));
+
+    /*fill out Ethernet packet header fields */
+    memset(join_msg, 0, sizeof(join_msg));
+    memcpy(join_msg->src, NetData.ethucast, ETH_ADDR_LEN);
+    memcpy(join_msg->dst, NetData.ethbcast, ETH_ADDR_LEN);
+    join_msg->type = htons(ETH_TYPE_A);
     int32 retval;
     /*fill out Ethernet packet data fields */
     join_msg->amsgtyp = htonl(A_JOIN);
@@ -40,9 +46,9 @@ status wsnode_join(struct netpacket *pkt)
         return SYSERR;
 
 }
-/*--------------------------------------------------
+/*-------------------------------------------------------------
  * Send ack message as a repsonse of assign and ping messages
- * -----------------------------------------------*/
+ * ----------------------------------------------------------*/
 status wsnode_sendack(struct netpacket *pkt)
 {
     struct etherPkt *ack_msg;
@@ -75,7 +81,6 @@ void amsg_handler(struct netpacket *pkt)
         break;
     case A_RESTART:
         kprintf("<--- RESTART message is received\n");
-        wsnode_join(pkt);
         break;
     case A_XOFF:
         kprintf("<---XOF message is received\n");
@@ -89,7 +94,6 @@ void amsg_handler(struct netpacket *pkt)
     case A_PING_ALL:
         kprintf("<--- PINGALL message is received\n");
         break;
-
 
     }
 

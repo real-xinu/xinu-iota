@@ -157,27 +157,29 @@ which have been recevied from the testbed server.
 ******************************************************/
 
 
-void print_topology(struct c_msg buf)
+void print_topology(struct c_msg *buf)
 {
     fflush(stdout);
-    printf("Reply: Topplogy Reply\n");
-    printf("Number of entries: %d\n",ntohl(buf.topnum));
-    int entries = ntohl(buf.topnum);
+    printf("Number of Nodes: %d\n",ntohl(buf->topnum));
+    int entries = ntohl(buf->topnum);
     byte mcaddr[6];
     for (int i=0; i<entries; i++)
     {
-        printf("%d ,", ntohl(buf.topdata[i].t_nodeid));
-        printf("%d ,",ntohl(buf.topdata[i].t_status));
+        printf("%d ,", ntohl(buf->topdata[i].t_nodeid));
+        printf("%d ,",ntohl(buf->topdata[i].t_status));
         for (int j=0; j <6; j++)
         {
-            for (int k=7; k>=0; k--)
-            {
-                printf("%d", (buf.topdata[i].t_neighbors[j]>>k)&0x01);
-            }
-            mcaddr[j] = buf.topdata[i].t_neighbors[j];
+            
+                  for (int k=7; k>=0; k--)
+                  {
+                      printf("%d", (buf->topdata[i].t_neighbors[j]>>k)&0x01);
+                  }
+		  printf(" ");
+            //printf("%d ",buf->topdata[i].t_neighbors[j]);
+            mcaddr[j] = buf->topdata[i].t_neighbors[j];
 
         }
-        printf("\nThe neighbors of Node %d are: ",ntohl(buf.topdata[i].t_nodeid));
+        printf("\nThe neighbors of Node %d are: ",ntohl(buf->topdata[i].t_nodeid));
         for (int j=0; j<46; j++)
         {
             if (srbit(mcaddr, j, BIT_TEST) == 1)
@@ -193,20 +195,16 @@ void print_topology(struct c_msg buf)
  *
  *  This function is used to discover the testbed server
  *
- *
- *
- *
- *
  ******************************************************/
 int server_discovery(const char *SRV_IP)
 {
 
     char *recvbuf;
-    recvbuf = malloc(sizeof(struct c_msg*));
+    recvbuf = malloc(sizeof(struct c_msg));
     struct sockaddr_in si_me, si_other;
     int s;
     socklen_t slen = sizeof(si_other);
-    struct c_msg *buf = malloc(sizeof(struct c_msg*));
+    struct c_msg *buf = malloc(sizeof(struct c_msg));
     struct c_msg message;
     struct timeval tv;
     tv.tv_sec = TIME_OUT;
@@ -284,11 +282,11 @@ void udp_process(const char *SRV_IP)
 {
 
     char *recvbuf;
-    recvbuf = malloc(sizeof(struct c_msg*));
+    recvbuf = malloc(sizeof(struct c_msg));
     struct sockaddr_in si_me, si_other;
     int s;
     socklen_t slen = sizeof(si_other);
-    struct c_msg *buf = malloc(sizeof(struct c_msg*));
+    struct c_msg *buf = malloc(sizeof(struct c_msg));
     char command[BUFLEN];
     struct c_msg message;
     struct timeval tv;
@@ -351,9 +349,15 @@ void udp_process(const char *SRV_IP)
                 printf("Timeout, Please try again\n");
             }
             buf = (struct c_msg*)recvbuf;
+
             if(ntohl(buf->cmsgtyp) == C_OK)
             {
                 printf("Reply from Testbed_Server: %s\n", "OK");
+            }
+            else if(ntohl(buf->cmsgtyp) == C_TOP_REPLY)
+            {
+
+                print_topology(buf);
             }
             else if (ntohl(buf->cmsgtyp) == C_ERR)
             {
@@ -365,19 +369,18 @@ void udp_process(const char *SRV_IP)
 
     close(s);
 
-
 }
 
 int main(int argc, char **argv)
 {
     if(argc != 2)
     {
-     printf("Usage: %s <ip address of testbed server>\n", argv[0]);
-     return ERR;
+        printf("Usage: %s <ip address of testbed server>\n", argv[0]);
+        return ERR;
 
     }
     const char *SRV_IP = argv[1];
-    
+
     if (server_discovery(SRV_IP) == 1)
         udp_process(SRV_IP);
     else

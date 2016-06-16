@@ -67,6 +67,7 @@ process	main(void)
 
   kprintf("\n...creating testbed server process\n");
   recvclr();
+  wsnode_join();
   //resume(create(wsserver, 8192, 50, "wsserver", 1, CONSOLE));
 
 	/* Wait for shell to exit and recreate it */

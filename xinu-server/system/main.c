@@ -68,7 +68,7 @@ process	main(void)
   kprintf("\n...creating testbed server process\n");
   recvclr();
   resume(create(wsserver, 8192, 50, "wsserver", 1, CONSOLE));
-  wsserver_init();
+  init_topo("Top.0");
 
 	/* Wait for shell to exit and recreate it */
 
