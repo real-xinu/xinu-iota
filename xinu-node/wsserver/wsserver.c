@@ -2,6 +2,13 @@
 
 #include <xinu.h>
 #include <stdio.h>
+struct node_info
+{
+    int32 nodeid;
+    byte mcastaddr[6];
+};
+
+struct node_info info;
 /*-----------------------------------------------------------
 * Create and Ethernet packet and fill out header fields
 *----------------------------------------------------------*/
@@ -26,7 +33,7 @@ struct etherPkt *create_etherPkt(struct netpacket *pkt)
 status wsnode_join()
 {
     struct etherPkt *join_msg;
-    //join_msg = create_etherPkt(pkt);
+    int32 retval;
     join_msg= (struct etherPkt *)getmem(sizeof(struct etherPkt));
 
     /*fill out Ethernet packet header fields */
@@ -34,7 +41,7 @@ status wsnode_join()
     memcpy(join_msg->src, NetData.ethucast, ETH_ADDR_LEN);
     memcpy(join_msg->dst, NetData.ethbcast, ETH_ADDR_LEN);
     join_msg->type = htons(ETH_TYPE_A);
-    int32 retval;
+
     /*fill out Ethernet packet data fields */
     join_msg->amsgtyp = htonl(A_JOIN);
     join_msg->anodeid = htons(0);
@@ -69,15 +76,15 @@ status wsnode_sendack(struct netpacket *pkt)
  * -----------------------------------------------*/
 void amsg_handler(struct netpacket *pkt)
 {
+    int i;
     struct etherPkt *node_msg;
     node_msg = (struct etherPkt *)pkt;
     int32 amsgtyp = ntohl(node_msg->amsgtyp);
     switch(amsgtyp)
     {
     case A_ASSIGN:
-        kprintf("<---Assign message is received\n");
         if(wsnode_sendack(pkt)== OK)
-		kprintf("--->ACK message is sent\n");
+            kprintf("--->ACK message is sent\n");
         break;
     case A_RESTART:
         kprintf("<--- RESTART message is received\n");

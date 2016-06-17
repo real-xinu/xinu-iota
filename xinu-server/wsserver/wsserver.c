@@ -4,10 +4,19 @@
 #include <stdio.h>
 
 int32 nodeid = 0;
-#define PORT 55000
-#define TIME_OUT 600000
-struct t_entry topo[MAXNODES];
 int32 nnodes = 0;
+
+#define PORT 55000  /* UDP PORT */
+#define TIME_OUT 600000 
+
+/*-----------------------------------------------------------------
+ * Network topology data strucutre which is used to keep current 
+ * network topology information in RAM.
+ * --------------------------------------------------------------*/
+
+struct t_entry topo[MAXNODES];
+
+
 /*-----------------------------------------------------------
  * controle message handler is used to
  * call appropiate function based on message
@@ -94,7 +103,6 @@ status init_topo(char *filename)
     {
         kprintf("WARNING: Could not read topology file\n");
         
-
     }
 
     nnodes = topo_update(buff, size, topo);
@@ -231,6 +239,7 @@ status wsserver_assign(struct netpacket *pkt)
     struct etherPkt *assign_msg;
     assign_msg = create_etherPkt();
     int32 retval;
+    int i;
     /* fill out Ethernet packet fields */
 
     memcpy(assign_msg->src, NetData.ethucast, ETH_ADDR_LEN);
@@ -238,6 +247,10 @@ status wsserver_assign(struct netpacket *pkt)
     assign_msg->type = htons(ETH_TYPE_A);
     assign_msg->amsgtyp = htonl(A_ASSIGN);  /*Assign message */
     assign_msg->anodeid = htonl(nodeid);
+    for (i=0; i<6; i++)
+    {
+	    assign_msg->amcastaddr[i] = topo[nodeid].t_neighbors[i];
+    }
     retval = write(ETHER0, (char *)assign_msg, sizeof(struct etherPkt));
     if(retval > 0)  
         return OK;
@@ -252,6 +265,7 @@ status wsserver_assign(struct netpacket *pkt)
 
 void amsg_handler(struct netpacket *pkt)
 {
+
     struct etherPkt *node_msg;
     status retval;
     node_msg = (struct etherPkt *)pkt;
@@ -274,6 +288,8 @@ void amsg_handler(struct netpacket *pkt)
     case A_ERR:
         kprintf("--->Error message is received\n");
         break;
+    default:
+        wsserver_senderr(pkt);	
 
     }
 
