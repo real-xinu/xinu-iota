@@ -1,4 +1,4 @@
-Testbed Server
+Xinu node
 ==============
 
 This directory contains files for the Xinu image that should be loaded on the nodes .
