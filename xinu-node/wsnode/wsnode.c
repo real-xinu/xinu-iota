@@ -2,10 +2,9 @@
 
 #include <xinu.h>
 #include <stdio.h>
-/*--------------------------------------------------------
- strucure to keep assigned multicast address and the node ID
- from testbed server
-*---------------------------------------------------------*/ 
+/*------------------------------------------------------------------
+ a data strucure to keep assigned multicast address and the node ID.
+*------------------------------------------------------------------*/ 
 struct node_info
 {
     int32 nodeid;
