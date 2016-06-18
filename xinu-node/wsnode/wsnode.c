@@ -2,6 +2,10 @@
 
 #include <xinu.h>
 #include <stdio.h>
+/*--------------------------------------------------------
+ strucure to keep assigned multicast address and the node ID
+ from testbed server
+*---------------------------------------------------------*/ 
 struct node_info
 {
     int32 nodeid;
@@ -70,22 +74,49 @@ status wsnode_sendack(struct netpacket *pkt)
         return SYSERR;
 
 }
+/*-------------------------------------------------------------------
+ A utility function to print multicast address and node ID
+-----------------------------------------------------------------*/
+void print_info(struct etherPkt *node_msg)
+{
+    int i,j;
+    for (i=0; i< 6; i++)
+    {
+        info.mcastaddr[i] = node_msg->amcastaddr[i];
+    }
+    kprintf("node id:%d, ", info.nodeid);
+    for (j=0; j< 6; j++)
+    {
+        for (i=7; i>=0; i--)
+        {
+
+            kprintf("%d ", (info.mcastaddr[j]>> i) &0x01);
+        }
+        kprintf(" ");
+    }
+
+}
+
+
 /*------------------------------------------------
  * Message handler is used to call
  * appropiate function based on message type.
  * -----------------------------------------------*/
 void amsg_handler(struct netpacket *pkt)
 {
-    int i;
+
     struct etherPkt *node_msg;
     node_msg = (struct etherPkt *)pkt;
     int32 amsgtyp = ntohl(node_msg->amsgtyp);
     switch(amsgtyp)
     {
     case A_ASSIGN:
-	pdump(pkt);
         if(wsnode_sendack(pkt)== OK)
-            kprintf("--->ACK message is sent\n");
+        {
+            info.nodeid = ntohl(node_msg->anodeid);
+            print_info(node_msg);
+            kprintf("\n--->ACK message is sent\n");
+        }
         break;
     case A_RESTART:
         kprintf("<--- RESTART message is received\n");
