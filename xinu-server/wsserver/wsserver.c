@@ -2,6 +2,7 @@
 
 #include <xinu.h>
 #include <stdio.h>
+#include <string.h>
 
 int32 nodeid = 0;
 int32 nnodes = 0;
@@ -27,6 +28,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
 {
 
     struct c_msg *cmsg_reply;
+    status stat;
     int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
     memset(cmsg_reply, 0, sizeof(struct c_msg));
@@ -34,45 +36,55 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
     switch(mgm_msgtyp)
     {
     case C_RESTART:
-        printf("Message type is %d\n", C_RESTART);
+        kprintf("Message type is %d\n", C_RESTART);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_RESTART_NODES:
-        printf("Message type is %d\n", C_RESTART_NODES);
+        kprintf("Message type is %d\n", C_RESTART_NODES);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_PING_REQ:
-        printf("Message type is %d\n", C_PING_REQ);
+        kprintf("Message type is %d\n", C_PING_REQ);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_PING_ALL:
-        printf("Message type is %d\n", C_PING_ALL);
+        kprintf("Message type is %d\n", C_PING_ALL);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_XOFF:
-        printf("Message type is %d\n", C_XOFF);
+        kprintf("Message type is %d\n", C_XOFF);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_XON:
-        printf("Message type is %d\n", C_XON);
+        kprintf("Message type is %d\n", C_XON);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_OFFLINE:
-        printf("Message type is %d\n", C_OFFLINE);
+        kprintf("Message type is %d\n", C_OFFLINE);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_ONLINE:
-        printf("Message type is %d\n", C_ONLINE);
+        kprintf("Message type is %d\n", C_ONLINE);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_TOP_REQ:
-        printf("Message type is %d\n", C_TOP_REQ);
+        kprintf("Message type is %d\n", C_TOP_REQ);
         cmsg_reply = toporeply();
         break;
     case C_NEW_TOP:
-        printf("Message type is %d\n", C_NEW_TOP);
-        printf("New File name:%s\n", ctlpkt.fname);
-        cmsg_reply->cmsgtyp = htonl(C_OK);
+        kprintf("Message type is %d\n", C_NEW_TOP);
+        char *fname;
+        fname = getmem(sizeof(ctlpkt.fname));
+        strcpy(fname,ctlpkt.fname);
+        stat = init_topo(fname);
+        if (stat == OK)
+        {
+            cmsg_reply->cmsgtyp = htonl(C_OK);
+        }
+        else
+        {
+            cmsg_reply->cmsgtyp = htonl(C_ERR);
+        }
         break;
     case C_TS_REQ:
         printf("Message type is %d\n", C_TS_REQ);
@@ -94,9 +106,10 @@ struct etherPkt *create_etherPkt()
     return msg;
 }
 
-/*-----------------------------------------------------------------------
-*Use the remote file system to open and read a topology database file named Top.0
--------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------
+*Use the remote file system to open and read a topology database file
+(Default file name=Top.0)
+--------------------------------------------------------------------------*/
 status init_topo(char *filename)
 {
 
@@ -106,7 +119,7 @@ status init_topo(char *filename)
     if (status == SYSERR)
     {
         kprintf("WARNING: Could not read topology file\n");
-
+        return SYSERR;
     }
 
     nnodes = topo_update(buff, size, topo);
@@ -185,7 +198,7 @@ process	wsserver ()
         }
         else
         {
-             int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp); 
+            int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
             kprintf("* => Got control message %d\n", mgm_msgtyp);
 
             struct c_msg *replypkt = cmsg_handler(ctlpkt);
@@ -294,7 +307,7 @@ void amsg_handler(struct netpacket *pkt)
     case A_ACK:
         for (i=0; i<16; i++)
         {
-         //   kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
+            //   kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
         }
         kprintf("--->ACK message is recevied\n");
         break;

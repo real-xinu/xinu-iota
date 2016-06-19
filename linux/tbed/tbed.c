@@ -344,7 +344,7 @@ void udp_process(const char *SRV_IP)
 
             if(ntohl(buf->cmsgtyp) == C_OK)
             {
-                printf("Reply from Testbed_Server: %s\n", "OK");
+                printf("Reply from Testbed Server: OK");
             }
             else if(ntohl(buf->cmsgtyp) == C_TOP_REPLY)
             {
@@ -353,7 +353,7 @@ void udp_process(const char *SRV_IP)
             }
             else if (ntohl(buf->cmsgtyp) == C_ERR)
             {
-
+               printf("Reply from Testbed server:ERROR");
             }
         }
 
