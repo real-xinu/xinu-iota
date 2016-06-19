@@ -46,7 +46,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     {
         message.cmsgtyp = htonl(C_RESTART);
     }
-    
+
     else if(!strcmp(array_token[0], "xon"))
     {
         message.cmsgtyp = htonl(C_XON);
@@ -78,8 +78,8 @@ struct c_msg  command_handler(char command[BUFLEN])
             message.cmsgtyp = htonl(ERR);
         }
     }
-    
-    
+
+
     else if(!strcmp(array_token[0], "nping"))
     {
         message.cmsgtyp = htonl(C_PING_REQ);
@@ -94,14 +94,15 @@ struct c_msg  command_handler(char command[BUFLEN])
             message.cmsgtyp = htonl(ERR);
         }
     }
-    
+
     else if(!strcmp(array_token[0], "topdump"))
     {
         message.cmsgtyp = htonl(C_TOP_REQ);
     }
-    else if (!strcmp(array_token[0], "newtopo"))
+    else if (!strcmp(array_token[0], "newtop"))
     {
         message.cmsgtyp = htonl(C_NEW_TOP);
+        message.flen = htonl(strlen(array_token[1]));
         strcpy((char *)message.fname ,array_token[1]);
     }
     else if (!strcmp(array_token[0], "online"))
@@ -112,7 +113,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     else if(!strcmp(array_token[0], "offline"))
     {
 
-    
+
 
     }
     else if (!strcmp(array_token[0], "exit"))
@@ -154,12 +155,12 @@ void print_topology(struct c_msg *buf)
         printf("%d ,",ntohl(buf->topdata[i].t_status));
         for (int j=0; j <6; j++)
         {
-            
-                  for (int k=7; k>=0; k--)
-                  {
-                      printf("%d", (buf->topdata[i].t_neighbors[j]>>k)&0x01);
-                  }
-		  printf(" ");
+
+            for (int k=7; k>=0; k--)
+            {
+                printf("%d", (buf->topdata[i].t_neighbors[j]>>k)&0x01);
+            }
+            printf(" ");
             //printf("%d ",buf->topdata[i].t_neighbors[j]);
             mcaddr[j] = buf->topdata[i].t_neighbors[j];
 
@@ -226,6 +227,12 @@ int server_discovery(const char *SRV_IP)
 	                                                              receive any response from the testbed server */
     {
         error_handler("socket Option for timeout can not be set");
+    }
+
+    int bcast = 1;
+    if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast)))
+    {
+        error_handler("Broadcast socket option cannot be set");
     }
 
 

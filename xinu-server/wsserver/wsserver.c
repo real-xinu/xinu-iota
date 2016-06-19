@@ -23,9 +23,11 @@ struct t_entry topo[MAXNODES];
  * call appropiate function based on message
  * which is received from the management server.
  * ---------------------------------------------------------*/
-struct c_msg * cmsg_handler(int32 mgm_msgtyp)
+struct c_msg * cmsg_handler(struct c_msg ctlpkt)
 {
+
     struct c_msg *cmsg_reply;
+    int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
     memset(cmsg_reply, 0, sizeof(struct c_msg));
 
@@ -69,6 +71,7 @@ struct c_msg * cmsg_handler(int32 mgm_msgtyp)
         break;
     case C_NEW_TOP:
         printf("Message type is %d\n", C_NEW_TOP);
+        printf("New File name:%s\n", ctlpkt.fname);
         cmsg_reply->cmsgtyp = htonl(C_OK);
         break;
     case C_TS_REQ:
@@ -182,10 +185,10 @@ process	wsserver ()
         }
         else
         {
-            int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
+             int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp); 
             kprintf("* => Got control message %d\n", mgm_msgtyp);
 
-            struct c_msg *replypkt = cmsg_handler(mgm_msgtyp);
+            struct c_msg *replypkt = cmsg_handler(ctlpkt);
 
             status sndval = udp_sendto(slot, remip, remport,
                                        (char *) replypkt, sizeof(struct c_msg));
