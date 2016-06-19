@@ -19,18 +19,7 @@ void error_handler(char *s)
 }
 /*******************************************************
  This function is used to handle operator commands.
-The list of commands:
-1- restart
-2- restart-nodes
-3- node-off
-4- node-on
-5- offline
-6- online
-7- ping
-8- pingall
-9- dump-topo
-10- new-topo
-11- exit
+
 *******************************************************/
 struct c_msg  command_handler(char command[BUFLEN])
 {
