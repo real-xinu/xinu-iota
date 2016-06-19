@@ -19,18 +19,7 @@ void error_handler(char *s)
 }
 /*******************************************************
  This function is used to handle operator commands.
-The list of commands:
-1- restart
-2- restart-nodes
-3- node-off
-4- node-on
-5- offline
-6- online
-7- ping
-8- pingall
-9- dump-topo
-10- new-topo
-11- exit
+
 *******************************************************/
 struct c_msg  command_handler(char command[BUFLEN])
 {
@@ -57,13 +46,8 @@ struct c_msg  command_handler(char command[BUFLEN])
     {
         message.cmsgtyp = htonl(C_RESTART);
     }
-    else if (!strcmp(array_token[0], "restart-nodes"))
-    {
-
-        message.cmsgtyp = htonl(C_RESTART_NODES);
-
-    }
-    else if(!strcmp(array_token[0], "node-on"))
+    
+    else if(!strcmp(array_token[0], "xon"))
     {
         message.cmsgtyp = htonl(C_XON);
         num = atoi(array_token[1]);
@@ -79,7 +63,7 @@ struct c_msg  command_handler(char command[BUFLEN])
         }
 
     }
-    else if (!strcmp(array_token[0], "node-off"))
+    else if (!strcmp(array_token[0], "xoff"))
     {
         message.cmsgtyp = htonl(C_XOFF);
         num = atoi(array_token[1]);
@@ -94,16 +78,9 @@ struct c_msg  command_handler(char command[BUFLEN])
             message.cmsgtyp = htonl(ERR);
         }
     }
-    else if(!strcmp(array_token[0], "nodes-off"))
-    {
-        message.cmsgtyp = htonl(C_OFFLINE);
-
-    }
-    else if(!strcmp(array_token[0], "nodes-on"))
-    {
-        message.cmsgtyp = htonl(C_ONLINE);
-    }
-    else if(!strcmp(array_token[0], "ping"))
+    
+    
+    else if(!strcmp(array_token[0], "nping"))
     {
         message.cmsgtyp = htonl(C_PING_REQ);
         num = atoi(array_token[1]);
@@ -117,18 +94,26 @@ struct c_msg  command_handler(char command[BUFLEN])
             message.cmsgtyp = htonl(ERR);
         }
     }
-    else if(!strcmp(array_token[0], "pingall"))
-    {
-        message.cmsgtyp = htonl(C_PING_ALL);
-    }
-    else if(!strcmp(array_token[0], "dump-topo"))
+    
+    else if(!strcmp(array_token[0], "topdump"))
     {
         message.cmsgtyp = htonl(C_TOP_REQ);
     }
-    else if (!strcmp(array_token[0], "new-topo"))
+    else if (!strcmp(array_token[0], "newtopo"))
     {
         message.cmsgtyp = htonl(C_NEW_TOP);
         strcpy((char *)message.fname ,array_token[1]);
+    }
+    else if (!strcmp(array_token[0], "online"))
+    {
+
+
+    }
+    else if(!strcmp(array_token[0], "offline"))
+    {
+
+    
+
     }
     else if (!strcmp(array_token[0], "exit"))
     {
@@ -160,8 +145,7 @@ which have been recevied from the testbed server.
 void print_topology(struct c_msg *buf)
 {
     fflush(stdout);
-    printf("Reply: Topplogy Reply\n");
-    printf("Number of entries: %d\n",ntohl(buf->topnum));
+    printf("Number of Nodes: %d\n",ntohl(buf->topnum));
     int entries = ntohl(buf->topnum);
     byte mcaddr[6];
     for (int i=0; i<entries; i++)
@@ -170,12 +154,13 @@ void print_topology(struct c_msg *buf)
         printf("%d ,",ntohl(buf->topdata[i].t_status));
         for (int j=0; j <6; j++)
         {
-	  /*
-            for (int k=7; k>=0; k--)
-            {
-                printf("%d", (buf->topdata[i].t_neighbors[j]>>k)&0x01);
-            } */
-	    printf("%d ",buf->topdata[i].t_neighbors[j]);
+            
+                  for (int k=7; k>=0; k--)
+                  {
+                      printf("%d", (buf->topdata[i].t_neighbors[j]>>k)&0x01);
+                  }
+		  printf(" ");
+            //printf("%d ",buf->topdata[i].t_neighbors[j]);
             mcaddr[j] = buf->topdata[i].t_neighbors[j];
 
         }
@@ -194,10 +179,6 @@ void print_topology(struct c_msg *buf)
 /*********************************************************
  *
  *  This function is used to discover the testbed server
- *
- *
- *
- *
  *
  ******************************************************/
 int server_discovery(const char *SRV_IP)
@@ -245,6 +226,13 @@ int server_discovery(const char *SRV_IP)
 	                                                              receive any response from the testbed server */
     {
         error_handler("socket Option for timeout can not be set");
+    }
+
+    /* Ensure that we can broadcast on our socket */
+    int bcast = 1;
+    if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast)))
+    {
+        error_handler("Broadcast socket option cannot be set");
     }
 
 
@@ -353,16 +341,16 @@ void udp_process(const char *SRV_IP)
                 printf("Timeout, Please try again\n");
             }
             buf = (struct c_msg*)recvbuf;
-	 
+
             if(ntohl(buf->cmsgtyp) == C_OK)
             {
                 printf("Reply from Testbed_Server: %s\n", "OK");
             }
-	    else if(ntohl(buf->cmsgtyp) == C_TOP_REPLY)
-	    {
-		   
-		    print_topology(buf);
-	    }
+            else if(ntohl(buf->cmsgtyp) == C_TOP_REPLY)
+            {
+
+                print_topology(buf);
+            }
             else if (ntohl(buf->cmsgtyp) == C_ERR)
             {
 
@@ -379,12 +367,12 @@ int main(int argc, char **argv)
 {
     if(argc != 2)
     {
-     printf("Usage: %s <ip address of testbed server>\n", argv[0]);
-     return ERR;
+        printf("Usage: %s <ip address of testbed server>\n", argv[0]);
+        return ERR;
 
     }
     const char *SRV_IP = argv[1];
-    
+
     if (server_discovery(SRV_IP) == 1)
         udp_process(SRV_IP);
     else

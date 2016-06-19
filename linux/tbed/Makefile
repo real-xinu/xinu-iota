@@ -1,6 +1,6 @@
 CFLAGS = -c -g -Wall -std=gnu99
 CC = gcc
-TARGET = mgmt-server
+TARGET = tbed
 TARGET2 = srbit
 all: $(TARGET)
 

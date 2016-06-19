@@ -7,10 +7,11 @@ int32 nodeid = 0;
 int32 nnodes = 0;
 
 #define PORT 55000  /* UDP PORT */
-#define TIME_OUT 600000 
+#define TIME_OUT 600000
 
+byte ack_info[16];
 /*-----------------------------------------------------------------
- * Network topology data strucutre which is used to keep current 
+ * Network topology data strucutre which is used to keep current
  * network topology information in RAM.
  * --------------------------------------------------------------*/
 
@@ -102,7 +103,7 @@ status init_topo(char *filename)
     if (status == SYSERR)
     {
         kprintf("WARNING: Could not read topology file\n");
-        
+
     }
 
     nnodes = topo_update(buff, size, topo);
@@ -113,7 +114,7 @@ status init_topo(char *filename)
 }
 
 /*-------------------------------------------------------------------
- * Create a topo reply message as a response of topo request message 
+ * Create a topo reply message as a response of topo request message
  * --------------------------------------------------------------------*/
 struct c_msg *toporeply()
 {
@@ -228,15 +229,15 @@ status wsserver_senderr(struct netpacket *pkt)
         return SYSERR;
 
 
-
 }
 /*-----------------------------------------------------------
- * Send assign message as a response of JOIN message from a
- * node.
+ * Send an assign message as a response of JOIN message that is
+ * received from a node.
  * ----------------------------------------------------------*/
 status wsserver_assign(struct netpacket *pkt)
 {
     struct etherPkt *assign_msg;
+
     assign_msg = create_etherPkt();
     int32 retval;
     int i;
@@ -249,10 +250,14 @@ status wsserver_assign(struct netpacket *pkt)
     assign_msg->anodeid = htonl(nodeid);
     for (i=0; i<6; i++)
     {
-	    assign_msg->amcastaddr[i] = topo[nodeid].t_neighbors[i];
+        assign_msg->amcastaddr[i] = topo[nodeid].t_neighbors[i];
     }
+
+    memset(ack_info, 0, sizeof(ack_info));
+    memcpy(ack_info, (char *)(assign_msg) + 14, 16);
+
     retval = write(ETHER0, (char *)assign_msg, sizeof(struct etherPkt));
-    if(retval > 0)  
+    if(retval > 0)
         return OK;
     else
         return SYSERR;
@@ -266,6 +271,7 @@ status wsserver_assign(struct netpacket *pkt)
 void amsg_handler(struct netpacket *pkt)
 {
 
+    int i;
     struct etherPkt *node_msg;
     status retval;
     node_msg = (struct etherPkt *)pkt;
@@ -276,20 +282,24 @@ void amsg_handler(struct netpacket *pkt)
         kprintf("--->Join message is received\n");
         retval = wsserver_assign(pkt);
         if (retval == OK)
-	{
+        {
             kprintf("<-Assign message is sent\n");
-	    nodeid++;
-	}
+            nodeid++;
+        }
         break;
 
     case A_ACK:
+        for (i=0; i<16; i++)
+        {
+         //   kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
+        }
         kprintf("--->ACK message is recevied\n");
         break;
     case A_ERR:
         kprintf("--->Error message is received\n");
         break;
     default:
-        wsserver_senderr(pkt);	
+        wsserver_senderr(pkt);
 
     }
 
