@@ -243,6 +243,13 @@ int server_discovery(const char *SRV_IP)
         error_handler("socket Option for timeout can not be set");
     }
 
+    /* Ensure that we can broadcast on our socket */
+    int bcast = 1;
+    if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast)))
+    {
+        error_handler("Broadcast socket option cannot be set");
+    }
+
 
     while(1)
     {
