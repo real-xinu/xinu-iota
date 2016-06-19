@@ -27,7 +27,7 @@ struct	etherPkt {
 
 	   byte apingdata[8];
 
-	   byte aaking[16];
+	   byte aacking[16];
 
 	   byte aerrmsg[16];
      

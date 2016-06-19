@@ -4,7 +4,7 @@
 #include <stdio.h>
 /*------------------------------------------------------------------
  a data strucure to keep assigned multicast address and the node ID.
-*------------------------------------------------------------------*/ 
+*------------------------------------------------------------------*/
 struct node_info
 {
     int32 nodeid;
@@ -62,10 +62,19 @@ status wsnode_join()
 status wsnode_sendack(struct netpacket *pkt)
 {
     struct etherPkt *ack_msg;
+    struct etherPkt *node_msg;
+    node_msg = (struct etherPkt *)pkt;
+
     ack_msg = create_etherPkt(pkt);
     int32 retval;
-
     ack_msg->amsgtyp = htonl(A_ACK);
+    memcpy(ack_msg->aacking,(char *)(node_msg) + 14, 16);
+    int i;
+    for (i=0; i<16; i++)
+    {
+        //kprintf("aacking: %d\n", ack_msg->aacking[i]);
+    }
+
     retval = write(ETHER0, (char *)ack_msg, sizeof(struct etherPkt));
     if(retval > 0)
         return OK;
@@ -76,14 +85,11 @@ status wsnode_sendack(struct netpacket *pkt)
 /*-------------------------------------------------------------------
  A utility function to print multicast address and node ID
 -----------------------------------------------------------------*/
-void print_info(struct etherPkt *node_msg)
+void print_info()
 {
     int i,j;
-    for (i=0; i< 6; i++)
-    {
-        info.mcastaddr[i] = node_msg->amcastaddr[i];
-    }
-    kprintf("node id:%d, ", info.nodeid);
+
+    kprintf("node id:%d\n", info.nodeid);
     for (j=0; j< 6; j++)
     {
         for (i=7; i>=0; i--)
@@ -107,13 +113,18 @@ void amsg_handler(struct netpacket *pkt)
     struct etherPkt *node_msg;
     node_msg = (struct etherPkt *)pkt;
     int32 amsgtyp = ntohl(node_msg->amsgtyp);
+    int i;
     switch(amsgtyp)
     {
     case A_ASSIGN:
         if(wsnode_sendack(pkt)== OK)
         {
             info.nodeid = ntohl(node_msg->anodeid);
-            print_info(node_msg);
+            for (i=0; i< 6; i++)
+            {
+                info.mcastaddr[i] = node_msg->amcastaddr[i];
+            }
+            print_info();
             kprintf("\n--->ACK message is sent\n");
         }
         break;
