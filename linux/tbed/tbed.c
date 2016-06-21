@@ -27,6 +27,7 @@ void error_handler(char *s)
 struct c_msg  command_handler(char command[BUFLEN])
 {
     struct c_msg message;
+    memset(&message, 0, sizeof(struct c_msg));
     char array_token[2][20];
     char seps[]   = " ";
     char *token;
@@ -119,13 +120,14 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
     else if (!strcmp(array_token[0], "online"))
     {
+     message.cmsgtyp = htonl(C_ONLINE);
 
 
     }
     else if(!strcmp(array_token[0], "offline"))
     {
 
-
+      message.cmsgtyp = htonl(C_OFFLINE);
 
     }
     else if (!strcmp(array_token[0], "exit"))
@@ -340,6 +342,7 @@ void response_handler(struct c_msg *buf)
         break;
     case C_TS_RESP:
         break;
+    
 
 
     }

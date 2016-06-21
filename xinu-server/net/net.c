@@ -110,6 +110,7 @@ process	netin ()
 			freebuf((char *)pkt);
 			continue;
 		    case ETH_TYPE_A:
+			kprintf("Type A\n");
 			amsg_handler(pkt);
 			continue;
 		    case ETH_TYPE_B:
