@@ -1,5 +1,5 @@
 /* string.h */
-
+extern  char    *strcpy(char *, char *);
 extern	char	*strncpy(char *, const char *, int32);
 extern	char	*strncat(char *, const char *, int32);
 extern	int32	strncmp(const char *, const char *, int32);

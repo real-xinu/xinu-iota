@@ -117,6 +117,7 @@ void amsg_handler(struct netpacket *pkt)
     switch(amsgtyp)
     {
     case A_ASSIGN:
+	pdump(pkt);
         if(wsnode_sendack(pkt)== OK)
         {
             info.nodeid = ntohl(node_msg->anodeid);
@@ -138,7 +139,14 @@ void amsg_handler(struct netpacket *pkt)
         kprintf("<--- XON message is received\n");
         break;
     case A_PING:
+	//pdump(pkt);
         kprintf("<--- PING message is received\n");
+	if(wsnode_sendack(pkt) == OK)
+	{
+            kprintf("----> ACK message is sent\n");   
+
+	}
+        
         break;
     case A_PING_ALL:
         kprintf("<--- PINGALL message is received\n");

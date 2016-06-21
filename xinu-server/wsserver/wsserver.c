@@ -11,6 +11,27 @@ int32 nnodes = 0;
 #define TIME_OUT 600000
 
 byte ack_info[16];
+int ping_ack_flag = 0;
+#define NOTACTIV 0
+#define ALIVE    1
+#define NOTRESP  -1
+/*----------------------------------------------------------------
+ * c_msg queue 
+ * -------------------------------------------------------------*/
+struct c_msg *c_msg_queue;
+int queue_index = 0;
+
+struct c_msg dequeue_msg()
+{
+   int i;
+   struct c_msg message;
+   message = c_msg_queue[0];
+   for (i=1; i<=queue_index; i++)
+	   c_msg_queue[i-1] = c_msg_queue[i];
+   queue_index--;
+
+   return message;
+}
 /*-----------------------------------------------------------------
  * Network topology data strucutre which is used to keep current
  * network topology information in RAM.
@@ -28,7 +49,6 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
 {
 
     struct c_msg *cmsg_reply;
-    status stat;
     int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
     memset(cmsg_reply, 0, sizeof(struct c_msg));
@@ -45,7 +65,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
         break;
     case C_PING_REQ:
         kprintf("Message type is %d\n", C_PING_REQ);
-        cmsg_reply->cmsgtyp = htonl(C_OK);
+	cmsg_reply = ping_reply(ctlpkt);
         break;
     case C_PING_ALL:
         kprintf("Message type is %d\n", C_PING_ALL);
@@ -73,18 +93,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
         break;
     case C_NEW_TOP:
         kprintf("Message type is %d\n", C_NEW_TOP);
-        char *fname;
-        fname = getmem(sizeof(ctlpkt.fname));
-        strcpy(fname,ctlpkt.fname);
-        stat = init_topo(fname);
-        if (stat == OK)
-        {
-            cmsg_reply->cmsgtyp = htonl(C_OK);
-        }
-        else
-        {
-            cmsg_reply->cmsgtyp = htonl(C_ERR);
-        }
+        cmsg_reply = newtop(ctlpkt);
         break;
     case C_TS_REQ:
         printf("Message type is %d\n", C_TS_REQ);
@@ -128,10 +137,133 @@ status init_topo(char *filename)
     return OK;
 
 }
+/* -----------------------------------------------------------------
+ * Thid function is used to update MAC address field in the topology 
+ * database.
+ * ----------------------------------------------------------------*/
+void topo_update_mac(struct netpacket *pkt)
+{
+    int i;
+    topo[nodeid].t_status = 1;
+    memcpy(topo[nodeid].t_macaddr, pkt->net_ethsrc, ETH_ADDR_LEN);
+    for (i=0;i<6;i++)
+    {
+	   //kprintf("%02x:", topo[nodeid].t_macaddr[i]);
+    }
+    //kprintf("\n");
+    nodeid++;
+}
+/*----------------------------------------------------------
+* This function is used to update the network topology
+ * information.
+ * ----------------------------------------------------------*/
+struct c_msg *newtop(struct c_msg ctlpkt)
+{
+
+    char *fname;
+    status stat;
+    struct c_msg *cmsg_reply;
+    cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
+    memset(cmsg_reply, 0, sizeof(struct c_msg));
+
+    fname = getmem(sizeof(ctlpkt.fname));
+    strcpy(fname,(char *)ctlpkt.fname);
+    stat = init_topo(fname);
+    if (stat == OK)
+    {
+        cmsg_reply->cmsgtyp = htonl(C_OK);
+    }
+    else
+    {
+        cmsg_reply->cmsgtyp = htonl(C_ERR);
+    }
+    return cmsg_reply;
+
+}
+/*-----------------------------------------------------------------
+ *  Make the PING REPLY message
+ *  -------------------------------------------------------------*/
+struct c_msg * ping_reply(struct c_msg ctlpkt)
+{
+	struct c_msg * cmsg_reply;
+        cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
+        memset(cmsg_reply, 0, sizeof(struct c_msg));
+
+	if (topo[ntohl(ctlpkt.pingnodeid)].t_status == 1)
+	{
+		nping(ctlpkt);
+                //sleep(1);
+		if (ping_ack_flag == 1)
+		{
+		 cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
+		 cmsg_reply->pingnum = htonl(1);
+		 cmsg_reply->pingdata[0].pnodeid = htonl(ctlpkt.pingnodeid);
+		 cmsg_reply->pingdata[0].pstatus = htonl(ALIVE);
+                 ping_ack_flag = 0;
+		}
+		else
+		{
+		 cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
+		 cmsg_reply->pingnum = htonl(1);
+		 cmsg_reply->pingdata[0].pnodeid = htonl(ctlpkt.pingnodeid);
+		 cmsg_reply->pingdata[0].pstatus = htonl(NOTRESP);
+
+		}
+	}
+	else
+	{
+		 
+		 cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
+		 cmsg_reply->pingnum = htonl(1);
+		 cmsg_reply->pingdata[0].pnodeid = htonl(ctlpkt.pingnodeid);
+		 cmsg_reply->pingdata[0].pstatus = htonl(NOTACTIV);
+		
+	}
+       
+	return cmsg_reply;
+}
+/*------------------------------------------------------------------
+ * This function is used to ping a speceifc node 
+ * which is determined by the mgmt app 
+ * ----------------------------------------------------------------*/
+status nping(struct c_msg ctlpkt)
+{
+    int i;
+    struct etherPkt *ping_msg;
+    int32 pingnodeid = ntohl(ctlpkt.pingnodeid);
+    
+    ping_msg = create_etherPkt();
+    int32 retval;
+
+    /* fill out the Ethernet packet fields */
+    memcpy(ping_msg->src, NetData.ethucast, ETH_ADDR_LEN);
+    memcpy(ping_msg->dst, topo[pingnodeid].t_macaddr, ETH_ADDR_LEN);
+    //kprintf("node ID is: %d ,node mac address: ", pingnodeid);
+    for (i = 0; i<6; i++)
+    {
+      	    kprintf("%02x:", topo[pingnodeid].t_macaddr[i]);
+    }
+    kprintf("\n");
+    ping_msg->type = htons(ETH_TYPE_A);
+    ping_msg->amsgtyp = htonl(A_PING); /* Error message */
+     
+
+    memset(ack_info, 0, sizeof(ack_info));
+    memcpy(ack_info, (char *)(ping_msg) + 14, 16);
+
+
+    /*send packet over Ethernet */
+    retval = write(ETHER0, (char *)ping_msg, sizeof(struct etherPkt));
+    if (retval > 0)
+	    return OK;
+    else
+	    return SYSERR;
+}
+
 
 /*-------------------------------------------------------------------
  * Create a topo reply message as a response of topo request message
- * --------------------------------------------------------------------*/
+ * -----------------------------------------------------------------*/
 struct c_msg *toporeply()
 {
     struct c_msg *topo_reply;
@@ -267,7 +399,9 @@ status wsserver_assign(struct netpacket *pkt)
     for (i=0; i<6; i++)
     {
         assign_msg->amcastaddr[i] = topo[nodeid].t_neighbors[i];
+	kprintf("%02x:", assign_msg->amcastaddr[i]);
     }
+    kprintf("\n Assigned Nodeid: %d\n",nodeid);
 
     memset(ack_info, 0, sizeof(ack_info));
     memcpy(ack_info, (char *)(assign_msg) + 14, 16);
@@ -279,6 +413,39 @@ status wsserver_assign(struct netpacket *pkt)
         return SYSERR;
 
 }
+
+/*----------------------------------------------------------------
+ *  ACK handler  
+ *  -------------------------------------------------------------*/
+void ack_handler(struct netpacket *pkt)
+{
+	struct etherPkt *node_msg;
+	node_msg = (struct etherPkt *)pkt;
+	int i, ack;
+	ack = 0;
+        for (i=0; i<16; i++)
+        {
+               if (node_msg->aacking[i] == ack_info[i])
+	       {
+                  ack++;           		       
+	       }
+               //kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
+        }
+	if (ack == 16)
+	{
+		if (ack_info[5] == A_ASSIGN)
+		{
+			topo_update_mac(pkt);
+			kprintf("--->Assign ACK message is received\n");
+		}
+		else
+		{
+			ping_ack_flag = 1;
+			kprintf("--->Ping ACK message is received\n");
+		}
+	}
+
+}
 /*-----------------------------------------------------------------
  * message handler is used to call appropiate function based
  * on a message which is received from a node.
@@ -286,8 +453,6 @@ status wsserver_assign(struct netpacket *pkt)
 
 void amsg_handler(struct netpacket *pkt)
 {
-
-    int i;
     struct etherPkt *node_msg;
     status retval;
     node_msg = (struct etherPkt *)pkt;
@@ -299,25 +464,22 @@ void amsg_handler(struct netpacket *pkt)
         retval = wsserver_assign(pkt);
         if (retval == OK)
         {
-            kprintf("<-Assign message is sent\n");
-            nodeid++;
+            kprintf("<---Assign message is sent\n");
+         
         }
         break;
 
     case A_ACK:
-        for (i=0; i<16; i++)
-        {
-            //   kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
-        }
-        kprintf("--->ACK message is recevied\n");
+	ack_handler(pkt);
         break;
     case A_ERR:
+        wsserver_senderr(pkt);
         kprintf("--->Error message is received\n");
         break;
-    default:
-        wsserver_senderr(pkt);
+        
 
     }
 
 }
+
 

@@ -7,7 +7,10 @@
 #define BIT_TEST 1
 #define BIT_SET 0
 #define TIME_OUT 10
-
+#define ALL -1
+#define ALIVE 1
+#define NOTRESP -1
+#define NOTACTIV 0
 extern int srbit(byte addr[], int, int);
 
 //This function is used for handling errors
@@ -80,18 +83,27 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
 
 
-    else if(!strcmp(array_token[0], "nping"))
+    else if(!strcmp(array_token[0], "nping") && strcmp(array_token[1], " "))
     {
         message.cmsgtyp = htonl(C_PING_REQ);
-        num = atoi(array_token[1]);
-        if ((num >= 0) && (num <= 45))
+        message.clength = htonl(sizeof(message));
+        if (!strcmp(array_token[1], "all"))
         {
-            message.pingnodeid = htonl(num);
+            message.pingnodeid = htonl(ALL);
+
         }
         else
         {
-            printf("Incorrect ID\n");
-            message.cmsgtyp = htonl(ERR);
+            num = atoi(array_token[1]);
+            if ((num >= 0) && (num <= 45))
+            {
+                message.pingnodeid = htonl(num);
+            }
+            else
+            {
+                printf("Incorrect ID\n");
+                message.cmsgtyp = htonl(ERR);
+            }
         }
     }
 
@@ -99,7 +111,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     {
         message.cmsgtyp = htonl(C_TOP_REQ);
     }
-    else if (!strcmp(array_token[0], "newtop"))
+    else if (!strcmp(array_token[0], "newtop") && (strcmp(array_token[1], " ")))
     {
         message.cmsgtyp = htonl(C_NEW_TOP);
         message.flen = htonl(strlen(array_token[1]));
@@ -143,7 +155,7 @@ which have been recevied from the testbed server.
 ******************************************************/
 
 
-void print_topology(struct c_msg *buf)
+void topodump(struct c_msg *buf)
 {
     fflush(stdout);
     printf("Number of Nodes: %d\n",ntohl(buf->topnum));
@@ -269,6 +281,73 @@ int server_discovery(const char *SRV_IP)
 
 }
 
+void ping_reply_handler(struct c_msg *buf)
+{
+    int i, counter,status;
+    counter = ntohl(buf->pingnum);
+    for(i=0; i<counter; i++)
+    {
+	status = ntohl(buf->pingdata[i].pstatus);    
+        if(status == ALIVE)
+        {
+
+            printf("<----Reply from testbed server: Node %d is alive\n", buf->pingdata[i].pnodeid);
+  
+
+        }
+        else if(status  == NOTACTIV)
+        {
+            printf("<----Reply from testbed server: Node %d is not in the active network topology\n", buf->pingdata[i].pnodeid);
+
+
+        }
+	else if(status == NOTRESP)
+	{
+           
+             printf("<----Reply from testbed server: Node %d is not responding \n", buf->pingdata[i].pnodeid);
+
+
+	}
+
+
+    }
+
+
+
+}
+
+
+
+void response_handler(struct c_msg *buf)
+{
+    int32 cmsgtyp = ntohl(buf->cmsgtyp);
+    switch(cmsgtyp)
+    {
+    case C_OK:
+        printf("Reply from testbed server: OK\n");
+        break;
+
+    case C_ERR:
+        printf("Reply from testbed server:ERROR");
+        break;
+    case C_TOP_REPLY:
+        topodump(buf);
+        break;
+    case C_PING_REPLY:
+        ping_reply_handler(buf);
+        break;
+    case C_PING_ALL:
+        break;
+    case C_TS_RESP:
+        break;
+
+
+    }
+
+}
+
+
+
 
 void udp_process(const char *SRV_IP)
 {
@@ -341,20 +420,8 @@ void udp_process(const char *SRV_IP)
                 printf("Timeout, Please try again\n");
             }
             buf = (struct c_msg*)recvbuf;
+            response_handler(buf);
 
-            if(ntohl(buf->cmsgtyp) == C_OK)
-            {
-                printf("Reply from Testbed Server: OK");
-            }
-            else if(ntohl(buf->cmsgtyp) == C_TOP_REPLY)
-            {
-
-                print_topology(buf);
-            }
-            else if (ntohl(buf->cmsgtyp) == C_ERR)
-            {
-               printf("Reply from Testbed server:ERROR");
-            }
         }
 
     }
