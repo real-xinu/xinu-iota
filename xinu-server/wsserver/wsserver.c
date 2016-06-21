@@ -69,7 +69,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
     case C_PING_REQ:
         kprintf("Message type is %d\n", C_PING_REQ);
         if(online)
-            cmsg_reply = ping_reply(ctlpkt);
+            cmsg_reply = nping_reply(ctlpkt);
         break;
     case C_PING_ALL:
         kprintf("Message type is %d\n", C_PING_ALL);
@@ -194,7 +194,7 @@ struct c_msg *newtop(struct c_msg ctlpkt)
 /*-----------------------------------------------------------------
  *  Make the PING REPLY message
  *  -------------------------------------------------------------*/
-struct c_msg * ping_reply(struct c_msg ctlpkt)
+struct c_msg * nping_reply(struct c_msg ctlpkt)
 {
     struct c_msg * cmsg_reply;
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
@@ -202,9 +202,10 @@ struct c_msg * ping_reply(struct c_msg ctlpkt)
 
     if (topo[ntohl(ctlpkt.pingnodeid)].t_status == 1)
     {
-        nping(ctlpkt);
+        status stat = nping(ctlpkt);
+
         //sleep(1);
-        if (ping_ack_flag == 1)
+        if (ping_ack_flag == 1 && stat == OK)
         {
             cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
             cmsg_reply->pingnum = htonl(1);
@@ -212,7 +213,7 @@ struct c_msg * ping_reply(struct c_msg ctlpkt)
             cmsg_reply->pingdata[0].pstatus = htonl(ALIVE);
             ping_ack_flag = 0;
         }
-        else
+        else if(ping_ack_flag == 0 && stat == OK)
         {
             cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
             cmsg_reply->pingnum = htonl(1);

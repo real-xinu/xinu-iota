@@ -84,17 +84,16 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
 
 
-    else if(!strcmp(array_token[0], "nping") && strcmp(array_token[1], " "))
+    else if(!strcmp(array_token[0], "nping") && strcmp(array_token[1], " ") && strcmp(array_token[1], "all"))
     {
         message.cmsgtyp = htonl(C_PING_REQ);
         message.clength = htonl(sizeof(message));
-        if (!strcmp(array_token[1], "all"))
+        /*if (!strcmp(array_token[1], "all"))
         {
             message.pingnodeid = htonl(ALL);
 
-        }
-        else
-        {
+        }*/
+       
             num = atoi(array_token[1]);
             if ((num >= 0) && (num <= 45))
             {
@@ -105,7 +104,14 @@ struct c_msg  command_handler(char command[BUFLEN])
                 printf("Incorrect ID\n");
                 message.cmsgtyp = htonl(ERR);
             }
-        }
+        
+    }
+    else if(!strcmp(array_token[0], "nping") && strcmp(array_token[1], " ") && (!strcmp(array_token[1], "all")))
+    {
+        message.cmsgtyp = htonl(C_PING_ALL);
+        message.pingnodeid = htonl(ALL);
+
+
     }
 
     else if(!strcmp(array_token[0], "topdump"))
@@ -132,6 +138,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
     else if (!strcmp(array_token[0], "exit"))
     {
+	printf("====Management app is closed=====\n");    
         exit(1);
     }
     else if(!strcmp(array_token[0], "help"))
@@ -350,7 +357,9 @@ void response_handler(struct c_msg *buf)
 }
 
 
-
+/*------------------------------------------------------------------------
+ * this UDP process is used to communicate with testbed server
+ *------------------------------------------------------------------------*/
 
 void udp_process(const char *SRV_IP)
 {

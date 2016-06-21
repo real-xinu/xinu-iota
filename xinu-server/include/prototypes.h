@@ -614,7 +614,7 @@ extern void amsg_handler(struct netpacket *);
 extern struct c_msg *toporeply();
 extern struct c_msg  *newtop(struct c_msg);
 extern status nping(struct c_msg);
-extern struct c_msg * ping_reply(struct c_msg);
+extern struct c_msg * nping_reply(struct c_msg);
 /* in file wstopology.c */
 extern status read_topology(char *, char **, uint32 *);
 extern int32 topo_update(char *, uint32, struct t_entry *);
