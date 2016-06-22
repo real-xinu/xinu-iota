@@ -22,7 +22,7 @@ status read_topology(char *name, char **buff, uint32 *size)
 
     /* Get size of topology file so we know how much to read */
     *size = control(RFILESYS, RFS_CTL_SIZE, 0, 0);
-    kprintf("size:%d\n", *size);
+    //kprintf("size:%d\n", *size);
     if (*size == SYSERR)
     {
         printf("WARNING: Could not get topology file size\n");
@@ -62,7 +62,7 @@ status read_topology(char *name, char **buff, uint32 *size)
  ***********************************************************************/
 int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
 {
-    int i, j,k;
+    int i, j;
 
     int32 num_of_entries;
 

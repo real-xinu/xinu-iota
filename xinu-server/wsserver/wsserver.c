@@ -217,10 +217,10 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
 
     int ping_num = 0;
 
-    kprintf("loop_start: %d , loop_end: %d\n", loop_start, loop_end);
+    //kprintf("loop_start: %d , loop_end: %d\n", loop_start, loop_end);
     for (i = loop_start; i<=loop_end; i++)
     {
-	kprintf("i: %d\n", i);
+	//kprintf("i: %d\n", i);
         if (topo[i].t_status == 1)
         {
             status stat = nping(i);
@@ -247,7 +247,7 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
 
         }
         ping_num++;
-        kprintf("pingnum: %d\n",ping_num);
+        //kprintf("pingnum: %d\n",ping_num);
     }
 
     cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
