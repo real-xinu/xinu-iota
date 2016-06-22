@@ -88,23 +88,17 @@ struct c_msg  command_handler(char command[BUFLEN])
     {
         message.cmsgtyp = htonl(C_PING_REQ);
         message.clength = htonl(sizeof(message));
-        /*if (!strcmp(array_token[1], "all"))
+        num = atoi(array_token[1]);
+        if ((num >= 0) && (num <= 45))
         {
-            message.pingnodeid = htonl(ALL);
+            message.pingnodeid = htonl(num);
+        }
+        else
+        {
+            printf("Incorrect ID\n");
+            message.cmsgtyp = htonl(ERR);
+        }
 
-        }*/
-       
-            num = atoi(array_token[1]);
-            if ((num >= 0) && (num <= 45))
-            {
-                message.pingnodeid = htonl(num);
-            }
-            else
-            {
-                printf("Incorrect ID\n");
-                message.cmsgtyp = htonl(ERR);
-            }
-        
     }
     else if(!strcmp(array_token[0], "nping") && strcmp(array_token[1], " ") && (!strcmp(array_token[1], "all")))
     {
@@ -126,19 +120,19 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
     else if (!strcmp(array_token[0], "online"))
     {
-     message.cmsgtyp = htonl(C_ONLINE);
+        message.cmsgtyp = htonl(C_ONLINE);
 
 
     }
     else if(!strcmp(array_token[0], "offline"))
     {
 
-      message.cmsgtyp = htonl(C_OFFLINE);
+        message.cmsgtyp = htonl(C_OFFLINE);
 
     }
     else if (!strcmp(array_token[0], "exit"))
     {
-	printf("====Management app is closed=====\n");    
+        printf("====Management app is closed=====\n");
         exit(1);
     }
     else if(!strcmp(array_token[0], "help"))
@@ -289,6 +283,12 @@ int server_discovery(const char *SRV_IP)
     }
 
 }
+/*-----------------------------------------------------
+ * ping reply control message which is received from
+ * testbed server is handled in this function
+ * it prints the staus of a node or a set of nodes
+ * that have been  pinged
+ -----------------------------------------------------*/
 
 void ping_reply_handler(struct c_msg *buf)
 {
@@ -296,27 +296,27 @@ void ping_reply_handler(struct c_msg *buf)
     counter = ntohl(buf->pingnum);
     for(i=0; i<counter; i++)
     {
-	status = ntohl(buf->pingdata[i].pstatus);    
+        status = ntohl(buf->pingdata[i].pstatus);
         if(status == ALIVE)
         {
 
-            printf("<----Reply from testbed server: Node %d is alive\n", buf->pingdata[i].pnodeid);
-  
+            printf("<----Reply from testbed server: Node %d is alive\n", ntohl(buf->pingdata[i].pnodeid));
+
 
         }
         else if(status  == NOTACTIV)
         {
-            printf("<----Reply from testbed server: Node %d is not in the active network topology\n", buf->pingdata[i].pnodeid);
+            printf("<----Reply from testbed server: Node %d is not in the active network topology\n", ntohl(buf->pingdata[i].pnodeid));
 
 
         }
-	else if(status == NOTRESP)
-	{
-           
-             printf("<----Reply from testbed server: Node %d is not responding \n", buf->pingdata[i].pnodeid);
+        else if(status == NOTRESP)
+        {
+
+            printf("<----Reply from testbed server: Node %d is not responding \n", ntohl(buf->pingdata[i].pnodeid));
 
 
-	}
+        }
 
 
     }
@@ -325,7 +325,11 @@ void ping_reply_handler(struct c_msg *buf)
 
 }
 
-
+/*-----------------------------------------------------------
+ *
+ *  Control message response handler is used to handle
+ *  responses from the testbed server
+ *  ---------------------------------------------------------*/
 
 void response_handler(struct c_msg *buf)
 {
@@ -349,7 +353,7 @@ void response_handler(struct c_msg *buf)
         break;
     case C_TS_RESP:
         break;
-    
+
 
 
     }
@@ -361,7 +365,7 @@ void response_handler(struct c_msg *buf)
  * this UDP process is used to communicate with testbed server
  *------------------------------------------------------------------------*/
 
-void udp_process(const char *SRV_IP)
+void udp_process(const char *SRV_IP, char *file)
 {
 
     char *recvbuf;
@@ -408,52 +412,86 @@ void udp_process(const char *SRV_IP)
         error_handler("socket Option for timeout can not be set");
     }
 
-
-    while(1)
+    FILE *type;
+    if (file == NULL)
     {
+        type = stdin;
 
-        memset(command, '\0', sizeof(char) * BUFLEN);
-        printf("\n(Enter Command): ");                               /*receives command from the operator */
-        fgets(command, sizeof(command), stdin);
-        command[strcspn(command, "\r\n")] = 0;
-        message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
-
-        if (message.cmsgtyp != htonl(ERR))
+        while(1)
         {
-            if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1)
+
+            memset(command, '\0', sizeof(char) * BUFLEN);
+            printf("\n(Enter Command): ");                               /*receives command from the operator */
+            fgets(command, sizeof(command), type);
+            command[strcspn(command, "\r\n")] = 0;
+            message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
+
+            if (message.cmsgtyp != htonl(ERR))
             {
-                error_handler("The message is not sent to Testbed_Server()");
+                if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1)
+                {
+                    error_handler("The message is not sent to Testbed_Server()");
+
+                }
+
+
+                if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0)
+                {
+                    printf("Timeout, Please try again\n");
+                }
+                buf = (struct c_msg*)recvbuf;
+                response_handler(buf);
 
             }
 
+        }
 
-            if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0)
+    }
+    else
+    {
+        type = fopen(file, "r");
+
+        while( fgets(command, sizeof(command), type) != NULL)
+        {
+
+            command[strcspn(command, "\r\n")] = 0;
+            message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
+
+            if (message.cmsgtyp != htonl(ERR))
             {
-                printf("Timeout, Please try again\n");
+                if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1)
+                {
+                    error_handler("The message is not sent to Testbed_Server()");
+
+                }
+
+
+                if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0)
+                {
+                    printf("Timeout, Please try again\n");
+                }
+                buf = (struct c_msg*)recvbuf;
+                response_handler(buf);
+
             }
-            buf = (struct c_msg*)recvbuf;
-            response_handler(buf);
 
         }
 
     }
 
+
     close(s);
 
 }
 
+/* Main- Call UDP process */
 int main(int argc, char **argv)
 {
-    if(argc != 2)
-    {
-        printf("Usage: %s <ip address of testbed server>\n", argv[0]);
-        return ERR;
 
-    }
     const char *SRV_IP = argv[1];
 
     if (server_discovery(SRV_IP) == 1)
-        udp_process(SRV_IP);
+        udp_process(SRV_IP,argv[2]);
     else
         printf("The Testbed server is not discovered.\n");
 

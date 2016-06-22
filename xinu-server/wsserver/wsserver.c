@@ -74,7 +74,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
     case C_PING_ALL:
         kprintf("Message type is %d\n", C_PING_ALL);
         if(online)
-            cmsg_reply->cmsgtyp = htonl(C_OK);
+            cmsg_reply = nping_reply(ctlpkt);
         break;
     case C_XOFF:
         kprintf("Message type is %d\n", C_XOFF);
@@ -109,7 +109,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
         cmsg_reply->cmsgtyp = htonl(C_TS_RESP);
         break;
     default:
-           cmsg_reply->cmsgtyp = htonl(C_ERR);
+        cmsg_reply->cmsgtyp = htonl(C_ERR);
     }
 
     return cmsg_reply;
@@ -196,41 +196,64 @@ struct c_msg *newtop(struct c_msg ctlpkt)
  *  -------------------------------------------------------------*/
 struct c_msg * nping_reply(struct c_msg ctlpkt)
 {
+    int32 i;
+    int32 loop_start = 0;
+    int32 loop_end = 0;
+
     struct c_msg * cmsg_reply;
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
     memset(cmsg_reply, 0, sizeof(struct c_msg));
 
-    if (topo[ntohl(ctlpkt.pingnodeid)].t_status == 1)
+    if (ntohl(ctlpkt.pingnodeid) == -1)
     {
-        status stat = nping(ctlpkt);
-
-        //sleep(1);
-        if (ping_ack_flag == 1 && stat == OK)
-        {
-            cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
-            cmsg_reply->pingnum = htonl(1);
-            cmsg_reply->pingdata[0].pnodeid = htonl(ctlpkt.pingnodeid);
-            cmsg_reply->pingdata[0].pstatus = htonl(ALIVE);
-            ping_ack_flag = 0;
-        }
-        else if(ping_ack_flag == 0 && stat == OK)
-        {
-            cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
-            cmsg_reply->pingnum = htonl(1);
-            cmsg_reply->pingdata[0].pnodeid = htonl(ctlpkt.pingnodeid);
-            cmsg_reply->pingdata[0].pstatus = htonl(NOTRESP);
-
-        }
+        loop_start = 0;
+        loop_end = MAXNODES - 1;
     }
     else
     {
-
-        cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
-        cmsg_reply->pingnum = htonl(1);
-        cmsg_reply->pingdata[0].pnodeid = htonl(ctlpkt.pingnodeid);
-        cmsg_reply->pingdata[0].pstatus = htonl(NOTACTIV);
-
+        loop_start = ntohl(ctlpkt.pingnodeid);
+        loop_end = ntohl(ctlpkt.pingnodeid);
     }
+
+    int ping_num = 0;
+
+    kprintf("loop_start: %d , loop_end: %d\n", loop_start, loop_end);
+    for (i = loop_start; i<=loop_end; i++)
+    {
+	kprintf("i: %d\n", i);
+        if (topo[i].t_status == 1)
+        {
+            status stat = nping(i);
+
+            sleep(1);
+            if (ping_ack_flag == 1 && stat == OK)
+            {
+                cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+                cmsg_reply->pingdata[ping_num].pstatus = htonl(ALIVE);
+                ping_ack_flag = 0;
+            }
+            else if(ping_ack_flag == 0 && stat == OK)
+            {
+                cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+                cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTRESP);
+
+            }
+        }
+        else
+        {
+
+            cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+            cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTACTIV);
+
+        }
+        ping_num++;
+        kprintf("pingnum: %d\n",ping_num);
+    }
+
+    cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
+
+    cmsg_reply->pingnum = htonl(ping_num);
+
 
     return cmsg_reply;
 }
@@ -238,11 +261,10 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
  * This function is used to ping a speceifc node
  * which is determined by the mgmt app
  * ----------------------------------------------------------------*/
-status nping(struct c_msg ctlpkt)
+status nping(int32 pingnodeid)
 {
     int i;
     struct etherPkt *ping_msg;
-    int32 pingnodeid = ntohl(ctlpkt.pingnodeid);
 
     ping_msg = create_etherPkt();
     int32 retval;
@@ -482,7 +504,7 @@ void amsg_handler(struct netpacket *pkt)
 
             }
         }
-	
+
         break;
     case A_ACK:
         ack_handler(pkt);

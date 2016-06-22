@@ -613,7 +613,7 @@ extern	process	wsserver(void);
 extern void amsg_handler(struct netpacket *);
 extern struct c_msg *toporeply();
 extern struct c_msg  *newtop(struct c_msg);
-extern status nping(struct c_msg);
+extern status nping(int32);
 extern struct c_msg * nping_reply(struct c_msg);
 /* in file wstopology.c */
 extern status read_topology(char *, char **, uint32 *);
