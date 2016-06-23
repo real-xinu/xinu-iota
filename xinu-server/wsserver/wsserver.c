@@ -11,6 +11,8 @@ int32 nnodes = 0;
 #define TIME_OUT 600000
 
 byte ack_info[16];
+int ping_all_ack_flag[46];
+
 int ping_ack_flag = 0;
 int online = 1;
 /* ping status */
@@ -49,7 +51,7 @@ struct t_entry topo[MAXNODES];
  * ---------------------------------------------------------*/
 struct c_msg * cmsg_handler(struct c_msg ctlpkt)
 {
-
+    int i;
     struct c_msg *cmsg_reply;
     int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
@@ -72,9 +74,11 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
             cmsg_reply = nping_reply(ctlpkt);
         break;
     case C_PING_ALL:
+	for (i=0; i <46; i++)
+		ping_all_ack_flag[i] = 0;
         kprintf("Message type is %d\n", C_PING_ALL);
         if(online)
-            cmsg_reply = nping_reply(ctlpkt);
+            cmsg_reply = nping_all_reply(ctlpkt);
         break;
     case C_XOFF:
         kprintf("Message type is %d\n", C_XOFF);
@@ -294,6 +298,92 @@ status nping(int32 pingnodeid)
         return SYSERR;
 }
 
+/*-----------------------------------------------------------------
+ *  Make the PING ALL REPLY message
+ *  -------------------------------------------------------------*/
+struct c_msg * nping_all_reply(struct c_msg ctlpkt)
+{
+    int32 i;
+
+    struct c_msg * cmsg_reply;
+    cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
+    memset(cmsg_reply, 0, sizeof(struct c_msg));
+
+    int ping_num = 0;
+
+
+    status stat = nping_all();
+
+    if (stat == OK)
+    {
+    sleep(1);
+    for (i = 0; i<MAXNODES; i++)
+    {
+
+        if (topo[i].t_status == 1)
+        {
+            if (ping_all_ack_flag[i] == 1)
+            {
+                cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+                cmsg_reply->pingdata[ping_num].pstatus = htonl(ALIVE);
+                ping_all_ack_flag[i] = 0;
+            }
+            else if(ping_all_ack_flag[i] == 0)
+            {
+                cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+                cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTRESP);
+
+            }
+        }
+        else
+        {
+
+            cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+            cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTACTIV);
+
+        }
+        ping_num++;
+        //kprintf("pingnum: %d\n",ping_num);
+    }
+
+    cmsg_reply->cmsgtyp = htonl(C_PING_ALL);
+
+    cmsg_reply->pingnum = htonl(ping_num);
+   }
+
+    return cmsg_reply;
+}
+/*------------------------------------------------------------------
+ * This function is used to send a broadcast ping message to all the
+ * nodes in active topology
+ * ----------------------------------------------------------------*/
+status nping_all()
+{
+    struct etherPkt *ping_msg;
+
+    ping_msg = create_etherPkt();
+    int32 retval;
+
+    /* fill out the Ethernet packet fields */
+    memcpy(ping_msg->src, NetData.ethucast, ETH_ADDR_LEN);
+    memcpy(ping_msg->dst, NetData.ethbcast, ETH_ADDR_LEN);
+   
+    ping_msg->type = htons(ETH_TYPE_A);
+    ping_msg->amsgtyp = htonl(A_PING_ALL); /* Error message */
+
+
+    memset(ack_info, 0, sizeof(ack_info));
+    memcpy(ack_info, (char *)(ping_msg) + 14, 16);
+
+
+    /*send packet over Ethernet */
+    retval = write(ETHER0, (char *)ping_msg, sizeof(struct etherPkt));
+    if (retval > 0)
+        return OK;
+    else
+        return SYSERR;
+}
+
 
 /*-------------------------------------------------------------------
  * Create a topo reply message as a response of topo request message
@@ -472,11 +562,16 @@ void ack_handler(struct netpacket *pkt)
             topo_update_mac(pkt);
             kprintf("--->Assign ACK message is received\n");
         }
-        else
+        else if (ack_info[5] == A_PING)
         {
             ping_ack_flag = 1;
             kprintf("--->Ping ACK message is received\n");
         }
+	else if (ack_info[5] == A_PING_ALL)
+	{
+            i = ntohl(node_msg->anodeid);
+	    ping_all_ack_flag[i] = 1;
+	}
     }
 
 }

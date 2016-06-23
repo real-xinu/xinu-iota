@@ -68,6 +68,7 @@ status wsnode_sendack(struct netpacket *pkt)
     ack_msg = create_etherPkt(pkt);
     int32 retval;
     ack_msg->amsgtyp = htonl(A_ACK);
+    ack_msg->anodeid = htonl(info.nodeid);
     memcpy(ack_msg->aacking,(char *)(node_msg) + 14, 16);
     int i;
     for (i=0; i<16; i++)
@@ -110,6 +111,8 @@ void print_info()
 void amsg_handler(struct netpacket *pkt)
 {
 
+    float delay;
+
     struct etherPkt *node_msg;
     node_msg = (struct etherPkt *)pkt;
     int32 amsgtyp = ntohl(node_msg->amsgtyp);
@@ -149,7 +152,15 @@ void amsg_handler(struct netpacket *pkt)
         
         break;
     case A_PING_ALL:
+	delay = (info.nodeid * 0.001);
+	sleep(delay);
         kprintf("<--- PINGALL message is received\n");
+	if(wsnode_sendack(pkt) == OK)
+	{
+            kprintf("----> ACK message is sent\n");   
+
+	}
+
         break;
 
     }

@@ -138,14 +138,15 @@ struct c_msg  command_handler(char command[BUFLEN])
     else if(!strcmp(array_token[0], "help"))
     {
 
-        message.cmsgtyp = htonl(ERR);
+        //message.cmsgtyp = htonl(ERR);
 
 
     }
+    
     else
     {
         printf("%s is not defined\n", array_token[0]);
-        message.cmsgtyp = htonl(ERR);
+        message.cmsgtyp = htonl(C_ERR);
 
     }
 
@@ -350,6 +351,7 @@ void response_handler(struct c_msg *buf)
         ping_reply_handler(buf);
         break;
     case C_PING_ALL:
+        ping_reply_handler(buf);
         break;
     case C_TS_RESP:
         break;
@@ -379,7 +381,7 @@ void udp_process(const char *SRV_IP, char *file)
     struct timeval tv;
     tv.tv_sec = TIME_OUT;
     tv.tv_usec = 0;
-
+    FILE *type;
 
 
     if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)  /* Create a UDP socket */
@@ -412,7 +414,7 @@ void udp_process(const char *SRV_IP, char *file)
         error_handler("socket Option for timeout can not be set");
     }
 
-    FILE *type;
+
     if (file == NULL)
     {
         type = stdin;
@@ -420,13 +422,14 @@ void udp_process(const char *SRV_IP, char *file)
         while(1)
         {
 
-            memset(command, '\0', sizeof(char) * BUFLEN);
-            printf("\n(Enter Command): ");                               /*receives command from the operator */
+            memset(command, 0, sizeof(char) * BUFLEN);
+            printf("\n(Enter Command)# ");                               /*receives command from the operator */
             fgets(command, sizeof(command), type);
             command[strcspn(command, "\r\n")] = 0;
+	    memset(&message, 0, sizeof(struct c_msg));
             message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp != htonl(ERR))
+            if (message.cmsgtyp != htonl(C_ERR))
             {
                 if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1)
                 {
