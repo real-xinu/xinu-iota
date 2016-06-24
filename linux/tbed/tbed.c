@@ -37,6 +37,14 @@ struct c_msg  command_handler(char command[BUFLEN])
 
     i = 0;
     token = strtok(command, seps );
+   
+     /*if(token == NULL)
+    {
+	 printf("Please enter a command\n");   
+         message.cmsgtyp = htonl(C_ERR);
+         return message;
+
+    }*/
     while( token != NULL )
     {
         /* While there are tokens in "command" */
@@ -45,6 +53,7 @@ struct c_msg  command_handler(char command[BUFLEN])
         token = strtok( NULL, seps);
         i++;
     }
+    
 
     if (!strcmp(array_token[0], "restart"))
     {
@@ -84,7 +93,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
 
 
-    else if(!strcmp(array_token[0], "nping") && strcmp(array_token[1], " ") && strcmp(array_token[1], "all"))
+    else if((!strcmp(array_token[0], "nping")) && strcmp(array_token[1], " ") && strcmp(array_token[1], "all"))
     {
         message.cmsgtyp = htonl(C_PING_REQ);
         message.clength = htonl(sizeof(message));
@@ -100,7 +109,7 @@ struct c_msg  command_handler(char command[BUFLEN])
         }
 
     }
-    else if(!strcmp(array_token[0], "nping") && strcmp(array_token[1], " ") && (!strcmp(array_token[1], "all")))
+    else if((!strcmp(array_token[0], "nping")) && strcmp(array_token[1], " ") && (!strcmp(array_token[1], "all")))
     {
         message.cmsgtyp = htonl(C_PING_ALL);
         message.pingnodeid = htonl(ALL);
@@ -356,8 +365,6 @@ void response_handler(struct c_msg *buf)
     case C_TS_RESP:
         break;
 
-
-
     }
 
 }
@@ -425,12 +432,18 @@ void udp_process(const char *SRV_IP, char *file)
             memset(command, 0, sizeof(char) * BUFLEN);
             printf("\n(Enter Command)# ");                               /*receives command from the operator */
             fgets(command, sizeof(command), type);
+	    while (!strcmp(command, "\n"))
+	    {
+               printf("\n(Enter Command)# ");                               /*receives command from the operator */
+               fgets(command, sizeof(command), type);
+	    }
             command[strcspn(command, "\r\n")] = 0;
 	    memset(&message, 0, sizeof(struct c_msg));
             message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
-
+            
             if (message.cmsgtyp != htonl(C_ERR))
             {
+                //printf("type:%d\n", ntohl(message.cmsgtyp));
                 if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1)
                 {
                     error_handler("The message is not sent to Testbed_Server()");

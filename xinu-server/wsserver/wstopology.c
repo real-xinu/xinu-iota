@@ -62,7 +62,9 @@ status read_topology(char *name, char **buff, uint32 *size)
  ***********************************************************************/
 int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
 {
-    int i, j;
+    int i, j ,k;
+     
+    int nnodes = 46;
 
     int32 num_of_entries;
 
@@ -78,27 +80,31 @@ int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
         {
             for(j = 0; j < ETH_ADDR_LEN; j++)
             {
-                /*for (k=7; k>=0; k--)
+	     /*
+                for (k=7; k>=0; k--)
                 {
                 	kprintf("%d ", (buff[i * ETH_ADDR_LEN + j]>>k)&0x01);
                 }
-                kprintf(" ");*/
+                kprintf(" "); 
+		*/
                 if ((int)buff[i * ETH_ADDR_LEN +j] == 0)
                     flag++;
             }
             //kprintf("\n");
-            topo[i].t_nodeid = i;
-            topo[i].t_status = 0;
-            for (j=0; j<6; j++)
-            {
-                topo[i].t_neighbors[j] = (unsigned char)buff[counter + j];
-            }
-            i++;
-            counter = counter + 6;
             if (flag == 6)
                 flag = -1;
             else
+	    {
                 flag = 0;
+                topo[i].t_nodeid = i;
+                topo[i].t_status = 0;
+                for (j=0; j<6; j++)
+                {
+                   topo[i].t_neighbors[j] = (unsigned char)buff[counter + j];
+                }
+                i++;
+	    }
+            counter = counter + 6;
         }
         else
         {
@@ -123,6 +129,11 @@ int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
             }
         }
     }
-    num_of_entries = i - 1;
+    num_of_entries = i;
+    for (i= num_of_entries -1; i<nnodes; i++)
+    {
+	    topo[i].t_nodeid = i;
+	    topo[i].t_status = 0;
+    }
     return num_of_entries;
 }

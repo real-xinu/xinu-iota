@@ -610,6 +610,7 @@ extern	syscall	write(did32, char *, uint32);
 
 /* in file wsserver.c */
 extern	process	wsserver(void);
+extern status wsserver_assign(struct netpacket *);
 extern void amsg_handler(struct netpacket *);
 extern struct c_msg *toporeply();
 extern struct c_msg  *newtop(struct c_msg);
@@ -621,6 +622,7 @@ extern struct c_msg * nping_all_reply(struct c_msg);
 extern status read_topology(char *, char **, uint32 *);
 extern int32 topo_update(char *, uint32, struct t_entry *);
 extern status init_topo(char *);
+extern void initialize_topo();
 /* in file xdone.c */
 extern	void	xdone(void);
 

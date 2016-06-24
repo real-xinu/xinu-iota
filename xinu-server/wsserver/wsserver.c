@@ -19,30 +19,30 @@ int online = 1;
 #define NOTACTIV 0
 #define ALIVE    1
 #define NOTRESP  -1
-/*----------------------------------------------------------------
- * c_msg queue
- * -------------------------------------------------------------*/
-struct c_msg *c_msg_queue;
-int queue_index = 0;
 
-struct c_msg dequeue_msg()
-{
-    int i;
-    struct c_msg message;
-    message = c_msg_queue[0];
-    for (i=1; i<=queue_index; i++)
-        c_msg_queue[i-1] = c_msg_queue[i];
-    queue_index--;
-
-    return message;
-}
 /*-----------------------------------------------------------------
  * Network topology data strucutre which is used to keep current
  * network topology information in RAM.
  * --------------------------------------------------------------*/
 
 struct t_entry topo[MAXNODES];
+struct t_entry old_topo[MAXNODES];
+/*---------------------------------------------------------------
+ * Initialize topology database with zeros
+ * --------------------------------------------------------------*/
+void initialize_topo()
+{
+	int i,j;
 
+	for (i=0; i< MAXNODES; i++)
+	{
+		topo[i].t_nodeid = i;
+		topo[i].t_neighbors[0] = 1;
+		for (j=1; j<6; j++)
+			topo[i].t_neighbors[j] = 0;
+		topo[i].t_status = 0;
+	}
+}
 
 /*-----------------------------------------------------------
  * controle message handler is used to
@@ -130,6 +130,7 @@ struct etherPkt *create_etherPkt()
     return msg;
 }
 
+
 /*------------------------------------------------------------------------
 *Use the remote file system to open and read a topology database file
 (Default file name=Top.0)
@@ -168,6 +169,70 @@ void topo_update_mac(struct netpacket *pkt)
     //kprintf("\n");
     nodeid++;
 }
+
+/*---------------------------------------------------------
+ * Print old and new topology database
+ * ------------------------------------------------------*/
+void print_topo()
+{
+    int i,j;
+    for (i=0; i<MAXNODES; i++)
+    {
+	    kprintf("node id: %d : %d -- status: %d : %d -- mcastaddr:  ", old_topo[i].t_nodeid , topo[i].t_nodeid, old_topo[i].t_status, topo[i].t_status);
+	    for (j=0; j<6; j++)
+               kprintf("%d ", old_topo[i].t_neighbors[j]);
+	    kprintf("  :  ");
+	    for (j=0; j<6; j++)
+               kprintf("%d ", topo[i].t_neighbors[j]);
+	    kprintf("\n");
+    }
+}
+
+/*---------------------------------------------------------
+ * comparisson old and new topology and send assign message
+ * if it is necessary
+ * ------------------------------------------------------*/
+void topo_compr()
+{
+	int i, j ,k;
+	int flag = 0;
+
+	int retval;
+
+	struct netpacket *pkt;
+	pkt = (struct netpacket *) getbuf(netbufpool);
+	//memset(&pkt, 0, sizeof(struct netpacket));
+
+	for (i=0; i<2; i++)
+	{
+                flag = 0;
+		for (j=0; j<6; j++)
+			if (old_topo[i].t_neighbors[j] == topo[i].t_neighbors[j])
+				flag++;
+		if (flag == 6)
+		{
+			topo[i].t_status = 1;
+                        kprintf("mcast addresses are the same\n");
+		}
+		else
+		{
+			sleep(0.05);
+			if (nodeid < i)
+				sleep(0.05);
+			kprintf("nnodes , i: %d, %d\n", nnodes, i);
+			for(k=0; k<6; k++)
+			{
+				kprintf("%02x ",topo[i].t_macaddr[k]);
+				pkt->net_ethsrc[k] = topo[i].t_macaddr[k];
+			}
+			kprintf("\n");
+			//memcpy(&pkt->net_ethsrc, topo[i].t_macaddr, ETH_ADDR_LEN);
+			kprintf("\nassign message should be sent\n");
+			retval = wsserver_assign(pkt);
+		}
+
+	}
+}
 /*----------------------------------------------------------
 * This function is used to update the network topology
  * information.
@@ -181,11 +246,16 @@ struct c_msg *newtop(struct c_msg ctlpkt)
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
     memset(cmsg_reply, 0, sizeof(struct c_msg));
 
+    memcpy(&old_topo, &topo, sizeof(topo));
+
     fname = getmem(sizeof(ctlpkt.fname));
     strcpy(fname,(char *)ctlpkt.fname);
     stat = init_topo(fname);
+    //print_topo();
+    nodeid = 0;
     if (stat == OK)
     {
+	topo_compr();
         cmsg_reply->cmsgtyp = htonl(C_OK);
     }
     else
@@ -255,7 +325,6 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
     }
 
     cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
-
     cmsg_reply->pingnum = htonl(ping_num);
 
 
