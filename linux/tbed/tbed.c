@@ -39,15 +39,15 @@ struct c_msg  command_handler(char command[BUFLEN])
 
     i = 0;
     token = strtok(command, seps );
-    /* While there are tokens in "command" */ 
+    /* While there are tokens in "command" */
     while( token != NULL )
     {
-        
-        strcpy(array_token[i], token); 
+
+        strcpy(array_token[i], token);
         token = strtok( NULL, seps);  /* Get next token: */
         i++;
     }
-    
+
 
     if (!strcmp(array_token[0], "restart") && !strcmp(array_token[1], "t"))
     {
@@ -136,9 +136,9 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
     else if (!strcmp(array_token[0], "delay"))
     {
-         int delay = atoi(array_token[1]);
-	 usleep(delay);
-	 message.cmsgtyp = htonl(C_ERR);
+        int delay = atoi(array_token[1]);
+        usleep(delay);
+        message.cmsgtyp = htonl(C_ERR);
 
     }
     else if (!strcmp(array_token[0], "exit"))
@@ -149,10 +149,10 @@ struct c_msg  command_handler(char command[BUFLEN])
     else if(!strcmp(array_token[0], "help"))
     {
 
-       
+
 
     }
-    
+
     else
     {
         printf("%s is not defined\n", array_token[0]);
@@ -172,7 +172,7 @@ which have been recevied from the testbed server.
 void topodump(struct c_msg *buf)
 {
     fflush(stdout);
-   
+
     if (ntohl(buf->topnum) == 0)
     {
         printf("Please enter newtop command\n");
@@ -182,7 +182,7 @@ void topodump(struct c_msg *buf)
     if(ntohl(buf->topnum) > 0)
     {
 
-      printf("Number of Nodes: %d\n",ntohl(buf->topnum));
+        printf("Number of Nodes: %d\n",ntohl(buf->topnum));
 
     }
 
@@ -317,7 +317,7 @@ void ping_reply_handler(struct c_msg *buf)
 {
     int i, counter,status;
     counter = ntohl(buf->pingnum);
-    
+
     for(i=0; i<counter; i++)
     {
         status = ntohl(buf->pingdata[i].pstatus);
@@ -325,19 +325,19 @@ void ping_reply_handler(struct c_msg *buf)
         {
 
             printf("<----Reply from testbed server: Node %d is alive\n", ntohl(buf->pingdata[i].pnodeid));
-	   
+
 
         }
         else if((status  == NOTACTIV) && (counter == 1))
         {
             printf("<----Reply from testbed server: Node %d is not in the active network topology\n", ntohl(buf->pingdata[i].pnodeid));
-           
+
 
         }
         else if(status == NOTRESP)
         {
             printf("<----Reply from testbed server: Node %d is not responding \n", ntohl(buf->pingdata[i].pnodeid));
-        
+
         }
 
     }
@@ -440,15 +440,15 @@ void udp_process(const char *SRV_IP, char *file)
             memset(command, 0, sizeof(char) * BUFLEN);
             printf("\n(Enter Command)# ");                               /*receives command from the operator */
             fgets(command, sizeof(command), type);
-	    while (!strcmp(command, "\n"))
-	    {
-               printf("\n(Enter Command)# ");                               /*receives command from the operator */
-               fgets(command, sizeof(command), type);
-	    }
+            while (!strcmp(command, "\n"))
+            {
+                printf("\n(Enter Command)# ");                               /*receives command from the operator */
+                fgets(command, sizeof(command), type);
+            }
             command[strcspn(command, "\r\n")] = 0;
-	    memset(&message, 0, sizeof(struct c_msg));
+            memset(&message, 0, sizeof(struct c_msg));
             message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
-            
+
             if (message.cmsgtyp != htonl(C_ERR))
             {
                 //printf("type:%d\n", ntohl(message.cmsgtyp));
