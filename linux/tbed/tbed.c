@@ -39,18 +39,18 @@ struct c_msg  command_handler(char command[BUFLEN])
 
     i = 0;
     token = strtok(command, seps );
-  
+    /* While there are tokens in "command" */ 
     while( token != NULL )
     {
-        /* While there are tokens in "command" */
+        
         strcpy(array_token[i], token);
-        /* Get next token: */
-        token = strtok( NULL, seps);
+        
+        token = strtok( NULL, seps);  /* Get next token: */
         i++;
     }
     
 
-    if (!strcmp(array_token[0], "restart"))
+    if (!strcmp(array_token[0], "restart") && !strcmp(array_token[1], "t"))
     {
         message.cmsgtyp = htonl(C_RESTART);
     }
@@ -318,20 +318,20 @@ void ping_reply_handler(struct c_msg *buf)
         {
 
             printf("<----Reply from testbed server: Node %d is alive\n", ntohl(buf->pingdata[i].pnodeid));
-	    printf("status:%d\n", status);
+	   
 
         }
         else if((status  == NOTACTIV) && (counter == 1))
         {
             printf("<----Reply from testbed server: Node %d is not in the active network topology\n", ntohl(buf->pingdata[i].pnodeid));
-            printf("status:%d\n", status);
+           
 
         }
         else if(status == NOTRESP)
         {
 
             printf("<----Reply from testbed server: Node %d is not responding \n", ntohl(buf->pingdata[i].pnodeid));
-            printf("status:%d\n", status);
+        
 
         }
 

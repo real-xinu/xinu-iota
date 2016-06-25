@@ -1,0 +1,22 @@
+topdump
+newtop Top1.0
+topdump
+nping 0
+nping 1
+nping 2
+nping 3
+nping 4
+nping all
+offline
+nping all
+nping 0
+online
+nping all
+nping 0
+newtop Top2.0
+topdump
+nping 0
+nping 1
+nping 3
+nping 2
+nping 4
