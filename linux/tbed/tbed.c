@@ -43,8 +43,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     while( token != NULL )
     {
         
-        strcpy(array_token[i], token);
-        
+        strcpy(array_token[i], token); 
         token = strtok( NULL, seps);  /* Get next token: */
         i++;
     }
@@ -54,6 +53,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     {
         message.cmsgtyp = htonl(C_RESTART);
     }
+
 
     else if(!strcmp(array_token[0], "xon"))
     {
@@ -132,6 +132,13 @@ struct c_msg  command_handler(char command[BUFLEN])
     {
 
         message.cmsgtyp = htonl(C_OFFLINE);
+
+    }
+    else if (!strcmp(array_token[0], "delay"))
+    {
+         int delay = atoi(array_token[1]);
+	 usleep(delay);
+	 message.cmsgtyp = htonl(C_ERR);
 
     }
     else if (!strcmp(array_token[0], "exit"))
@@ -329,16 +336,11 @@ void ping_reply_handler(struct c_msg *buf)
         }
         else if(status == NOTRESP)
         {
-
             printf("<----Reply from testbed server: Node %d is not responding \n", ntohl(buf->pingdata[i].pnodeid));
         
-
         }
 
-
     }
-
-
 
 }
 
@@ -356,7 +358,6 @@ void response_handler(struct c_msg *buf)
     case C_OK:
         printf("Reply from testbed server: OK\n");
         break;
-
     case C_ERR:
         printf("Reply from testbed server:ERROR");
         break;
@@ -512,7 +513,6 @@ int main(int argc, char **argv)
 {
 
     const char *SRV_IP = argv[1];
-
     if (server_discovery(SRV_IP) == 1)
         udp_process(SRV_IP,argv[2]);
     else

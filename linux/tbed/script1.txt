@@ -1,5 +1,6 @@
 topdump
 newtop Top1.0
+delay 5000
 topdump
 nping 0
 nping 1
