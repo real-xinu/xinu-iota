@@ -11,14 +11,15 @@ int32 nnodes = 0;
 #define TIME_OUT 600000
 
 byte ack_info[16];
-int ping_all_ack_flag[46];
+int ping_ack_flag[46];
 
-int ping_ack_flag = 0;
 int online = 1;
 /* ping status */
 #define NOTACTIV 0
 #define ALIVE    1
 #define NOTRESP  -1
+
+int32 *seqnum;
 
 /*-----------------------------------------------------------------
  * Network topology data strucutre which is used to keep current
@@ -27,21 +28,28 @@ int online = 1;
 
 struct t_entry topo[MAXNODES];
 struct t_entry old_topo[MAXNODES];
+
 /*---------------------------------------------------------------
  * Initialize topology database with zeros
  * --------------------------------------------------------------*/
 void initialize_topo()
 {
-	int i,j;
+    int i,j;
 
-	for (i=0; i< MAXNODES; i++)
-	{
-		topo[i].t_nodeid = i;
-		topo[i].t_neighbors[0] = 1;
-		for (j=1; j<6; j++)
-			topo[i].t_neighbors[j] = 0;
-		topo[i].t_status = 0;
-	}
+    for (i=0; i< MAXNODES; i++)
+    {
+        topo[i].t_nodeid = i;
+        topo[i].t_neighbors[0] = 1;
+        for (j=1; j<6; j++)
+            topo[i].t_neighbors[j] = 0;
+        topo[i].t_status = 0;
+    }
+    seqnum = (int32 *)getmem(sizeof(int32));
+    *seqnum = 0;
+
+    for (i=0; i <46; i++)
+        ping_ack_flag[i] = 0;
+
 }
 
 /*-----------------------------------------------------------
@@ -74,8 +82,6 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
             cmsg_reply = nping_reply(ctlpkt);
         break;
     case C_PING_ALL:
-	for (i=0; i <46; i++)
-		ping_all_ack_flag[i] = 0;
         kprintf("Message type is %d\n", C_PING_ALL);
         if(online)
             cmsg_reply = nping_all_reply(ctlpkt);
@@ -178,13 +184,20 @@ void print_topo()
     int i,j;
     for (i=0; i<MAXNODES; i++)
     {
-	    kprintf("node id: %d : %d -- status: %d : %d -- mcastaddr:  ", old_topo[i].t_nodeid , topo[i].t_nodeid, old_topo[i].t_status, topo[i].t_status);
-	    for (j=0; j<6; j++)
-               kprintf("%d ", old_topo[i].t_neighbors[j]);
-	    kprintf("  :  ");
-	    for (j=0; j<6; j++)
-               kprintf("%d ", topo[i].t_neighbors[j]);
-	    kprintf("\n");
+        kprintf("node id: %d : %d -- status: %d : %d -- mcastaddr:  ", old_topo[i].t_nodeid , topo[i].t_nodeid, old_topo[i].t_status, topo[i].t_status);
+        for (j=0; j<6; j++)
+            kprintf("%d ", old_topo[i].t_neighbors[j]);
+        kprintf("  :  ");
+        for (j=0; j<6; j++)
+            kprintf("%d ", topo[i].t_neighbors[j]);
+        kprintf("\n  -- macaddr:  ");
+	for (j=0; j<6; j++)
+            kprintf("%02x ", old_topo[i].t_macaddr[j]);
+        kprintf("  :  ");
+        for (j=0; j<6; j++)
+            kprintf("%02x ", topo[i].t_macaddr[j]);
+        kprintf("\n");
+
     }
 }
 
@@ -194,45 +207,45 @@ void print_topo()
  * ------------------------------------------------------*/
 void topo_compr()
 {
-	int i, j ,k;
-	int flag = 0;
+    int i, j ,k;
+    int flag = 0;
 
-	int retval;
+    struct netpacket *pkt;
+    pkt = (struct netpacket *) getbuf(netbufpool);
+    //memset(&pkt, 0, sizeof(struct netpacket));
 
-	struct netpacket *pkt;
-	pkt = (struct netpacket *) getbuf(netbufpool);
-	//memset(&pkt, 0, sizeof(struct netpacket));
+    //kprintf("number of nodes: %d\n", nnodes);
+    for (i=0; i<nnodes; i++)
+    {
+        //kprintf("nodeid , i: %d, %d\n", nodeid, i);
+        flag = 0;
+        for (j=0; j<6; j++)
+            if (old_topo[i].t_neighbors[j] == topo[i].t_neighbors[j])
+                flag++;
+        if (flag == 6)
+        {
+            topo[i].t_status = 1;
+            //kprintf("mcast addresses are the same\n");
+            nodeid += 1;
+        }
+        else
+        {
 
-	for (i=0; i<4; i++)
-	{
-                flag = 0;
-		for (j=0; j<6; j++)
-			if (old_topo[i].t_neighbors[j] == topo[i].t_neighbors[j])
-				flag++;
-		if (flag == 6)
-		{
-			topo[i].t_status = 1;
-                        kprintf("mcast addresses are the same\n");
-			nodeid = i + 1;
-		}
-		else
-		{
-			sleep(0.05);
-			if (nodeid < i)
-				sleep(0.05);
-			kprintf("nnodes , i: %d, %d\n", nnodes, i);
-			for(k=0; k<6; k++)
-			{
-				kprintf("%02x ",topo[i].t_macaddr[k]);
-				pkt->net_ethsrc[k] = topo[i].t_macaddr[k];
-			}
-			kprintf("\n");
-			//memcpy(&pkt->net_ethsrc, topo[i].t_macaddr, ETH_ADDR_LEN);
-			kprintf("\nassign message should be sent\n");
-			retval = wsserver_assign(pkt);
-		}
+            //kprintf("nnodes , i: %d, %d\n", nnodes, i);
+            for(k=0; k<6; k++)
+            {
+                kprintf("%02x ",topo[i].t_macaddr[k]);
+                pkt->net_ethsrc[k] = topo[i].t_macaddr[k];
+            }
+            kprintf("\n");
+            //memcpy(&pkt->net_ethsrc, topo[i].t_macaddr, ETH_ADDR_LEN);
+            //kprintf("\nassign message should be sent\n");
+            wsserver_assign(pkt);
+            sleepms(10);
 
-	}
+        }
+
+    }
 }
 /*----------------------------------------------------------
 * This function is used to update the network topology
@@ -253,14 +266,16 @@ struct c_msg *newtop(struct c_msg ctlpkt)
     strcpy(fname,(char *)ctlpkt.fname);
     stat = init_topo(fname);
     //print_topo();
-    nodeid = 0;
+
     if (stat == OK)
     {
-	topo_compr();
+	nodeid = 0;
+        topo_compr();
         cmsg_reply->cmsgtyp = htonl(C_OK);
     }
     else
     {
+        memcpy(&topo, &old_topo, sizeof(topo));
         cmsg_reply->cmsgtyp = htonl(C_ERR);
     }
     return cmsg_reply;
@@ -272,62 +287,47 @@ struct c_msg *newtop(struct c_msg ctlpkt)
 struct c_msg * nping_reply(struct c_msg ctlpkt)
 {
     int32 i;
-    int32 loop_start = 0;
-    int32 loop_end = 0;
-
     struct c_msg * cmsg_reply;
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
     memset(cmsg_reply, 0, sizeof(struct c_msg));
 
-    if (ntohl(ctlpkt.pingnodeid) == -1)
-    {
-        loop_start = 0;
-        loop_end = MAXNODES - 1;
-    }
-    else
-    {
-        loop_start = ntohl(ctlpkt.pingnodeid);
-        loop_end = ntohl(ctlpkt.pingnodeid);
-    }
 
     int ping_num = 0;
 
-    //kprintf("loop_start: %d , loop_end: %d\n", loop_start, loop_end);
-    for (i = loop_start; i<=loop_end; i++)
+    i = ntohl(ctlpkt.pingnodeid);
+   
+    if (topo[i].t_status == 1)
     {
-	//kprintf("i: %d\n", i);
-        if (topo[i].t_status == 1)
+      
+        status stat = nping(i);
+
+        sleepms(10);
+        
+        if (ping_ack_flag[i] == 1 && stat == OK)
         {
-            status stat = nping(i);
-
-            sleep(1);
-            if (ping_ack_flag == 1 && stat == OK)
-            {
-                cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
-                cmsg_reply->pingdata[ping_num].pstatus = htonl(ALIVE);
-                ping_ack_flag = 0;
-            }
-            else if(ping_ack_flag == 0 && stat == OK)
-            {
-                cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
-                cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTRESP);
-
-            }
-        }
-        else
-        {
-
             cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
-            cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTACTIV);
+            cmsg_reply->pingdata[ping_num].pstatus = htonl(ALIVE);
+            //kprintf("ping ack flag:%d:%d\n", ping_ack_flag[i], stat);
+            ping_ack_flag[i] = 0;
+        }
+        else if(ping_ack_flag[i] == 0 && stat == OK)
+        {
+            cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+            cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTRESP);
 
         }
-        ping_num++;
-        //kprintf("pingnum: %d\n",ping_num);
     }
+    else
+    {
+       
+        cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+        cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTACTIV);
 
+    }
+    //kprintf("pingnum: %d\n",ping_num);
+    ping_num = 1;
     cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
     cmsg_reply->pingnum = htonl(ping_num);
-
 
     return cmsg_reply;
 }
@@ -337,8 +337,9 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
  * ----------------------------------------------------------------*/
 status nping(int32 pingnodeid)
 {
-    int i;
     struct etherPkt *ping_msg;
+    byte *seq_buf;
+    seq_buf = (byte *)getmem(sizeof(byte) * 4);
 
     ping_msg = create_etherPkt();
     int32 retval;
@@ -347,14 +348,18 @@ status nping(int32 pingnodeid)
     memcpy(ping_msg->src, NetData.ethucast, ETH_ADDR_LEN);
     memcpy(ping_msg->dst, topo[pingnodeid].t_macaddr, ETH_ADDR_LEN);
     //kprintf("node ID is: %d ,node mac address: ", pingnodeid);
-    for (i = 0; i<6; i++)
+    /*for (i = 0; i<6; i++)
     {
         //  	    kprintf("%02x:", topo[pingnodeid].t_macaddr[i]);
-    }
+    }*/
     //kprintf("\n");
     ping_msg->type = htons(ETH_TYPE_A);
     ping_msg->amsgtyp = htonl(A_PING); /* Error message */
 
+    seq_buf = (byte *)seqnum;
+    //kprintf("seq num: %d, seq buf: %d\n", *seqnum , *seq_buf);
+    memcpy(ping_msg->apingdata , seq_buf , sizeof(byte) * 4);
+    *seqnum = *seqnum + 1;
 
     memset(ack_info, 0, sizeof(ack_info));
     memcpy(ack_info, (char *)(ping_msg) + 14, 16);
@@ -363,7 +368,10 @@ status nping(int32 pingnodeid)
     /*send packet over Ethernet */
     retval = write(ETHER0, (char *)ping_msg, sizeof(struct etherPkt));
     if (retval > 0)
+    {
+        ///kprintf("ping sent\n");
         return OK;
+    }
     else
         return SYSERR;
 }
@@ -386,40 +394,42 @@ struct c_msg * nping_all_reply(struct c_msg ctlpkt)
 
     if (stat == OK)
     {
-    sleep(1);
-    for (i = 0; i<MAXNODES; i++)
-    {
-
-        if (topo[i].t_status == 1)
-        {
-            if (ping_all_ack_flag[i] == 1)
-            {
-                cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
-                cmsg_reply->pingdata[ping_num].pstatus = htonl(ALIVE);
-                ping_all_ack_flag[i] = 0;
-            }
-            else if(ping_all_ack_flag[i] == 0)
-            {
-                cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
-                cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTRESP);
-
-            }
-        }
-        else
+        sleepms(nnodes+10);
+        for (i = 0; i<MAXNODES; i++)
         {
 
-            cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
-            cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTACTIV);
+            if (topo[i].t_status == 1)
+            {
+                //kprintf("i:ping ack flag  %d:%d\n", i,  ping_ack_flag[i]);
 
+                if (ping_ack_flag[i] == 1)
+                {
+                    cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+                    cmsg_reply->pingdata[ping_num].pstatus = htonl(ALIVE);
+                    ping_ack_flag[i] = 0;
+                }
+                else if(ping_ack_flag[i] == 0)
+                {
+                    cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+                    cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTRESP);
+
+                }
+            }
+            /*      else
+                  {
+
+                      cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
+                      cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTACTIV);
+
+                  }*/
+            ping_num++;
+            //kprintf("pingnum: %d\n",ping_num);
         }
-        ping_num++;
-        //kprintf("pingnum: %d\n",ping_num);
+
+        cmsg_reply->cmsgtyp = htonl(C_PING_ALL);
+
+        cmsg_reply->pingnum = htonl(ping_num);
     }
-
-    cmsg_reply->cmsgtyp = htonl(C_PING_ALL);
-
-    cmsg_reply->pingnum = htonl(ping_num);
-   }
 
     return cmsg_reply;
 }
@@ -430,6 +440,9 @@ struct c_msg * nping_all_reply(struct c_msg ctlpkt)
 status nping_all()
 {
     struct etherPkt *ping_msg;
+    byte *seq_buf;
+    seq_buf = (byte *)getmem(sizeof(byte) * 4);
+
 
     ping_msg = create_etherPkt();
     int32 retval;
@@ -437,9 +450,14 @@ status nping_all()
     /* fill out the Ethernet packet fields */
     memcpy(ping_msg->src, NetData.ethucast, ETH_ADDR_LEN);
     memcpy(ping_msg->dst, NetData.ethbcast, ETH_ADDR_LEN);
-   
+
     ping_msg->type = htons(ETH_TYPE_A);
     ping_msg->amsgtyp = htonl(A_PING_ALL); /* Error message */
+
+    seq_buf = (byte *)seqnum;
+    //kprintf("seq num: %d, seq buf: %d\n", *seqnum , *seq_buf);
+    memcpy(ping_msg->apingdata , seq_buf , sizeof(byte) * 4);
+    *seqnum = *seqnum + 1;
 
 
     memset(ack_info, 0, sizeof(ack_info));
@@ -625,6 +643,8 @@ void ack_handler(struct netpacket *pkt)
         }
         //kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
     }
+    i = ntohl(node_msg->anodeid);
+    //kprintf("ack handler i: %d\n", i);
     if (ack == 16)
     {
         if (ack_info[5] == A_ASSIGN)
@@ -634,14 +654,13 @@ void ack_handler(struct netpacket *pkt)
         }
         else if (ack_info[5] == A_PING)
         {
-            ping_ack_flag = 1;
+            ping_ack_flag[i] = 1;
             kprintf("--->Ping ACK message is received\n");
         }
-	else if (ack_info[5] == A_PING_ALL)
-	{
-            i = ntohl(node_msg->anodeid);
-	    ping_all_ack_flag[i] = 1;
-	}
+        else if (ack_info[5] == A_PING_ALL)
+        {
+            ping_ack_flag[i] = 1;
+        }
     }
 
 }

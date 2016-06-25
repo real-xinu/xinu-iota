@@ -2,12 +2,14 @@
 
 //#define SRV_IP   "128.10.136.187"
 #define BUFLEN 2048
-#define PORT 55000
+#define PORT 55000  // UDP prort
 #define ERR -1
 #define BIT_TEST 1
 #define BIT_SET 0
 #define TIME_OUT 10
-#define ALL -1
+#define ALL -1     // This macro is used for ping all
+
+// toptology status variables
 #define ALIVE 1
 #define NOTRESP -1
 #define NOTACTIV 0
@@ -37,14 +39,7 @@ struct c_msg  command_handler(char command[BUFLEN])
 
     i = 0;
     token = strtok(command, seps );
-   
-     /*if(token == NULL)
-    {
-	 printf("Please enter a command\n");   
-         message.cmsgtyp = htonl(C_ERR);
-         return message;
-
-    }*/
+  
     while( token != NULL )
     {
         /* While there are tokens in "command" */
@@ -147,8 +142,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     else if(!strcmp(array_token[0], "help"))
     {
 
-        //message.cmsgtyp = htonl(ERR);
-
+       
 
     }
     
@@ -171,7 +165,20 @@ which have been recevied from the testbed server.
 void topodump(struct c_msg *buf)
 {
     fflush(stdout);
-    printf("Number of Nodes: %d\n",ntohl(buf->topnum));
+   
+    if (ntohl(buf->topnum) == 0)
+    {
+        printf("Please enter newtop command\n");
+
+
+    }
+    if(ntohl(buf->topnum) > 0)
+    {
+
+      printf("Number of Nodes: %d\n",ntohl(buf->topnum));
+
+    }
+
     int entries = ntohl(buf->topnum);
     byte mcaddr[6];
     for (int i=0; i<entries; i++)
@@ -186,11 +193,10 @@ void topodump(struct c_msg *buf)
                 printf("%d", (buf->topdata[i].t_neighbors[j]>>k)&0x01);
             }
             printf(" ");
-            //printf("%d ",buf->topdata[i].t_neighbors[j]);
             mcaddr[j] = buf->topdata[i].t_neighbors[j];
 
         }
-        printf("\nThe neighbors of Node %d are: ",ntohl(buf->topdata[i].t_nodeid));
+        printf("\nThe neighbors of node %d are: ",ntohl(buf->topdata[i].t_nodeid));
         for (int j=0; j<46; j++)
         {
             if (srbit(mcaddr, j, BIT_TEST) == 1)
@@ -304,6 +310,7 @@ void ping_reply_handler(struct c_msg *buf)
 {
     int i, counter,status;
     counter = ntohl(buf->pingnum);
+    
     for(i=0; i<counter; i++)
     {
         status = ntohl(buf->pingdata[i].pstatus);
@@ -311,20 +318,20 @@ void ping_reply_handler(struct c_msg *buf)
         {
 
             printf("<----Reply from testbed server: Node %d is alive\n", ntohl(buf->pingdata[i].pnodeid));
-
+	    printf("status:%d\n", status);
 
         }
-        else if(status  == NOTACTIV)
+        else if((status  == NOTACTIV) && (counter == 1))
         {
             printf("<----Reply from testbed server: Node %d is not in the active network topology\n", ntohl(buf->pingdata[i].pnodeid));
-
+            printf("status:%d\n", status);
 
         }
         else if(status == NOTRESP)
         {
 
             printf("<----Reply from testbed server: Node %d is not responding \n", ntohl(buf->pingdata[i].pnodeid));
-
+            printf("status:%d\n", status);
 
         }
 

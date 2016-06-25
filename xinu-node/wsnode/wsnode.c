@@ -71,10 +71,10 @@ status wsnode_sendack(struct netpacket *pkt)
     ack_msg->anodeid = htonl(info.nodeid);
     memcpy(ack_msg->aacking,(char *)(node_msg) + 14, 16);
     int i;
-    for (i=0; i<16; i++)
+    /*for (i=0; i<16; i++)
     {
         //kprintf("aacking: %d\n", ack_msg->aacking[i]);
-    }
+    }*/
 
     retval = write(ETHER0, (char *)ack_msg, sizeof(struct etherPkt));
     if(retval > 0)
@@ -121,9 +121,9 @@ void amsg_handler(struct netpacket *pkt)
     {
     case A_ASSIGN:
 	pdump(pkt);
+        info.nodeid = ntohl(node_msg->anodeid);
         if(wsnode_sendack(pkt)== OK)
         {
-            info.nodeid = ntohl(node_msg->anodeid);
             for (i=0; i< 6; i++)
             {
                 info.mcastaddr[i] = node_msg->amcastaddr[i];
