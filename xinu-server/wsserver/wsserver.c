@@ -203,7 +203,7 @@ void topo_compr()
 	pkt = (struct netpacket *) getbuf(netbufpool);
 	//memset(&pkt, 0, sizeof(struct netpacket));
 
-	for (i=0; i<2; i++)
+	for (i=0; i<4; i++)
 	{
                 flag = 0;
 		for (j=0; j<6; j++)
@@ -213,6 +213,7 @@ void topo_compr()
 		{
 			topo[i].t_status = 1;
                         kprintf("mcast addresses are the same\n");
+			nodeid = i + 1;
 		}
 		else
 		{
