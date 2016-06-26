@@ -127,8 +127,7 @@
 
 #define	MAXNODES	46	/* Maximum number of nodes being tested	*/
 
-struct	t_entry	 		/* Entry in a topology file (also used	*/
-{
+struct	t_entry { 		/* Entry in a topology file (also used	*/
     /*  in messages.			*/
     int32	t_nodeid;	/* ID of a node				*/
     int32	t_status;	/* Status of the node			*/
@@ -138,21 +137,18 @@ struct	t_entry	 		/* Entry in a topology file (also used	*/
 
 
 
-struct	p_entry  		/* Entry in a ping reply		*/
-{
+struct	p_entry {		/* Entry in a ping reply		*/
     int32	pnodeid;	/* ID of a node				*/
     int32	pstatus;	/* Status of the node			*/
 };
 
 
-struct	c_msg
-{
+struct	c_msg {
     int32	clength;	/* The length of the message measured	*/
     /* in octets from the start of c_msg.	*/
     int32	cmsgtyp;	/* Message type as specified above	*/
 
-    union  			/* Items in the union are only needed	*/
-    {
+    union {			/* Items in the union are only needed	*/
         /*  for messages that contain additional*/
         /*  information beyond the message type	*/
         /*  and message length.			*/
@@ -162,21 +158,18 @@ struct	c_msg
 
         int32	pingnodeid;	/* PING_REQ */
 
-        struct	 		/* PING_REPLY */
-        {
+        struct { 		/* PING_REPLY */
             int32	pingnum; /* Count of entries that follow*/
             struct	p_entry	pingdata[MAX_NODES];
 
         };
 
-        struct	 		/* TOP_REPLY */
-        {
+        struct { 		/* TOP_REPLY */
             int32	topnum; /* Count of entries that follow	*/
             struct	t_entry	topdata[MAX_NODES];
         };
 
-        struct	 		/* NEW_TOP */
-        {
+        struct { 		/* NEW_TOP */
             int32	flen;	/* Length of the name in bytes	*/
             byte	fname[File_Name_Size];/* File name to use		*/
         };

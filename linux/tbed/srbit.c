@@ -64,8 +64,7 @@ int	srbit (
 
     /* Ensure that the bit value is valid */
 
-    if ( (nodeid < 0) || (nodeid > 45) )
-    {
+    if ( (nodeid < 0) || (nodeid > 45) ) {
         return SYSERR;
     }
 
@@ -79,8 +78,7 @@ int	srbit (
 
     /* Adjust the mask one bit for the high-order byte */
 
-    if (aindex == 0)
-    {
+    if (aindex == 0) {
         mask = mask << 1;
     }
 
@@ -89,20 +87,16 @@ int	srbit (
 
     /* If command specifies setting, change set the bit */
 
-    if (cmd == BIT_SET)
-    {
+    if (cmd == BIT_SET) {
         addr[aindex] |= mask;
         return 1;
     }
 
     /* Command specifies testing */
 
-    if ( (addr[aindex] & mask) == 0)
-    {
+    if ( (addr[aindex] & mask) == 0) {
         return 0;	/* Bit is 0 */
-    }
-    else
-    {
+    } else {
         return 1;	/* Bit is 1 */
     }
 }

@@ -5,8 +5,7 @@
 /*------------------------------------------------------------------
  a data strucure to keep assigned multicast address and the node ID.
 *------------------------------------------------------------------*/
-struct node_info
-{
+struct node_info {
     int32 nodeid;
     byte mcastaddr[6];
 };
@@ -91,10 +90,8 @@ void print_info()
     int i,j;
 
     kprintf("node id:%d\n", info.nodeid);
-    for (j=0; j< 6; j++)
-    {
-        for (i=7; i>=0; i--)
-        {
+    for (j=0; j< 6; j++) {
+        for (i=7; i>=0; i--) {
 
             kprintf("%d ", (info.mcastaddr[j]>> i) &0x01);
         }
@@ -117,15 +114,12 @@ void amsg_handler(struct netpacket *pkt)
     node_msg = (struct etherPkt *)pkt;
     int32 amsgtyp = ntohl(node_msg->amsgtyp);
     int i;
-    switch(amsgtyp)
-    {
+    switch(amsgtyp) {
     case A_ASSIGN:
-	pdump(pkt);
+        pdump(pkt);
         info.nodeid = ntohl(node_msg->anodeid);
-        if(wsnode_sendack(pkt)== OK)
-        {
-            for (i=0; i< 6; i++)
-            {
+        if(wsnode_sendack(pkt)== OK) {
+            for (i=0; i< 6; i++) {
                 info.mcastaddr[i] = node_msg->amcastaddr[i];
             }
             print_info();
@@ -142,24 +136,22 @@ void amsg_handler(struct netpacket *pkt)
         kprintf("<--- XON message is received\n");
         break;
     case A_PING:
-	//pdump(pkt);
+        //pdump(pkt);
         kprintf("<--- PING message is received\n");
-	if(wsnode_sendack(pkt) == OK)
-	{
-            kprintf("----> ACK message is sent\n");   
+        if(wsnode_sendack(pkt) == OK) {
+            kprintf("----> ACK message is sent\n");
 
-	}
-        
+        }
+
         break;
     case A_PING_ALL:
-	delay = (info.nodeid * 0.001);
-	sleep(delay);
+        delay = (info.nodeid * 0.001);
+        sleep(delay);
         kprintf("<--- PINGALL message is received\n");
-	if(wsnode_sendack(pkt) == OK)
-	{
-            kprintf("----> ACK message is sent\n");   
+        if(wsnode_sendack(pkt) == OK) {
+            kprintf("----> ACK message is sent\n");
 
-	}
+        }
 
         break;
 

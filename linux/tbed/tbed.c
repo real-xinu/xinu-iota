@@ -40,8 +40,7 @@ struct c_msg  command_handler(char command[BUFLEN])
     i = 0;
     token = strtok(command, seps );
     /* While there are tokens in "command" */
-    while( token != NULL )
-    {
+    while( token != NULL ) {
 
         strcpy(array_token[i], token);
         token = strtok( NULL, seps);  /* Get next token: */
@@ -49,38 +48,28 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
 
 
-    if (!strcmp(array_token[0], "restart") && !strcmp(array_token[1], "t"))
-    {
+    if (!strcmp(array_token[0], "restart") && !strcmp(array_token[1], "t")) {
         message.cmsgtyp = htonl(C_RESTART);
     }
 
 
-    else if(!strcmp(array_token[0], "xon"))
-    {
+    else if(!strcmp(array_token[0], "xon")) {
         message.cmsgtyp = htonl(C_XON);
         num = atoi(array_token[1]);
-        if (((num >= 0) && (num <= 45)) || (num == -1))
-        {
+        if (((num >= 0) && (num <= 45)) || (num == -1)) {
             message.xonoffid = htonl(num);
-        }
-        else
-        {
+        } else {
 
             printf("Incorrect ID\n");
             message.cmsgtyp = htonl(ERR);
         }
 
-    }
-    else if (!strcmp(array_token[0], "xoff"))
-    {
+    } else if (!strcmp(array_token[0], "xoff")) {
         message.cmsgtyp = htonl(C_XOFF);
         num = atoi(array_token[1]);
-        if (((num >= 0) && (num <= 45)) || (num == -1))
-        {
+        if (((num >= 0) && (num <= 45)) || (num == -1)) {
             message.xonoffid = htonl(num);
-        }
-        else
-        {
+        } else {
 
             printf("Incorrect ID\n");
             message.cmsgtyp = htonl(ERR);
@@ -88,73 +77,53 @@ struct c_msg  command_handler(char command[BUFLEN])
     }
 
 
-    else if((!strcmp(array_token[0], "nping")) && strcmp(array_token[1], " ") && strcmp(array_token[1], "all"))
-    {
+    else if((!strcmp(array_token[0], "nping")) && strcmp(array_token[1], " ") && strcmp(array_token[1], "all")) {
         message.cmsgtyp = htonl(C_PING_REQ);
         message.clength = htonl(sizeof(message));
         num = atoi(array_token[1]);
-        if ((num >= 0) && (num <= 45))
-        {
+        if ((num >= 0) && (num <= 45)) {
             message.pingnodeid = htonl(num);
-        }
-        else
-        {
+        } else {
             printf("Incorrect ID\n");
             message.cmsgtyp = htonl(ERR);
         }
 
-    }
-    else if((!strcmp(array_token[0], "nping")) && strcmp(array_token[1], " ") && (!strcmp(array_token[1], "all")))
-    {
+    } else if((!strcmp(array_token[0], "nping")) && strcmp(array_token[1], " ") && (!strcmp(array_token[1], "all"))) {
         message.cmsgtyp = htonl(C_PING_ALL);
         message.pingnodeid = htonl(ALL);
 
 
     }
 
-    else if(!strcmp(array_token[0], "topdump"))
-    {
+    else if(!strcmp(array_token[0], "topdump")) {
         message.cmsgtyp = htonl(C_TOP_REQ);
-    }
-    else if (!strcmp(array_token[0], "newtop") && (strcmp(array_token[1], " ")))
-    {
+    } else if (!strcmp(array_token[0], "newtop") && (strcmp(array_token[1], " "))) {
         message.cmsgtyp = htonl(C_NEW_TOP);
         message.flen = htonl(strlen(array_token[1]));
         strcpy((char *)message.fname ,array_token[1]);
-    }
-    else if (!strcmp(array_token[0], "online"))
-    {
+    } else if (!strcmp(array_token[0], "online")) {
         message.cmsgtyp = htonl(C_ONLINE);
 
 
-    }
-    else if(!strcmp(array_token[0], "offline"))
-    {
+    } else if(!strcmp(array_token[0], "offline")) {
 
         message.cmsgtyp = htonl(C_OFFLINE);
 
-    }
-    else if (!strcmp(array_token[0], "delay"))
-    {
+    } else if (!strcmp(array_token[0], "delay")) {
         int delay = atoi(array_token[1]);
         usleep(delay);
         message.cmsgtyp = htonl(C_ERR);
 
-    }
-    else if (!strcmp(array_token[0], "exit"))
-    {
+    } else if (!strcmp(array_token[0], "exit")) {
         printf("====Management app is closed=====\n");
         exit(1);
-    }
-    else if(!strcmp(array_token[0], "help"))
-    {
+    } else if(!strcmp(array_token[0], "help")) {
 
 
 
     }
 
-    else
-    {
+    else {
         printf("%s is not defined\n", array_token[0]);
         message.cmsgtyp = htonl(C_ERR);
 
@@ -173,14 +142,12 @@ void topodump(struct c_msg *buf)
 {
     fflush(stdout);
 
-    if (ntohl(buf->topnum) == 0)
-    {
+    if (ntohl(buf->topnum) == 0) {
         printf("Please enter newtop command\n");
 
 
     }
-    if(ntohl(buf->topnum) > 0)
-    {
+    if(ntohl(buf->topnum) > 0) {
 
         printf("Number of Nodes: %d\n",ntohl(buf->topnum));
 
@@ -188,15 +155,12 @@ void topodump(struct c_msg *buf)
 
     int entries = ntohl(buf->topnum);
     byte mcaddr[6];
-    for (int i=0; i<entries; i++)
-    {
+    for (int i=0; i<entries; i++) {
         printf("%d ,", ntohl(buf->topdata[i].t_nodeid));
         printf("%d ,",ntohl(buf->topdata[i].t_status));
-        for (int j=0; j <6; j++)
-        {
+        for (int j=0; j <6; j++) {
 
-            for (int k=7; k>=0; k--)
-            {
+            for (int k=7; k>=0; k--) {
                 printf("%d", (buf->topdata[i].t_neighbors[j]>>k)&0x01);
             }
             printf(" ");
@@ -204,10 +168,8 @@ void topodump(struct c_msg *buf)
 
         }
         printf("\nThe neighbors of node %d are: ",ntohl(buf->topdata[i].t_nodeid));
-        for (int j=0; j<46; j++)
-        {
-            if (srbit(mcaddr, j, BIT_TEST) == 1)
-            {
+        for (int j=0; j<46; j++) {
+            if (srbit(mcaddr, j, BIT_TEST) == 1) {
                 printf("%d ",j);
             }
         }
@@ -235,8 +197,7 @@ int server_discovery(const char *SRV_IP)
     tv.tv_usec = 0;
 
 
-    if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)  /* Create a UDP socket */
-    {
+    if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) { /* Create a UDP socket */
         error_handler("socket");
 
     }
@@ -247,14 +208,12 @@ int server_discovery(const char *SRV_IP)
     si_me.sin_family = AF_INET;
     si_me.sin_port = htons(PORT);
     si_me.sin_addr.s_addr = htonl(INADDR_ANY);
-    if( bind(s , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1)
-    {
+    if( bind(s , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1) {
         error_handler("Sock can not bind to the address");
 
 
     }
-    if (inet_aton(SRV_IP, &si_other.sin_addr)==0)
-    {
+    if (inet_aton(SRV_IP, &si_other.sin_addr)==0) {
         fprintf(stderr, "inet_aton() failed\n");
         exit(1);
     }
@@ -268,38 +227,31 @@ int server_discovery(const char *SRV_IP)
     }
 
     int bcast = 1;
-    if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast)))
-    {
+    if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast))) {
         error_handler("Broadcast socket option cannot be set");
     }
 
 
-    while(1)
-    {
+    while(1) {
 
         message.cmsgtyp = htonl(C_TS_REQ);
 
-        if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1)
-        {
+        if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
             error_handler("The message is not sent to Testbed_Server()");
 
         }
         printf("Looking for the Testbed Server...\n");
 
 
-        if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0)
-        {
+        if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0) {
             printf("Timeout, Please try again\n");
         }
         buf = (struct c_msg*)recvbuf;
-        if(ntohl(buf->cmsgtyp) == C_TS_RESP)
-        {
+        if(ntohl(buf->cmsgtyp) == C_TS_RESP) {
             printf("Reply from Testbed_Server, Testbed server is discovered.\n");
             close(s);
             return 1;
-        }
-        else
-        {
+        } else {
             close(s);
             return 0;
         }
@@ -318,24 +270,18 @@ void ping_reply_handler(struct c_msg *buf)
     int i, counter,status;
     counter = ntohl(buf->pingnum);
 
-    for(i=0; i<counter; i++)
-    {
+    for(i=0; i<counter; i++) {
         status = ntohl(buf->pingdata[i].pstatus);
-        if(status == ALIVE)
-        {
+        if(status == ALIVE) {
 
             printf("<----Reply from testbed server: Node %d is alive\n", ntohl(buf->pingdata[i].pnodeid));
 
 
-        }
-        else if((status  == NOTACTIV) && (counter == 1))
-        {
+        } else if((status  == NOTACTIV) && (counter == 1)) {
             printf("<----Reply from testbed server: Node %d is not in the active network topology\n", ntohl(buf->pingdata[i].pnodeid));
 
 
-        }
-        else if(status == NOTRESP)
-        {
+        } else if(status == NOTRESP) {
             printf("<----Reply from testbed server: Node %d is not responding \n", ntohl(buf->pingdata[i].pnodeid));
 
         }
@@ -353,8 +299,7 @@ void ping_reply_handler(struct c_msg *buf)
 void response_handler(struct c_msg *buf)
 {
     int32 cmsgtyp = ntohl(buf->cmsgtyp);
-    switch(cmsgtyp)
-    {
+    switch(cmsgtyp) {
     case C_OK:
         printf("Reply from testbed server: OK\n");
         break;
@@ -399,8 +344,7 @@ void udp_process(const char *SRV_IP, char *file)
     FILE *type;
 
 
-    if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)  /* Create a UDP socket */
-    {
+    if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) { /* Create a UDP socket */
         error_handler("socket");
 
     }
@@ -409,14 +353,12 @@ void udp_process(const char *SRV_IP, char *file)
     si_me.sin_family = AF_INET;
     si_me.sin_port = htons(PORT);
     si_me.sin_addr.s_addr = htonl(INADDR_ANY);
-    if( bind(s , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1)
-    {
+    if( bind(s , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1) {
         error_handler("Sock can not bind to the address");
 
 
     }
-    if (inet_aton(SRV_IP, &si_other.sin_addr)==0)
-    {
+    if (inet_aton(SRV_IP, &si_other.sin_addr)==0) {
         fprintf(stderr, "inet_aton() failed\n");
         exit(1);
     }
@@ -430,18 +372,15 @@ void udp_process(const char *SRV_IP, char *file)
     }
 
 
-    if (file == NULL)
-    {
+    if (file == NULL) {
         type = stdin;
 
-        while(1)
-        {
+        while(1) {
 
             memset(command, 0, sizeof(char) * BUFLEN);
             printf("\n(Enter Command)# ");                               /*receives command from the operator */
             fgets(command, sizeof(command), type);
-            while (!strcmp(command, "\n"))
-            {
+            while (!strcmp(command, "\n")) {
                 printf("\n(Enter Command)# ");                               /*receives command from the operator */
                 fgets(command, sizeof(command), type);
             }
@@ -449,18 +388,15 @@ void udp_process(const char *SRV_IP, char *file)
             memset(&message, 0, sizeof(struct c_msg));
             message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp != htonl(C_ERR))
-            {
+            if (message.cmsgtyp != htonl(C_ERR)) {
                 //printf("type:%d\n", ntohl(message.cmsgtyp));
-                if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1)
-                {
+                if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
                     error_handler("The message is not sent to Testbed_Server()");
 
                 }
 
 
-                if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0)
-                {
+                if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0) {
                     printf("Timeout, Please try again\n");
                 }
                 buf = (struct c_msg*)recvbuf;
@@ -470,28 +406,22 @@ void udp_process(const char *SRV_IP, char *file)
 
         }
 
-    }
-    else
-    {
+    } else {
         type = fopen(file, "r");
 
-        while( fgets(command, sizeof(command), type) != NULL)
-        {
+        while( fgets(command, sizeof(command), type) != NULL) {
 
             command[strcspn(command, "\r\n")] = 0;
             message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp != htonl(ERR))
-            {
-                if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1)
-                {
+            if (message.cmsgtyp != htonl(ERR)) {
+                if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
                     error_handler("The message is not sent to Testbed_Server()");
 
                 }
 
 
-                if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0)
-                {
+                if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0) {
                     printf("Timeout, Please try again\n");
                 }
                 buf = (struct c_msg*)recvbuf;

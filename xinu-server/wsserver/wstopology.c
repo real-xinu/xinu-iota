@@ -14,8 +14,7 @@ status read_topology(char *name, char **buff, uint32 *size)
     /* Open topology file from server */
 
     int32 fd = open(RFILESYS, name, "ro");
-    if (fd == SYSERR)
-    {
+    if (fd == SYSERR) {
         printf("WARNING: Could not open topology file for reading\n");
         return SYSERR;
     }
@@ -23,8 +22,7 @@ status read_topology(char *name, char **buff, uint32 *size)
     /* Get size of topology file so we know how much to read */
     *size = control(RFILESYS, RFS_CTL_SIZE, 0, 0);
     //kprintf("size:%d\n", *size);
-    if (*size == SYSERR)
-    {
+    if (*size == SYSERR) {
         printf("WARNING: Could not get topology file size\n");
         close(fd);
         return SYSERR;
@@ -32,8 +30,7 @@ status read_topology(char *name, char **buff, uint32 *size)
 
     /* Allocate buffer so that caller knows where it is */
     *buff = getmem(*size);
-    if ((int32) *buff == SYSERR)
-    {
+    if ((int32) *buff == SYSERR) {
         printf("WARNING: Could not allocate memory for topology\n");
         close(fd);
         return SYSERR;
@@ -41,8 +38,7 @@ status read_topology(char *name, char **buff, uint32 *size)
 
     /* Read the topology file into the buffer */
     int32 status = read(fd, *buff, *size);
-    if (status == SYSERR)
-    {
+    if (status == SYSERR) {
         printf("WARNING: Could not read topology file contents\n");
         close(fd);
         freemem(*buff,*size);
@@ -74,12 +70,9 @@ int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
     int len_flag = 0;
     int name_size;
     i = 0;
-    while (counter <= size)
-    {
-        if (flag != -1)
-        {
-            for(j = 0; j < ETH_ADDR_LEN; j++)
-            {
+    while (counter <= size) {
+        if (flag != -1) {
+            for(j = 0; j < ETH_ADDR_LEN; j++) {
                 /*
                        for (k=7; k>=0; k--)
                        {
@@ -93,33 +86,25 @@ int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
             //kprintf("\n");
             if (flag == 6)
                 flag = -1;
-            else
-            {
+            else {
                 flag = 0;
                 topo[i].t_nodeid = i;
                 topo[i].t_status = 0;
-                for (j=0; j<6; j++)
-                {
+                for (j=0; j<6; j++) {
                     topo[i].t_neighbors[j] = (unsigned char)buff[counter + j];
                 }
                 i++;
             }
             counter = counter + 6;
-        }
-        else
-        {
-            if (len_flag == 0)
-            {
+        } else {
+            if (len_flag == 0) {
                 name_size = buff[counter];
                 counter++;
                 len_flag = 1;
-            }
-            else
-            {
+            } else {
                 int name[name_size];
 
-                for (j=0; j<name_size; j++)
-                {
+                for (j=0; j<name_size; j++) {
                     name[j] = buff[counter + j];
                     //kprintf("%s",&name[j]);
                 }
@@ -130,8 +115,7 @@ int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
         }
     }
     num_of_entries = i;
-    for (i= num_of_entries -1; i<nnodes; i++)
-    {
+    for (i= num_of_entries -1; i<nnodes; i++) {
         topo[i].t_nodeid = i;
         topo[i].t_status = 0;
     }
