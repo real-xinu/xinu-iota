@@ -507,150 +507,151 @@ int	main(
 	}
 
 
+	if (parse) {
+		/*Reopen stdin to be the topology file */
 
-	/*Reopen stdin to be the topology file */
-
-	infile = argv[1];
-	if (freopen(infile, "r", stdin) == NULL) {
-		fprintf(stderr, "error: cannot read input file %s\n", infile);
-		exit(1);
-	}
-
-	/* Initialize data structures */
-
-	init();
-
-	/* Start with the first token */
-
-	typ = gettok(tok);
-	if (typ == TOKEOF) {
-		fprintf(stderr, "error: no tokens found in input file %s\n", infile, 0);
-		exit(1);
-	}
-
-	/* While items remain to be processed */
-
-	while(1) {
-
-		/* Verify that the next item is the name of a sending node */
-
-		if (typ != TOKSEND) {
-			errexit("Sending node expected on line %d\n", linenum, 0);
+		infile = argv[1];
+		if (freopen(infile, "r", stdin) == NULL) {
+			fprintf(stderr, "error: cannot read input file %s\n", infile);
+			exit(1);
 		}
 
-		/* Lookup name of sender and verify that the sender did	*/
-		/*	not have a previous specification		*/
+		/* Initialize data structures */
 
-		sindex = lookup(tok);
-		sptr = &nodes[sindex];
-		if (sptr->nstatus == RECVDEF) {
-			errexit("error: multiple definitions for node %s on line %d\n", (long)tok, linenum);
-		}
+		init();
 
-		/* Mark the sender as having appeared in a definition */
-
-		sptr->nstatus = RECVDEF;
-
-		/* Get the first receiver on the list */
+		/* Start with the first token */
 
 		typ = gettok(tok);
+		if (typ == TOKEOF) {
+			fprintf(stderr, "error: no tokens found in input file %s\n", infile, 0);
+			exit(1);
+		}
 
-		if (typ != TOKRECV) {
-			/* The node does not have any receivers on its	*/
-			/*  list.  An error exit can be inserted here	*/
-			/*  isolated nodes are not allowed (the current	*/
-			/*  version allows them to permit testing the	*/
-			/*  effects of isolation.			*/
+		/* While items remain to be processed */
 
+		while(1) {
+
+			/* Verify that the next item is the name of a sending node */
+
+			if (typ != TOKSEND) {
+				errexit("Sending node expected on line %d\n", linenum, 0);
+			}
+
+			/* Lookup name of sender and verify that the sender did	*/
+			/*	not have a previous specification		*/
+
+			sindex = lookup(tok);
+			sptr = &nodes[sindex];
+			if (sptr->nstatus == RECVDEF) {
+				errexit("error: multiple definitions for node %s on line %d\n", (long)tok, linenum);
+			}
+
+			/* Mark the sender as having appeared in a definition */
+
+			sptr->nstatus = RECVDEF;
+
+			/* Get the first receiver on the list */
+
+			typ = gettok(tok);
+
+			if (typ != TOKRECV) {
+				/* The node does not have any receivers on its	*/
+				/*  list.  An error exit can be inserted here	*/
+				/*  isolated nodes are not allowed (the current	*/
+				/*  version allows them to permit testing the	*/
+				/*  effects of isolation.			*/
+
+				if (typ == TOKEOF) {
+					break;
+				} else {
+					continue;
+				}
+			}
+
+			/* While additional receiving nodes are found, add each to the list of receivers */
+
+			while (typ == TOKRECV) {
+				rindex = lookup(tok);
+				if (rindex == sindex) {
+					errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
+				}
+				rptr = &nodes[rindex];
+				rptr->nrecv = 1;
+				sptr->nsend = 1;
+				srbit(sptr->nmcast, rindex, BIT_SET);
+				if (symmetric > 0) {
+					/* Force symmetry */
+					srbit(nodes[rindex].nmcast, sindex, BIT_SET);
+					rptr->nsend = 1;
+					sptr->nrecv = 1;
+				}
+				/* Move to the next token */
+				typ = gettok(tok);
+			}
 			if (typ == TOKEOF) {
 				break;
-			} else {
-				continue;
 			}
 		}
 
-		/* While additional receiving nodes are found, add each to the list of receivers */
+		/* Analyze the results */
 
-		while (typ == TOKRECV) {
-			rindex = lookup(tok);
-			if (rindex == sindex) {
-				errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
+		for (nindex=0; nindex<nnodes; nindex++) {
+			sptr = &nodes[nindex];
+			printf("Node %2d ", nindex);
+			msg="Can send & receive";
+			if (sptr->nsend == 0) {
+				msg = "Can only receive";
+				if (sptr->nrecv == 0) {
+					msg = "Completely isolated";
+				}
+			} else if (sptr->nrecv == 0) {
+				msg = "Can only send";
 			}
-			rptr = &nodes[rindex];
-			rptr->nrecv = 1;
-			sptr->nsend = 1;
-			srbit(sptr->nmcast, rindex, BIT_SET);
-			if (symmetric > 0) {
-				/* Force symmetry */
-				srbit(nodes[rindex].nmcast, sindex, BIT_SET);
-				rptr->nsend = 1;
-				sptr->nrecv = 1;
+			printf(" %-19s",msg);
+			printf(" (original name %s)\n", sptr->nname);
+			printf("         Multicast address: ");
+			for (i=0;i<6;i++) {
+				printf(" ");
+				for (j=7; j>=0; j--) {
+					printf("%d",(sptr->nmcast[i]>>j)&0x01);
+				}
 			}
-			/* Move to the next token */
-			typ = gettok(tok);
+			printf("\n");
 		}
-		if (typ == TOKEOF) {
-			break;
+
+		/* Output a topology database */
+
+		outfile = malloc(strlen(infile)+3);
+		strcpy(outfile, infile);
+		strcat(outfile, ".0");
+		if ( (fout = fopen(outfile, "w") ) == NULL) {
+			fprintf(stderr,"error - cannot open output file %s\n", outfile);
 		}
-	}
 
-	/* Analyze the results */
+		/* Write the multicast address for each node */
 
-	for (nindex=0; nindex<nnodes; nindex++) {
-		sptr = &nodes[nindex];
-		printf("Node %2d ", nindex);
-		msg="Can send & receive";
-		if (sptr->nsend == 0) {
-			msg = "Can only receive";
-			if (sptr->nrecv == 0) {
-				msg = "Completely isolated";
-			}
-		} else if (sptr->nrecv == 0) {
-			msg = "Can only send";
+		for (nindex=0; nindex<nnodes; nindex++) {
+			fwrite(nodes[nindex].nmcast, 1, 6, fout);
 		}
-		printf(" %-19s",msg);
-		printf(" (original name %s)\n", sptr->nname);
-		printf("         Multicast address: ");
-		for (i=0;i<6;i++) {
-			printf(" ");
-			for (j=7; j>=0; j--) {
-				printf("%d",(sptr->nmcast[i]>>j)&0x01);
-			}
+
+		/* Write the sentinel value */
+
+		sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
+			sentinel[4] = sentinel[5] = 0x00;
+		fwrite(sentinel, 1, 6, fout);
+
+		/* Write the node names as a 1-byte length field followed by	*/
+		/*	a set of 9null-terminated) characters that form the	*/
+		/*	name of the node.  The length includes the null byte.	*/
+
+		for (nindex=0; nindex<nnodes; nindex++) {
+			nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
+			fwrite(&nlen, 1, 1, fout);
+			fwrite(nodes[nindex].nname, 1, nlen, fout);
 		}
-		printf("\n");
+
+		fclose(fout);
 	}
-
-	/* Output a topology database */
-
-	outfile = malloc(strlen(infile)+3);
-	strcpy(outfile, infile);
-	strcat(outfile, ".0");
-	if ( (fout = fopen(outfile, "w") ) == NULL) {
-		fprintf(stderr,"error - cannot open output file %s\n", outfile);
-	}
-
-	/* Write the multicast address for each node */
-
-	for (nindex=0; nindex<nnodes; nindex++) {
-		fwrite(nodes[nindex].nmcast, 1, 6, fout);
-	}
-
-	/* Write the sentinel value */
-
-	sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
-		sentinel[4] = sentinel[5] = 0x00;
-	fwrite(sentinel, 1, 6, fout);
-
-	/* Write the node names as a 1-byte length field followed by	*/
-	/*	a set of 9null-terminated) characters that form the	*/
-	/*	name of the node.  The length includes the null byte.	*/
-
-	for (nindex=0; nindex<nnodes; nindex++) {
-		nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
-		fwrite(&nlen, 1, 1, fout);
-		fwrite(nodes[nindex].nname, 1, nlen, fout);
-	}
-
-	fclose(fout);
 	exit(0);
 }
