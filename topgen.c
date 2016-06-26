@@ -460,6 +460,8 @@ int	main(
 	unsigned char sentinel[6];	/* Sentinel value in the file	*/
 	unsigned char	nlen;		/* Length of a node name	*/
 
+	int parse = 1;
+
 	char	use[] = "error: use is topgen [-s] (filename | -u topname)\n";
 
 	/* Process arguments */
@@ -474,18 +476,37 @@ int	main(
 			symmetric = 1;
 			argv++;
 		}
-		else if (strcmp(argv[1], "-u") != 0) {
+
+		else if (strcmp(argv[1], "-u") == 0) {
+			parse = 0;
+		}
+
+		else {
 			fprintf(stderr, "%s", use);
 			exit(1);
 		}
 	}
 
-	if (argc == 4)
-		if ((strcmp(argv[1], "-s") != 0) || (strcmp(argv[2], "-u") != 0)) {
+	if (argc == 4) {
+		if (strcmp(argv[1], "-s") == 0) {
+			symmetric++;
+			if (strcmp(argv[2], "-u") == 0) {
+				parse = 0;
+			}
+
+			else {
+				 fprintf(stderr, "%s", use);
+				 exit(1);
+			}
+		}
+
+		else {
 			fprintf(stderr, "%s", use);
 			exit(1);
 		}
 	}
+
+
 
 	/*Reopen stdin to be the topology file */
 
