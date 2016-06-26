@@ -1,0 +1,562 @@
+/* parse.c - parse a topology specification and build a database */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+/************************************************************************/
+/*									*/
+/* use:   parse  [-s] filename						*/
+/*									*/
+/* Parse reads a topology specification, checks the syntax, and		*/
+/*	converts the topology into the binary form used by the		*/
+/*	testbed server.  The -s flag makes all communication, which	*/
+/*	means that if the input specifies node A can hear node B,	*/
+/*	parse automatically specifies that node B can also hear node	*/
+/*	A.  If the input file is named filename, output is written	*/
+/*	a file anmed							*/
+/*			    filename.top				*/
+/*									*/
+/************************************************************************/
+
+
+#define	NAMLEN	128		/* Maximum length of a node name	*/
+#define	NODES	 46		/* Maximum number of nodes		*/
+
+#define	TOKEOF	 -1		/* Token for End-Of-File		*/
+#define	TOKRECV	  0		/* Token of the form xxx (a receiver)	*/
+#define	TOKSEND	  1		/* Token of the form xxx: (a sender)	*/
+
+#define	RECVUDEF  0		/* No specification of receivers has	*/
+				/*   been encoutered for this node	*/
+#define	RECVDEF   1		/* A specification of receivers has	*/
+				/*   been encoutered for this node	*/
+
+#define	CHARRNG	256		/* The integer range of a char		*/
+
+/* Chracter definitions */
+
+#define	BLANK	' '
+#define	SHARP	'#'
+#define	NEWLINE	'\n'
+#define	COLON	':'
+#define	TAB	'\t'
+#define	NULLCH	'\0'
+
+int	linenum = 1;		/* The line number (for error messages)	*/
+
+int	map[CHARRNG];		/* Map of chracters allowed in a token	*/
+
+struct	node {			/* An entry in the list of node names	*/
+	int	nstatus;	/* Have we seen this node already?	*/
+	int	nrecv;		/* Can the node receive from any other?	*/
+	int	nsend;		/* Can the node send to any others?	*/
+	char	nname[NAMLEN];	/* Name of the node			*/
+	unsigned char nmcast[6];/* Multicast address to use when sending*/
+};
+
+struct	node	nodes[NODES];	/* List of node names			*/
+int	nnodes = 0;		/* Current number of names in the nodes	*/
+				/*	array				*/
+
+/************************************************************************/
+/*									*/
+/* errexit - print an error message and exit				*/
+/*									*/
+/************************************************************************/
+
+void	errexit (
+	  char	*fmt,		/* Printf format to use			*/
+	  long	arg1,		/* First argument to printf		*/
+	  long	arg2		/* Second argument to printf		*/
+	)
+{
+	fprintf(stderr, fmt, arg1, arg2);
+	exit(1);
+}
+
+/************************************************************************/
+/*									*/
+/* init - initialize							*/
+/*									*/
+/************************************************************************/
+
+void	init (void)
+{
+	int	i;		/* Array index used with nap and nodes	*/
+	int	j;		/* Index in a multicast array		*/
+	struct	node	*nptr;	/* Ptr to an entry in modes		*/
+
+	/* Initialize the nodes array */
+
+	for (i=0; i<NODES; i++) {
+		nptr = &nodes[i];
+		nptr->nstatus = RECVUDEF;
+		nptr->nrecv = nptr->nsend = 0;
+		nptr->nname[0] = NULLCH;
+		nptr->nmcast[0]= 0x01;
+		for (j=1; j<6; j++) {
+			nptr->nmcast[j] = 0x00;
+		}
+	}
+
+	/* Initialize the token map (i.e., the set of characters */
+	/*	 allowed in a node name plus color)		 */
+
+	/* Begin by disallowing all characters */
+
+	for (i=0; i<CHARRNG; i++) {
+		map[i] = 0;
+	}
+
+	/* Allow lowercase letters */
+
+	for (i='a'; i<='z'; i++) {
+		map[i] = 1;
+	}
+
+	/* Allow lowercase letters */
+
+	for (i='A'; i<='Z'; i++) {
+		map[i] = 1;
+	}
+
+	/* Allow digits */
+
+	for (i='0'; i<='9'; i++) {
+		map[i] = 1;
+	}
+
+	/* Allow underscore, period, and colon */
+
+	map['_'] = map['.'] = map[':'] = 1;
+
+	return;
+}
+
+
+/************************************************************************/
+/*									*/
+/* skipblanks - skip whitespace and NEWLINES, and return the next char	*/
+/*									*/
+/************************************************************************/
+
+int	skipblanks(void)
+{
+	int	ch;		/* Next character read from stdin */
+
+	/* Get one character */
+
+	ch = fgetc(stdin);
+
+	/* Skip by whitespace */
+
+	while ((ch==BLANK) || (ch==TAB) || (ch==NEWLINE) || (ch==SHARP)) {
+
+		/* If end-of-file has been reached, return EOF */
+
+		if (ch == EOF) {
+			return EOF;
+		}
+
+		/* Ignore # comment end-of-line (or EOF) */
+
+		if (ch == SHARP) {
+			while( (ch!=NEWLINE) && (ch!=EOF)) {
+				ch = fgetc(stdin);
+			}
+			if (ch == EOF) {
+				return EOF;
+			}
+		}
+		if (ch == NEWLINE) {
+			linenum++;
+		}
+		ch = fgetc(stdin);
+	}
+
+	/* Return a non-whitespace character or EOF */
+
+	return ch;
+}
+
+
+/************************************************************************/
+/*									*/
+/* gettok - get the next token, one of TOKSEND, TOKRECV, TOKEOF		*/
+/*									*/
+/************************************************************************/
+
+int	gettok(
+	  char *tok		/* Buffer used to store the token	*/
+	 )
+{
+
+	int	ch;		/* Next character read from stdin	*/
+	int	colonseen;	/* Have we seen a colon?		*/
+	int	len;		/* The number of characters in the token*/
+
+	len = colonseen = 0;
+
+	/* Find the first character of the token */
+
+	ch = skipblanks();
+
+	/* If end-of-file was encountered, return the EOF token */
+
+	if (ch == EOF) {
+		return TOKEOF;
+	}
+
+	/* Accumulate characters of the token */
+
+	while ((ch!=BLANK) && (ch!=TAB) && (ch!=EOF) && (ch!=NEWLINE) ) {
+		if (ch == COLON) {
+			if ( (colonseen>0) || (len==0) ) {
+				errexit("error: misplaced colon on line %d\n", linenum, 0);
+			}
+			colonseen = 1;
+		} else if (map[ch] == 0) {
+			if (isprint(ch)) {
+				errexit("error: illegal character %c appears on line %d\n",ch,linenum);
+			} else {
+				errexit("error: unprintable character appears on line %d\n",linenum, 0);
+			}
+		}
+		tok[len++] = ch;
+		if (len >= NAMLEN - 1) {
+			errexit("error: token exceeds maximum size on line %d\n", linenum, 0);
+		}
+		ch = fgetc(stdin);
+	}
+
+	tok[len] = NULLCH;
+
+	/* Ensure that the first character of the token is not numeric */
+
+	if ( (tok[0]>='0') && (tok[0]<='9') ) {
+		errexit("error: on line %d, token name '%s' starts with a digit\n",linenum, (int)tok);
+	}
+
+	if (ch == NEWLINE) {
+		linenum++;
+	}
+
+	if (colonseen > 0) {
+		if (len == 1) {
+			errexit("error: stray colon found on line %d\n", linenum, 0);
+		}
+
+		/* Remove the trailing colon */
+
+		len--;
+		tok[len] = NULLCH;
+		return TOKSEND;
+	}
+	return TOKRECV;
+}
+
+
+/************************************************************************/
+/*									*/
+/* srbit - set or read the bit in a 48-bit Ehternet multicast address	*/
+/*		that corresponds to a node ID.				*/
+/*									*/
+/* Arguments are:							*/
+/*									*/
+/*	The node ID in the range 0 through 45				*/
+/*	Pointer to a multicast address (array of six bytes)		*/
+/*	operation: either BIT_SET or BIT_TEST				*/
+/*									*/
+/* Bit assignment:							*/
+/*	A multicast address is placed in an array of bytes in memory,	*/
+/*	stored in big-endian byte order.  Each node ID corresponds to	*/
+/*	one of the bits, starting at the least-significant bit in the	*/
+/*	least-significant byte.  Thus, to set the bit for node 0,	*/
+/*	we compute the logical or of mask 0x01 with address[5].  Node 1	*/
+/*	uses 0x02 with address[5].  Node 7 uses mask 0x80 with		*/
+/*	address[5], and node 8 uses mask 0x01 with address[4].  The	*/
+/*	only exception occurs in the high-order byte (address[0])	*/
+/*	because Ethernet reserves the low-order bit for multicast.	*/
+/*	Therefore, the assignment of bits in high-order byte is		*/
+/*	shifted one bit to the left (i.e., the first bit we use is	*/
+/*	0x02.								*/
+/*									*/
+/************************************************************************/
+
+#define	BIT_SET		 0	/* Command to set a bit   */
+#define	BIT_TEST	 1	/* Command to test a bit  */
+/* Definitions to make code compatibile with Xinu */
+#define	SYSERR		-1
+typedef	unsigned char	byte;
+
+int	srbit (
+	  byte	addr[],		/* A 48-bit Ethernet multicast address	*/
+	  int	nodeid,		/* A node ID (0 - 45)			*/
+	  int	cmd		/* BIT_SET or BIT_TEST			*/
+	)
+{
+	int	aindex;		/* The byte index in the address array	*/
+				/*	(0 through 5)			*/
+	int	mask;		/* A byte with a 1 in the bit position	*/
+				/*	to use and 0 in other positions	*/
+
+	/* Ensure that the bit value is valid */
+
+	if ( (nodeid < 0) || (nodeid > 45) ) {
+		return SYSERR;
+	}
+
+	/* Compute a mask 2^(floor(nodeid modulo 8))*/
+
+	mask = 1 << (nodeid % 8);
+
+	/* Compute the appropriate array index */
+
+	aindex = 5 - (nodeid >> 3);
+
+	/* Adjust the mask one bit for the high-order byte */
+
+	if (aindex == 0) {
+		mask = mask << 1;
+	}
+
+	/* If command specifies setting, change set the bit */
+
+	if (cmd == BIT_SET) {
+		addr[aindex] |= mask;
+		return 1;
+	}
+
+	/* Command specifies testing */
+
+	if ( (addr[aindex] & mask) == 0) {
+		return 0;	/* Bit is 0 */
+	} else {
+		return 1;	/* Bit is 1 */
+	}
+}
+
+
+
+/************************************************************************/
+/*									*/
+/* lookup - look up a token name					*/
+/*									*/
+/************************************************************************/
+
+int	lookup(
+	  char	*tok		/* A token name to look up in the list	*/
+	)
+
+{
+	int	i;		/* Index in the token list		*/
+	struct	node	*nptr;	/* Pointer to an entry in nodes		*/
+
+	for (i=0; i<nnodes; i++) {
+		nptr = &nodes[i];
+		if (strcmp(tok,nptr->nname) == 0) {
+			return i;
+		}
+	}
+	nptr = &nodes[nnodes++];
+	if (nnodes >= NODES) {
+		errexit("Maximum number of nodes exceeded on line %d\n",linenum, 0);
+	}
+	strcpy(nptr->nname, tok);
+	return i;
+}
+
+
+/************************************************************************/
+/*									*/
+/* main program								*/
+/*									*/
+/************************************************************************/
+
+int	main(
+	  int	argc,
+	  char	*argv[]
+	)
+{
+	char	tok[NAMLEN];		/* The next input token		*/
+	int	typ;			/* Type of a token		*/
+	int	sindex;			/* Index of sender in nodes	*/
+	int	rindex;			/* Index of receiver in nodes	*/
+	char	*infile;		/* Ptr to input file name	*/
+	char	*outfile;		/* Ptr to output file name	*/
+	FILE	*fout;			/* Stdio file ptr for outfile	*/
+	struct	node	*sptr;		/* Ptr to sending node entry	*/
+	struct	node	*rptr;		/* Ptr to receiving node entry	*/
+	int	nindex;			/* Index into the nodes array	*/
+	int	symmetric = 0;		/* Nonzero => force symmetry	*/
+	int	i, j;			/* Indicies used for bytes and	*/
+					/*  bits of a multicast address	*/
+	char	*msg;			/* Used to select a message to	*/
+					/*  print			*/
+	unsigned char sentinel[6];	/* Sentinel value in the file	*/
+	unsigned char	nlen;		/* Length of a node name	*/
+
+	char	use[] = "error: use is  parse [-s] filename\n";
+
+	/* Process arguments */
+
+	if ( (argc!=2) && (argc!=3) ) {
+		fprintf(stderr, "%s", use);
+		exit(1);
+	}
+	if (argc == 3) {
+		if (strcmp(argv[1], "-s") != 0) {
+			fprintf(stderr, "%s", use);
+			exit(1);
+		}
+		symmetric = 1;
+		argv++;
+	}
+
+	/*Reopen stdin to be the topology file */
+
+	infile = argv[1];
+	if (freopen(infile, "r", stdin) == NULL) {
+		fprintf(stderr, "error: cannot read input file %s\n", infile);
+		exit(1);
+	}
+
+	/* Initialize data structures */
+
+	init();
+
+	/* Start with the first token */
+
+	typ = gettok(tok);
+	if (typ == TOKEOF) {
+		fprintf(stderr, "error: no tokens found in input file %s\n", infile, 0);
+		exit(1);
+	}
+
+	/* While items remain to be processed */
+
+	while(1) {
+
+		/* Verify that the next item is the name of a sending node */
+
+		if (typ != TOKSEND) {
+			errexit("Sending node expected on line %d\n", linenum, 0);
+		}
+
+		/* Lookup name of sender and verify that the sender did	*/
+		/*	not have a previous specification		*/
+
+		sindex = lookup(tok);
+		sptr = &nodes[sindex];
+		if (sptr->nstatus == RECVDEF) {
+			errexit("error: multiple definitions for node %s on line %d\n", (long)tok, linenum);
+		}
+
+		/* Mark the sender as having appeared in a definition */
+
+		sptr->nstatus = RECVDEF;
+
+		/* Get the first receiver on the list */
+
+		typ = gettok(tok);
+
+		if (typ != TOKRECV) {
+			/* The node does not have any receivers on its	*/
+			/*  list.  An error exit can be inserted here	*/
+			/*  isolated nodes are not allowed (the current	*/
+			/*  version allows them to permit testing the	*/
+			/*  effects of isolation.			*/
+
+			if (typ == TOKEOF) {
+				break;
+			} else {
+				continue;
+			}
+		}
+
+		/* While additional receiving nodes are found, add each to the list of receivers */
+
+		while (typ == TOKRECV) {
+			rindex = lookup(tok);
+			if (rindex == sindex) {
+				errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
+			}
+			rptr = &nodes[rindex];
+			rptr->nrecv = 1;
+			sptr->nsend = 1;
+			srbit(sptr->nmcast, rindex, BIT_SET);
+			if (symmetric > 0) {
+				/* Force symmetry */
+				srbit(nodes[rindex].nmcast, sindex, BIT_SET);
+				rptr->nsend = 1;
+				sptr->nrecv = 1;
+			}
+			/* Move to the next token */
+			typ = gettok(tok);
+		}
+		if (typ == TOKEOF) {
+			break;
+		}
+	}
+
+	/* Analyze the results */
+
+	for (nindex=0; nindex<nnodes; nindex++) {
+		sptr = &nodes[nindex];
+		printf("Node %2d ", nindex);
+		msg="Can send & receive";
+		if (sptr->nsend == 0) {
+			msg = "Can only receive";
+			if (sptr->nrecv == 0) {
+				msg = "Completely isolated";
+			}
+		} else if (sptr->nrecv == 0) {
+			msg = "Can only send";
+		}
+		printf(" %-19s",msg);
+		printf(" (original name %s)\n", sptr->nname);
+		printf("         Multicast address: ");
+		for (i=0;i<6;i++) {
+			printf(" ");
+			for (j=7; j>=0; j--) {
+				printf("%d",(sptr->nmcast[i]>>j)&0x01);
+			}
+		}
+		printf("\n");
+	}
+
+	/* Output a topology database */
+
+	outfile = malloc(strlen(infile)+3);
+	strcpy(outfile, infile);
+	strcat(outfile, ".0");
+	if ( (fout = fopen(outfile, "w") ) == NULL) {
+		fprintf(stderr,"error - cannot open output file %s\n", outfile);
+	}
+
+	/* Write the multicast address for each node */
+
+	for (nindex=0; nindex<nnodes; nindex++) {
+		fwrite(nodes[nindex].nmcast, 1, 6, fout);
+	}
+
+	/* Write the sentinel value */
+
+	sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
+		sentinel[4] = sentinel[5] = 0x00;
+	fwrite(sentinel, 1, 6, fout);
+
+	/* Write the node names as a 1-byte length field followed by	*/
+	/*	a set of 9null-terminated) characters that form the	*/
+	/*	name of the node.  The length includes the null byte.	*/
+
+	for (nindex=0; nindex<nnodes; nindex++) {
+		nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
+		fwrite(&nlen, 1, 1, fout);
+		fwrite(nodes[nindex].nname, 1, nlen, fout);
+	}
+
+	fclose(fout);
+	exit(0);
+}
