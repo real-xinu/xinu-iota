@@ -1,4 +1,5 @@
-/* parse.c - parse a topology specification and build a database */
+/* topgen.c - parse a topology specification and build an initial	*/
+/*		database or update an existing database			*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -6,16 +7,78 @@
 
 /************************************************************************/
 /*									*/
-/* use:   parse  [-s] filename						*/
+/* use:   topgen  [-s] other_args					*/
 /*									*/
-/* Parse reads a topology specification, checks the syntax, and		*/
-/*	converts the topology into the binary form used by the		*/
-/*	testbed server.  The -s flag makes all communication, which	*/
-/*	means that if the input specifies node A can hear node B,	*/
-/*	parse automatically specifies that node B can also hear node	*/
-/*	A.  If the input file is named filename, output is written	*/
-/*	a file anmed							*/
-/*			    filename.top				*/
+/*	where other_args are either					*/
+/*									*/
+/*		-u topname						*/
+/*	or								*/
+/*		file							*/
+/*									*/
+/* Topgen performs one of two actions.  With argument -u and a topology	*/
+/*   name, topgen uses topname to find an existing topology database	*/
+/*   file, applies changes (additions and deletions of connectivity),	*/
+/*   and creates one or more updated topology database files, as	*/
+/*   requested.	 Given a file name, topgen assumes the file contains	*/
+/*   a topology specification, parses the specification, and creates an	*/
+/*   initial topology database in a file with a .0 suffix (e.g., if the	*/
+/*   specifcation file is named X, the database will be X.0).		*/
+/*   The optional -s flag makes all communication symmetric, which	*/
+/*   means that if the input specifies node A can hear node B, topgen	*/
+/*   automatically infers that node B can also hear node A.  Similarly	*/
+/*   if node A cannot hear node B, topgen infers that B cannot hear A.	*/
+/*									*/
+/* An initial topology specification file is a text file. A pound sign	*/
+/*   starts a comment, and the rest of the line is ignored.  Arbitrary	*/
+/*   whitespace	(blanks, tabs, and newlines) is allowed among items.	*/
+/*   The file consists of a series of entries, where each entry lists	*/
+/*   a sending node name terminated by a colon followed by zero or more	*/
+/*   receiving node names.  For example,				*/
+/*									*/
+/*	a: b c x3 qqq							*/
+/*									*/
+/*   specifies that node a can send to nodes b, c, x3, and qqq.		*/
+/*   Node names can contain uppercase or lowercase letters, digits,	*/
+/*   underscores and periods, but must start with a non-digit.		*/ 
+/*									*/
+/* 									*/
+/* When the -u option is present, 					*/
+/*	  1) On any input line, everything to the right of a pound	*/
+/*		sign (#) is a comment.					*/
+/*									*/
+/*	  2) To specify that node a can send to node b, a user enters:	*/
+/*									*/
+/*		        + a b						*/
+/*									*/
+/*	  3) To specify that x can no longer send to y, a user enters:	*/
+/*									*/
+/*			- x y						*/
+/*									*/
+/*	  4) As a shorthand, * specifies all nodes, so to specify that	*/
+/*		all nodes can receive from node q, a user enters:	*/
+/*									*/
+/*			+ q *						*/
+/*									*/
+/*		and to specify that node w cannot receive from any	*/
+/*		node, a user can enter:					*/
+/*									*/
+/*			- * w						*/
+/*									*/
+/*	  5) After a series of + and - commands, a user can enter	*/
+/*									*/
+/*			write						*/
+/*									*/
+/*		to specify that a snapshot of the current topology be	*/
+/*		written to a file.					*/
+/*									*/
+/*									*/
+/*	The argument to topgen specifies a topology database, either	*/
+/*	by giving a topology name or a complete topology database name.	*/
+/*	A topology database has a name of the form T.N, where T is a	*/
+/*	topology name and N is a numerical suffix in			*/
+/*	decimal.  When	it generates the initial database for topology	*/
+/*	X, the parser stores the database in a file named X.0. 		*/
+/*									*/
 /*									*/
 /************************************************************************/
 
