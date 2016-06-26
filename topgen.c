@@ -430,6 +430,38 @@ int	lookup(
 	return i;
 }
 
+int node_can_send(int nodeid) {
+  int i;
+  for (i = 0; i < nnodes; i++) {
+    if (srbit(nodes[nodeid].nmcast, i, BIT_TEST) == 1) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int node_can_receive(int nodeid) {
+  int i;
+  for (i = 0; i < nnodes; i++) {
+    if (srbit(nodes[i].nmcast, nodeid, BIT_TEST) == 1)
+      return 1;
+  }
+  return 0;
+}
+
+void set_reset_send_all(int nodeid, int bit_op) {
+  int i;
+  for (i = 0; i < nnodes; i++) {
+    srbit(nodes[nodeid].nmcast, i, bit_op);
+  }
+}
+
+void set_reset_receive_all(int nodeid, int bit_op) {
+  int i;
+  for (i = 0; i < nnodes; i++) {
+    srbit(nodes[i].nmcast, nodeid, bit_op);
+  }
+}
 
 /************************************************************************/
 /*									*/
