@@ -464,17 +464,27 @@ int	main(
 
 	/* Process arguments */
 
-	if ( (argc!=2) && (argc!=3) ) {
+	if ( (argc!=2) && (argc!=3) && (argc!= 4) ) {
 		fprintf(stderr, "%s", use);
 		exit(1);
 	}
+
 	if (argc == 3) {
-		if (strcmp(argv[1], "-s") != 0) {
+		if (strcmp(argv[1], "-s") == 0) {
+			symmetric = 1;
+			argv++;
+		}
+		else if (strcmp(argv[1], "-u") != 0) {
 			fprintf(stderr, "%s", use);
 			exit(1);
 		}
-		symmetric = 1;
-		argv++;
+	}
+
+	if (argc == 4)
+		if ((strcmp(argv[1], "-s") != 0) || (strcmp(argv[2], "-u") != 0)) {
+			fprintf(stderr, "%s", use);
+			exit(1);
+		}
 	}
 
 	/*Reopen stdin to be the topology file */
