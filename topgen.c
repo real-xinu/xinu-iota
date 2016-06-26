@@ -39,7 +39,7 @@
 /*									*/
 /*   specifies that node a can send to nodes b, c, x3, and qqq.		*/
 /*   Node names can contain uppercase or lowercase letters, digits,	*/
-/*   underscores and periods, but must start with a non-digit.		*/ 
+/*   underscores and periods, but must start with a non-digit.		*/
 /*									*/
 /* 									*/
 /* When the -u option is present, 					*/
@@ -460,7 +460,7 @@ int	main(
 	unsigned char sentinel[6];	/* Sentinel value in the file	*/
 	unsigned char	nlen;		/* Length of a node name	*/
 
-	char	use[] = "error: use is  parse [-s] filename\n";
+	char	use[] = "error: use is topgen [-s] (filename | -u topname)\n";
 
 	/* Process arguments */
 
