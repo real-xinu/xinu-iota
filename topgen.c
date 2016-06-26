@@ -449,6 +449,7 @@ int	main(
 	char	*infile;		/* Ptr to input file name	*/
 	char	*outfile;		/* Ptr to output file name	*/
 	FILE	*fout;			/* Stdio file ptr for outfile	*/
+	FILE	*fin;			/* Stdio file ptr for intop	*/
 	struct	node	*sptr;		/* Ptr to sending node entry	*/
 	struct	node	*rptr;		/* Ptr to receiving node entry	*/
 	int	nindex;			/* Index into the nodes array	*/
@@ -459,6 +460,15 @@ int	main(
 					/*  print			*/
 	unsigned char sentinel[6];	/* Sentinel value in the file	*/
 	unsigned char	nlen;		/* Length of a node name	*/
+
+	unsigned char buffer[6], namebuffer[NAMLEN];
+	unsigned char name[NAMLEN];
+	unsigned char length[1];
+	char op[1], operand_1[NAMLEN], operand_2[NAMLEN];
+	char update_string[260];
+	int nodeid_1, nodeid_2;
+	int plus_minus;
+	struct node *nptr;
 
 	int parse = 1;
 
@@ -479,6 +489,7 @@ int	main(
 
 		else if (strcmp(argv[1], "-u") == 0) {
 			parse = 0;
+			argv++;
 		}
 
 		else {
@@ -490,8 +501,10 @@ int	main(
 	if (argc == 4) {
 		if (strcmp(argv[1], "-s") == 0) {
 			symmetric++;
+			argv++;
 			if (strcmp(argv[2], "-u") == 0) {
 				parse = 0;
+				argv++;
 			}
 
 			else {
@@ -625,6 +638,147 @@ int	main(
 		outfile = malloc(strlen(infile)+3);
 		strcpy(outfile, infile);
 		strcat(outfile, ".0");
+		if ( (fout = fopen(outfile, "w") ) == NULL) {
+			fprintf(stderr,"error - cannot open output file %s\n", outfile);
+		}
+
+		/* Write the multicast address for each node */
+
+		for (nindex=0; nindex<nnodes; nindex++) {
+			fwrite(nodes[nindex].nmcast, 1, 6, fout);
+		}
+
+		/* Write the sentinel value */
+
+		sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
+			sentinel[4] = sentinel[5] = 0x00;
+		fwrite(sentinel, 1, 6, fout);
+
+		/* Write the node names as a 1-byte length field followed by	*/
+		/*	a set of 9null-terminated) characters that form the	*/
+		/*	name of the node.  The length includes the null byte.	*/
+
+		for (nindex=0; nindex<nnodes; nindex++) {
+			nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
+			fwrite(&nlen, 1, 1, fout);
+			fwrite(nodes[nindex].nname, 1, nlen, fout);
+		}
+
+		fclose(fout);
+	}
+
+	/* Update branch */
+
+	else {
+		fin = fopen(argv[1], "rb");
+		while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
+			if(memcmp(buffer, sentinel, 6) == 0) {
+				break;
+			}
+			nptr = &nodes[nnodes++];
+			for(int j = 0; j < 6; j++) {
+			  nptr -> nmcast[j] = buffer[j];
+			}
+		}
+
+		nnodes = 0;
+		while(fread(buffer, 1, 1, fin) > 0) {
+			memcpy(length, buffer, 1);
+			//sprintf(length, "%x", l);
+			printf("\nlength original: %x\n", buffer[0]);
+			//printf("\nlength: %d\n", l);
+			fread(namebuffer, 1, (int) buffer[0], fin);
+			memcpy(name, namebuffer, (int)buffer[0]);
+			//print_uc(length, 1);
+			nptr = &nodes[nnodes++];
+			strcpy(nptr->nname, name);
+			//printf("\nlength: %d\n", (int)strtol(length, NULL, 16));
+			printf("\nname: %s\n", nptr->nname);
+			printf("\nmulticast address: ");
+			print_uc(nptr->nmcast, 6);
+		}
+
+		printf("sentinel: %llx\n", *sentinel);
+		fclose(fin);
+
+		scanf("%[^\n]", update_string);
+		getchar();
+		//change "insert" to update command constant later
+
+		while(strcmp(update_string, "insert") != 0) {
+			char *update_string_temp = update_string;
+			strcpy(op, strsep(&update_string_temp, " "));
+			strcpy(operand_1, strsep(&update_string_temp, " "));
+			strcpy(operand_2, strsep(&update_string_temp, " "));
+			if(!(strcmp(op, "+") == 0 || strcmp(op, "-") == 0)) {
+				printf("invalid operation");
+			}
+
+			if (strcmp(op, "+") == 0)
+				plus_minus = BIT_SET;
+			else
+				plus_minus = BIT_RESET;
+
+			if (strcmp(operand_1, "*") == 0) {
+				if (strcmp(operand_2, "*") == 0) {
+					for (i = 0; i < nnodes; i++) {
+						set_reset_send_all(i, plus_minus);
+					}
+				}
+				else {
+					nodeid_2 = lookup(operand_2);
+					set_reset_receive_all(nodeid_2, plus_minus);
+				}
+			}
+
+			else if(strcmp(operand_2, "*") == 0) {
+				nodeid_1 = lookup(operand_1);
+				set_reset_send_all(nodeid_1, plus_minus);
+			}
+
+			else {
+				nodeid_1 = lookup(operand_1);
+				nodeid_2 = lookup(operand_2);
+				srbit(nodes[nodeid_1].nmcast, nodeid_2, plus_minus);
+				if(symmetric > 0) {
+					srbit(nodes[nodeid_2].nmcast, nodeid_1, plus_minus);
+				}
+			}
+			scanf("%[^\n]", update_string);
+			getchar();
+		}
+
+		/* Analyze the results */
+
+		for (int nindex=0; nindex<nnodes; nindex++) {
+			sptr = &nodes[nindex];
+			printf("Node %2d ", nindex);
+			msg="Can send & receive";
+			if (sptr->nsend == 0) {
+				msg = "Can only receive";
+				if (sptr->nrecv == 0) {
+					msg = "Completely isolated";
+				}
+			} else if (sptr->nrecv == 0) {
+				msg = "Can only send";
+			}
+			printf(" %-19s",msg);
+			printf(" (original name %s)\n", sptr->nname);
+			printf("         Multicast address: ");
+			for (i=0;i<6;i++) {
+				printf(" ");
+				for (j=7; j>=0; j--) {
+					printf("%d",(sptr->nmcast[i]>>j)&0x01);
+				}
+			}
+			printf("\n");
+		}
+
+		/* Output a topology database */
+
+		outfile = malloc(strlen(argv[1])+3);
+		strcpy(outfile, argv[1]);
+		strcat(outfile, ".1");
 		if ( (fout = fopen(outfile, "w") ) == NULL) {
 			fprintf(stderr,"error - cannot open output file %s\n", outfile);
 		}
