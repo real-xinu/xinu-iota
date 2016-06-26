@@ -208,6 +208,10 @@ int server_discovery(const char *SRV_IP)
     si_me.sin_family = AF_INET;
     si_me.sin_port = htons(PORT);
     si_me.sin_addr.s_addr = htonl(INADDR_ANY);
+    int enable = 1;
+    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+        error_handler("setsockopt(SO_REUSEADDR) failed");
+
     if( bind(s , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1) {
         error_handler("Sock can not bind to the address");
 
@@ -331,11 +335,11 @@ void udp_process(const char *SRV_IP, char *file)
 {
 
     char *recvbuf;
-    recvbuf = malloc(sizeof(struct c_msg));
+    //recvbuf = malloc(sizeof(struct c_msg));
     struct sockaddr_in si_me, si_other;
     int s;
     socklen_t slen = sizeof(si_other);
-    struct c_msg *buf = malloc(sizeof(struct c_msg));
+    struct c_msg *buf;
     char command[BUFLEN];
     struct c_msg message;
     struct timeval tv;
@@ -395,18 +399,23 @@ void udp_process(const char *SRV_IP, char *file)
 
                 }
 
-
+                recvbuf = malloc(sizeof(struct c_msg));
                 if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0) {
                     printf("Timeout, Please try again\n");
                 }
+                buf = malloc(sizeof(struct c_msg));
                 buf = (struct c_msg*)recvbuf;
+
                 response_handler(buf);
+                free(buf);
+
 
             }
 
         }
 
     } else {
+
         type = fopen(file, "r");
 
         while( fgets(command, sizeof(command), type) != NULL) {
@@ -420,18 +429,22 @@ void udp_process(const char *SRV_IP, char *file)
 
                 }
 
-
+                recvbuf = malloc(sizeof(struct c_msg));
                 if ((recvfrom(s,recvbuf, sizeof(struct c_msg), 0, (struct sockaddr *)&si_other,&slen)) < 0) {
                     printf("Timeout, Please try again\n");
                 }
                 buf = (struct c_msg*)recvbuf;
                 response_handler(buf);
+                free(buf);
 
             }
 
         }
 
+
+
     }
+
 
 
     close(s);

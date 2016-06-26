@@ -67,6 +67,9 @@ extern	uint32	getlocalip_boot(uint32 *, char *, uint32 *);
 
 extern	uint32	dot2ip(char *, uint32 *);
 
+/* exit.c */
+extern void exit(void);
+
 /* in file queue.c */
 
 extern	pid32	enqueue(pid32, qid16);

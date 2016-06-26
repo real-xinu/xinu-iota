@@ -19,14 +19,15 @@ char    *getbuf(
 	/* Check arguments */
 
 	if ( (poolid < 0  ||  poolid >= nbpools) ) {
+
 		restore(mask);
 		return (char *)SYSERR;
 
 	}
 	bpptr = &buftab[poolid];
-
+        
 	/* Wait for pool to have > 0 buffers and allocate a buffer */
-
+       
 	wait(bpptr->bpsem);
 	bufptr = bpptr->bpnext;
 

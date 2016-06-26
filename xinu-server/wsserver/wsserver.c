@@ -78,6 +78,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
         kprintf("Message type is %d\n", C_PING_REQ);
         if(online)
             cmsg_reply = nping_reply(ctlpkt);
+        //kprintf("after ping reply\n");
         break;
     case C_PING_ALL:
         kprintf("Message type is %d\n", C_PING_ALL);
@@ -113,7 +114,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
         cmsg_reply = newtop(ctlpkt);
         break;
     case C_TS_REQ:
-        printf("Message type is %d\n", C_TS_REQ);
+        kprintf("Message type is %d\n", C_TS_REQ);
         cmsg_reply->cmsgtyp = htonl(C_TS_RESP);
         break;
     default:
@@ -224,18 +225,24 @@ void topo_compr()
 
             //kprintf("nnodes , i: %d, %d\n", nnodes, i);
             for(k=0; k<6; k++) {
-                kprintf("%02x ",topo[i].t_macaddr[k]);
+                //kprintf("%02x ",topo[i].t_macaddr[k]);
                 pkt->net_ethsrc[k] = topo[i].t_macaddr[k];
             }
-            kprintf("\n");
+            //kprintf("\n");
             //memcpy(&pkt->net_ethsrc, topo[i].t_macaddr, ETH_ADDR_LEN);
             //kprintf("\nassign message should be sent\n");
-            wsserver_assign(pkt);
-            sleepms(10);
+            if(wsserver_assign(pkt) == OK) {
+                sleepms(10);
+            } else {
+
+                exit();
+
+            }
 
         }
 
     }
+
 }
 /*----------------------------------------------------------
 * This function is used to update the network topology
@@ -262,6 +269,7 @@ struct c_msg *newtop(struct c_msg ctlpkt)
         topo_compr();
         cmsg_reply->cmsgtyp = htonl(C_OK);
     } else {
+
         memcpy(&topo, &old_topo, sizeof(topo));
         cmsg_reply->cmsgtyp = htonl(C_ERR);
     }
@@ -348,6 +356,7 @@ status nping(int32 pingnodeid)
 
     /*send packet over Ethernet */
     retval = write(ETHER0, (char *)ping_msg, sizeof(struct etherPkt));
+    freemem((char *)ping_msg, sizeof(struct etherPkt));
     if (retval > 0) {
         ///kprintf("ping sent\n");
         return OK;
@@ -367,8 +376,6 @@ struct c_msg * nping_all_reply(struct c_msg ctlpkt)
     memset(cmsg_reply, 0, sizeof(struct c_msg));
 
     int ping_num = 0;
-
-
     status stat = nping_all();
 
     if (stat == OK) {
@@ -400,7 +407,6 @@ struct c_msg * nping_all_reply(struct c_msg ctlpkt)
         }
 
         cmsg_reply->cmsgtyp = htonl(C_PING_ALL);
-
         cmsg_reply->pingnum = htonl(ping_num);
     }
 
@@ -439,6 +445,7 @@ status nping_all()
 
     /*send packet over Ethernet */
     retval = write(ETHER0, (char *)ping_msg, sizeof(struct etherPkt));
+    freemem((char *)ping_msg, sizeof(struct etherPkt));
     if (retval > 0)
         return OK;
     else
@@ -485,7 +492,7 @@ process	wsserver ()
     uint16 remport;
     uint32 timeout = TIME_OUT;
     struct c_msg ctlpkt;
-
+    struct c_msg *replypkt;
     printf("=== Started Wi-SUN testbed server ===\n");
 
     /* Register UDP port for use by server */
@@ -504,15 +511,16 @@ process	wsserver ()
             continue;
         } else if (retval == SYSERR) {
             kprintf("WARNING: UDP receive error in testbed server\n");
-            continue; /* may be better to have the server terminate? */
+            exit(); /* may be better to have the server terminate? */
         } else {
             int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
             kprintf("* => Got control message %d\n", mgm_msgtyp);
 
-            struct c_msg *replypkt = cmsg_handler(ctlpkt);
+            replypkt = cmsg_handler(ctlpkt);
 
             status sndval = udp_sendto(slot, remip, remport,
                                        (char *) replypkt, sizeof(struct c_msg));
+            //kprintf("send to \n");
             if (sndval == SYSERR) {
                 kprintf("WARNING: UDP send error in testbed server\n");
             } else {
@@ -544,6 +552,7 @@ status wsserver_senderr(struct netpacket *pkt)
 
     /*send packet over Ethernet */
     retval = write(ETHER0, (char *)err_msg, sizeof(struct etherPkt));
+    freemem((char *)err_msg, sizeof(struct etherPkt));
     if (retval > 0)
         return OK;
     else
@@ -579,6 +588,7 @@ status wsserver_assign(struct netpacket *pkt)
     memcpy(ack_info, (char *)(assign_msg) + 14, 16);
 
     retval = write(ETHER0, (char *)assign_msg, sizeof(struct etherPkt));
+    freemem((char *)assign_msg, sizeof(struct etherPkt));
     if(retval > 0)
         return OK;
     else
@@ -606,14 +616,16 @@ void ack_handler(struct netpacket *pkt)
     if (ack == 16) {
         if (ack_info[5] == A_ASSIGN) {
             topo_update_mac(pkt);
-            kprintf("--->Assign ACK message is received\n");
+            //kprintf("--->Assign ACK message is received\n");
         } else if (ack_info[5] == A_PING) {
             ping_ack_flag[i] = 1;
-            kprintf("--->Ping ACK message is received\n");
+            //kprintf("--->Ping ACK message is received\n");
         } else if (ack_info[5] == A_PING_ALL) {
             ping_ack_flag[i] = 1;
         }
     }
+
+    freemem((char *)node_msg, sizeof(struct etherPkt));
 
 }
 /*-----------------------------------------------------------------
@@ -649,6 +661,9 @@ void amsg_handler(struct netpacket *pkt)
 
 
     }
+
+    freemem((char *)node_msg, sizeof(struct etherPkt));
+
 
 }
 

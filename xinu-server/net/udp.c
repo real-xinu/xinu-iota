@@ -430,11 +430,11 @@ status	udp_sendto (
 	char	*udataptr;		/* Pointer to UDP data		*/
 
 	/* Ensure only one process can access the UDP table at a time	*/
-
+        
 	mask = disable();
 
 	/* Verify that the slot is valid */
-
+        
 	if ( (slot < 0) || (slot >= UDP_SLOTS) ) {
 		restore(mask);
 		return SYSERR;
@@ -445,23 +445,23 @@ status	udp_sendto (
 	udptr = &udptab[slot];
 
 	/* Verify that the slot has been registered and is valid */
-
+       
 	if (udptr->udstate == UDP_FREE) {
 		restore(mask);
 		return SYSERR;
 	}
 
 	/* Allocate a network buffer to hold the packet */
-
+       
 	pkt = (struct netpacket *)getbuf(netbufpool);
-
+       
 	if ((int32)pkt == SYSERR) {
 		restore(mask);
 		return SYSERR;
 	}
 
 	/* Compute packet length as UDP data size + fixed header size	*/
-
+     
 	pktlen = ((char *)&pkt->net_udpdata - (char *)pkt) + len;
 
 	/* Create UDP packet in pkt */
@@ -489,7 +489,8 @@ status	udp_sendto (
 
 	/* Call ipsend to send the datagram */
 
-	ip_send(pkt);
+
+	ip_send(pkt);	
 	restore(mask);
 	return OK;
 }
