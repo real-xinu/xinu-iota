@@ -772,13 +772,18 @@ int	main(
 				else {
 					nodeid_2 = lookup(operand_2);
 					set_reset_receive_all(nodeid_2, plus_minus);
+					if (symmetric > 0) {
+						set_reset_send_all(nodeid_2, plus_minus);
+					}
 				}
 			}
 
 			else if(strcmp(operand_2, "*") == 0) {
 				nodeid_1 = lookup(operand_1);
 				set_reset_send_all(nodeid_1, plus_minus);
-
+				if (symmetric > 0) {
+					set_reset_receive_all(nodeid_1, plus_minus);
+				}
 			}
 
 			else {
