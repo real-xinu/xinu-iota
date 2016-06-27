@@ -474,14 +474,14 @@ void set_reset_receive_all(int nodeid, int bit_op) {
 }
 
 void apply_update(char *update_string, int symmetric) {
-	char op[1], operand_1[NAMLEN], operand_2[NAMLEN];
-	int nodeid_1, nodeid_2;
+	char op[1], snode[NAMLEN], rnode[NAMLEN];
+	int sindex, rindex;
 	int plus_minus;
 	int i;
 
 	strcpy(op, strsep(&update_string, " "));
-	strcpy(operand_1, strsep(&update_string, " "));
-	strcpy(operand_2, strsep(&update_string, " "));
+	strcpy(snode, strsep(&update_string, " "));
+	strcpy(rnode, strsep(&update_string, " "));
 	if(!(strcmp(op, "+") == 0 || strcmp(op, "-") == 0)) {
 		printf("invalid operation");
 	}
@@ -491,38 +491,38 @@ void apply_update(char *update_string, int symmetric) {
 	else
 		plus_minus = BIT_RESET;
 
-	if (strcmp(operand_1, "*") == 0) {
-		if (strcmp(operand_2, "*") == 0) {
+	if (strcmp(snode, "*") == 0) {
+		if (strcmp(rnode, "*") == 0) {
 			for (i = 0; i < nnodes; i++) {
 				set_reset_send_all(i, plus_minus);
 			}
 		}
 		else {
-			nodeid_2 = lookup(operand_2);
-			set_reset_receive_all(nodeid_2, plus_minus);
+			rindex = lookup(rnode);
+			set_reset_receive_all(rindex, plus_minus);
 			if (symmetric > 0) {
-				set_reset_send_all(nodeid_2, plus_minus);
+				set_reset_send_all(rindex, plus_minus);
 			}
 		}
 	}
 
-	else if(strcmp(operand_2, "*") == 0) {
-		nodeid_1 = lookup(operand_1);
-		set_reset_send_all(nodeid_1, plus_minus);
+	else if(strcmp(rnode, "*") == 0) {
+		sindex = lookup(snode);
+		set_reset_send_all(sindex, plus_minus);
 		if (symmetric > 0) {
-			set_reset_receive_all(nodeid_1, plus_minus);
+			set_reset_receive_all(sindex, plus_minus);
 		}
 	}
 
 	else {
-		nodeid_1 = lookup(operand_1);
-		nodeid_2 = lookup(operand_2);
-		if (nodeid_1 == nodeid_2) {
+		sindex = lookup(snode);
+		rindex = lookup(rnode);
+		if (sindex == rindex) {
 		  //errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
 		}
-		srbit(nodes[nodeid_1].nmcast, nodeid_2, plus_minus);
+		srbit(nodes[sindex].nmcast, rindex, plus_minus);
 		if(symmetric > 0) {
-			srbit(nodes[nodeid_2].nmcast, nodeid_1, plus_minus);
+			srbit(nodes[rindex].nmcast, sindex, plus_minus);
 		}
 	}
 }
