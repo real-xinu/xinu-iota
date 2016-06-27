@@ -583,9 +583,11 @@ void apply_update(char *update_string, int symmetric) {
 /************************************************************************/
 
 void analyze_results() {
-	struct node *sptr;
-	char *msg;
-	int i, j;
+	struct node *sptr;		/* Ptr to sending node entry	*/
+	char *msg;			/* Used to select a message to	*/
+					/*  print			*/
+	int i, j;			/* Indicies used for bytes and	*/
+					/*  bits of a multicast address	*/
 
 	for (int nindex=0; nindex<nnodes; nindex++) {
 	       	sptr = &nodes[nindex];
