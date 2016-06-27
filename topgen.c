@@ -760,6 +760,7 @@ int	main(
 
 		fclose(fin);
 
+		printf("\nEnter update commands, and insert \"insert\" at the end: \n");
 		scanf("%[^\n]", update_string);
 		getchar();
 		//change "insert" to update command constant later
@@ -769,7 +770,6 @@ int	main(
 		        scanf("%[^\n]", update_string);
 			getchar();
 		}
-
 
 		// test for isolation, sending and receiving capabiliites
 
