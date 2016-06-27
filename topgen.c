@@ -737,8 +737,8 @@ int	main(
 	/* Update branch */
 
 	else {
-		fin = fopen(argv[1], "rb");
-		printf("%s\n", argv[1]);
+		fin = fopen(infile, "rb");
+		printf("%s\n", infile);
 		while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
 			if(memcmp(buffer, sentinel, 6) == 0) {
 				break;
