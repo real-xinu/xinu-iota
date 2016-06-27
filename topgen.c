@@ -834,6 +834,7 @@ int	main(
 
 		while(strcmp(update_string, "insert") != 0) {
 			apply_update(update_string, symmetric);
+			linenum++;
 		        scanf("%[^\n]", update_string);
 			getchar();
 		}
