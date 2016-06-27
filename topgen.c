@@ -637,10 +637,7 @@ int	main(
 	struct	node	*rptr;		/* Ptr to receiving node entry	*/
 	int	nindex;			/* Index into the nodes array	*/
 	int	symmetric = 0;		/* Nonzero => force symmetry	*/
-	int	i, j;			/* Indicies used for bytes and	*/
-					/*  bits of a multicast address	*/
-	char	*msg;			/* Used to select a message to	*/
-					/*  print			*/
+	int	i;			/* Index for nodes		*/
 	unsigned char sentinel[6];	/* Sentinel value in the file	*/
 	unsigned char	nlen;		/* Length of a node name	*/
 
