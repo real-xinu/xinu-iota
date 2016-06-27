@@ -586,7 +586,7 @@ void analyze_results() {
 	struct node *sptr;		/* Ptr to sending node entry	*/
 	char *msg;			/* Used to select a message to	*/
 					/*  print			*/
-	int i, j;			/* Indicies used for bytes and	*/
+	int i, j;			/* Indices used for bytes and	*/
 					/*  bits of a multicast address	*/
 
 	for (int nindex=0; nindex<nnodes; nindex++) {
