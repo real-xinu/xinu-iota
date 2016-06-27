@@ -473,6 +473,60 @@ void set_reset_receive_all(int nodeid, int bit_op) {
   srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET); // node can't receive from itself
 }
 
+void apply_update(char *update_string, int symmetric) {
+	char op[1], operand_1[NAMLEN], operand_2[NAMLEN];
+	int nodeid_1, nodeid_2;
+	int plus_minus;
+	int i;
+
+	strcpy(op, strsep(&update_string, " "));
+	strcpy(operand_1, strsep(&update_string, " "));
+	strcpy(operand_2, strsep(&update_string, " "));
+	if(!(strcmp(op, "+") == 0 || strcmp(op, "-") == 0)) {
+		printf("invalid operation");
+	}
+
+	if (strcmp(op, "+") == 0)
+		plus_minus = BIT_SET;
+	else
+		plus_minus = BIT_RESET;
+
+	if (strcmp(operand_1, "*") == 0) {
+		if (strcmp(operand_2, "*") == 0) {
+			for (i = 0; i < nnodes; i++) {
+				set_reset_send_all(i, plus_minus);
+			}
+		}
+		else {
+			nodeid_2 = lookup(operand_2);
+			set_reset_receive_all(nodeid_2, plus_minus);
+			if (symmetric > 0) {
+				set_reset_send_all(nodeid_2, plus_minus);
+			}
+		}
+	}
+
+	else if(strcmp(operand_2, "*") == 0) {
+		nodeid_1 = lookup(operand_1);
+		set_reset_send_all(nodeid_1, plus_minus);
+		if (symmetric > 0) {
+			set_reset_receive_all(nodeid_1, plus_minus);
+		}
+	}
+
+	else {
+		nodeid_1 = lookup(operand_1);
+		nodeid_2 = lookup(operand_2);
+		if (nodeid_1 == nodeid_2) {
+		  //errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
+		}
+		srbit(nodes[nodeid_1].nmcast, nodeid_2, plus_minus);
+		if(symmetric > 0) {
+			srbit(nodes[nodeid_2].nmcast, nodeid_1, plus_minus);
+		}
+	}
+}
+
 /************************************************************************/
 /*									*/
 /* main program								*/
@@ -506,10 +560,9 @@ int	main(
 	unsigned char buffer[6], namebuffer[NAMLEN];
 	unsigned char name[NAMLEN];
 	unsigned char length[1];
-	char op[1], operand_1[NAMLEN], operand_2[NAMLEN];
-	char update_string[sizeof(op) + 2 * NAMLEN + 3];
-	int nodeid_1, nodeid_2;
-	int plus_minus;
+
+	char update_string[1 + 2 * NAMLEN + 3];
+
 	struct node *nptr;
 
 	int parse = 1;
@@ -750,54 +803,8 @@ int	main(
 		//change "insert" to update command constant later
 
 		while(strcmp(update_string, "insert") != 0) {
-			char *update_string_temp = update_string;
-			strcpy(op, strsep(&update_string_temp, " "));
-			strcpy(operand_1, strsep(&update_string_temp, " "));
-			strcpy(operand_2, strsep(&update_string_temp, " "));
-			if(!(strcmp(op, "+") == 0 || strcmp(op, "-") == 0)) {
-				printf("invalid operation");
-			}
-
-			if (strcmp(op, "+") == 0)
-				plus_minus = BIT_SET;
-			else
-				plus_minus = BIT_RESET;
-
-			if (strcmp(operand_1, "*") == 0) {
-				if (strcmp(operand_2, "*") == 0) {
-					for (i = 0; i < nnodes; i++) {
-						set_reset_send_all(i, plus_minus);
-					}
-				}
-				else {
-					nodeid_2 = lookup(operand_2);
-					set_reset_receive_all(nodeid_2, plus_minus);
-					if (symmetric > 0) {
-						set_reset_send_all(nodeid_2, plus_minus);
-					}
-				}
-			}
-
-			else if(strcmp(operand_2, "*") == 0) {
-				nodeid_1 = lookup(operand_1);
-				set_reset_send_all(nodeid_1, plus_minus);
-				if (symmetric > 0) {
-					set_reset_receive_all(nodeid_1, plus_minus);
-				}
-			}
-
-			else {
-				nodeid_1 = lookup(operand_1);
-				nodeid_2 = lookup(operand_2);
-				if (nodeid_1 == nodeid_2) {
-					errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
-				}
-				srbit(nodes[nodeid_1].nmcast, nodeid_2, plus_minus);
-				if(symmetric > 0) {
-					srbit(nodes[nodeid_2].nmcast, nodeid_1, plus_minus);
-				}
-			}
-			scanf("%[^\n]", update_string);
+			apply_update(update_string, symmetric);
+		        scanf("%[^\n]", update_string);
 			getchar();
 		}
 
