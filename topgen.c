@@ -528,8 +528,11 @@ void apply_update(char *update_string, int symmetric) {
 	strcpy(op, strsep(&update_string, " "));
 	strcpy(snode, strsep(&update_string, " "));
 	strcpy(rnode, strsep(&update_string, " "));
-	if(!(strcmp(op, "+") == 0 || strcmp(op, "-") == 0)) {
-		printf("invalid operation");
+
+
+	if(!(strcmp(op, "+") == 0 || strcmp(op, "-") == 0) || snode == NULL || rnode == NULL) {
+		fprintf(stderr, "%s", "Illegal operation");
+		exit(1);
 	}
 
 	if (strcmp(op, "+") == 0)
