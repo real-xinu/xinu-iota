@@ -444,7 +444,11 @@ int	lookup(
 /*									*/
 /************************************************************************/
 
-int node_can_send(int nodeid) {
+int	node_can_send(
+	  int nodeid
+	)
+
+{
 	int i;			/* Index for node list			*/
 
 	for (i = 0; i < nnodes; i++) {
@@ -461,7 +465,11 @@ int node_can_send(int nodeid) {
 /*									*/
 /************************************************************************/
 
-int node_can_receive(int nodeid) {
+int	node_can_receive(
+	  int nodeid
+	)
+
+{
 	int i;			/* Index for node list			*/
 
 	for (i = 0; i < nnodes; i++) {
@@ -478,7 +486,12 @@ int node_can_receive(int nodeid) {
 /*									*/
 /************************************************************************/
 
-void set_reset_send_all(int nodeid, int bit_op) {
+void	set_reset_send_all(
+	  int nodeid,
+	  int bit_op
+	)
+
+{
 	int i;			/* Index for node list			*/
 
 	for (i = 0; i < nnodes; i++) {
@@ -496,7 +509,11 @@ void set_reset_send_all(int nodeid, int bit_op) {
 /*									*/
 /************************************************************************/
 
-void set_reset_receive_all(int nodeid, int bit_op) {
+void	set_reset_receive_all(
+	  int nodeid,
+	  int bit_op
+	)
+{
 	int i;			/* Index for node list			*/
 
 	for (i = 0; i < nnodes; i++) {
@@ -514,7 +531,12 @@ void set_reset_receive_all(int nodeid, int bit_op) {
 /*									*/
 /************************************************************************/
 
-void apply_update(char *update_string, int symmetric) {
+void	apply_update(
+	  char *update_string,
+	  int symmetric
+	)
+
+{
 	char op[1];		/* Operation - "+" (add link) or	*/
 				/*	       "-" (delete link)	*/
 	char snode[NAMLEN];	/* Name of sending node			*/
@@ -585,7 +607,9 @@ void apply_update(char *update_string, int symmetric) {
 /*									*/
 /************************************************************************/
 
-void analyze_results() {
+void analyze_results()
+
+{
 	struct node *sptr;		/* Ptr to sending node entry	*/
 	char *msg;			/* Used to select a message to	*/
 					/*  print			*/
