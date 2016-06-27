@@ -349,6 +349,7 @@ int	gettok(
 
 #define	BIT_SET		 0	/* Command to set a bit   */
 #define	BIT_TEST	 1	/* Command to test a bit  */
+#define BIT_RESET	 2	/* Command to reset a bit */
 /* Definitions to make code compatibile with Xinu */
 #define	SYSERR		-1
 typedef	unsigned char	byte;
@@ -356,7 +357,7 @@ typedef	unsigned char	byte;
 int	srbit (
 	  byte	addr[],		/* A 48-bit Ethernet multicast address	*/
 	  int	nodeid,		/* A node ID (0 - 45)			*/
-	  int	cmd		/* BIT_SET or BIT_TEST			*/
+	  int	cmd		/* BIT_SET or BIT_TEST or BIT_RESET   	*/
 	)
 {
 	int	aindex;		/* The byte index in the address array	*/
@@ -389,6 +390,13 @@ int	srbit (
 	if (cmd == BIT_SET) {
 		addr[aindex] |= mask;
 		return 1;
+	}
+
+	/* If command specifies resetting, reset the bit to 0 */
+
+	if (cmd == BIT_RESET) {
+	        addr[aindex] &= (!mask);
+		return 2;
 	}
 
 	/* Command specifies testing */
@@ -703,6 +711,9 @@ int	main(
 
 	else {
 		fin = fopen(argv[1], "rb");
+		sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
+			sentinel[4] = sentinel[5] = 0x00;
+		printf("%s\n", argv[1]);
 		while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
 			if(memcmp(buffer, sentinel, 6) == 0) {
 				break;
@@ -727,7 +738,7 @@ int	main(
 			//printf("\nlength: %d\n", (int)strtol(length, NULL, 16));
 			printf("\nname: %s\n", nptr->nname);
 			printf("\nmulticast address: ");
-			print_uc(nptr->nmcast, 6);
+			//print_uc(nptr->nmcast, 6);
 		}
 
 		printf("sentinel: %llx\n", *sentinel);
