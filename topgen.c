@@ -445,13 +445,14 @@ int	lookup(
 /************************************************************************/
 
 int node_can_send(int nodeid) {
-  int i;
-  for (i = 0; i < nnodes; i++) {
-    if (srbit(nodes[nodeid].nmcast, i, BIT_TEST) == 1) {
-      return 1;
-    }
-  }
-  return 0;
+	int i;			/* Index for node list			*/
+
+	for (i = 0; i < nnodes; i++) {
+	  if (srbit(nodes[nodeid].nmcast, i, BIT_TEST) == 1) {
+	    return 1;
+	  }
+	}
+	return 0;
 }
 
 /************************************************************************/
@@ -461,12 +462,13 @@ int node_can_send(int nodeid) {
 /************************************************************************/
 
 int node_can_receive(int nodeid) {
-  int i;
-  for (i = 0; i < nnodes; i++) {
-    if (srbit(nodes[i].nmcast, nodeid, BIT_TEST) == 1)
-      return 1;
-  }
-  return 0;
+	int i;			/* Index for node list			*/
+
+	for (i = 0; i < nnodes; i++) {
+	  if (srbit(nodes[i].nmcast, nodeid, BIT_TEST) == 1)
+	    return 1;
+	}
+	return 0;
 }
 
 /************************************************************************/
@@ -477,11 +479,14 @@ int node_can_receive(int nodeid) {
 /************************************************************************/
 
 void set_reset_send_all(int nodeid, int bit_op) {
-  int i;
-  for (i = 0; i < nnodes; i++) {
-    srbit(nodes[nodeid].nmcast, i, bit_op);
-  }
-  srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET); // node can't send to itself
+	int i;			/* Index for node list			*/
+
+	for (i = 0; i < nnodes; i++) {
+	  srbit(nodes[nodeid].nmcast, i, bit_op);
+	}
+
+	/* node can't send to itself */
+	srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET);
 }
 
 /************************************************************************/
@@ -492,11 +497,14 @@ void set_reset_send_all(int nodeid, int bit_op) {
 /************************************************************************/
 
 void set_reset_receive_all(int nodeid, int bit_op) {
-  int i;
-  for (i = 0; i < nnodes; i++) {
-    srbit(nodes[i].nmcast, nodeid, bit_op);
-  }
-  srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET); // node can't receive from itself
+	int i;			/* Index for node list			*/
+
+	for (i = 0; i < nnodes; i++) {
+	  srbit(nodes[i].nmcast, nodeid, bit_op);
+	}
+
+	/* node can't receive from itself */
+	srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET);
 }
 
 /************************************************************************/
@@ -507,10 +515,15 @@ void set_reset_receive_all(int nodeid, int bit_op) {
 /************************************************************************/
 
 void apply_update(char *update_string, int symmetric) {
-	char op[1], snode[NAMLEN], rnode[NAMLEN];
-	int sindex, rindex;
-	int plus_minus;
-	int i;
+	char op[1];		/* Operation - "+" (add link) or	*/
+				/*	       "-" (delete link)	*/
+	char snode[NAMLEN];	/* Name of sending node			*/
+	char rnode[NAMLEN];	/* Name of receiving node		*/
+	int sindex;		/* Index of sending node		*/
+	int rindex;		/* Index of receiving node	        */
+	int plus_minus;		/* Specifies which operation in terms	*/
+				/* setting or resetting bits		*/
+	int i;			/* Index for node list			*/
 
 	strcpy(op, strsep(&update_string, " "));
 	strcpy(snode, strsep(&update_string, " "));
@@ -523,6 +536,8 @@ void apply_update(char *update_string, int symmetric) {
 		plus_minus = BIT_SET;
 	else
 		plus_minus = BIT_RESET;
+
+	/* Test for broadcast-like messages */
 
 	if (strcmp(snode, "*") == 0) {
 		if (strcmp(rnode, "*") == 0) {
@@ -777,6 +792,12 @@ int	main(
 	/* Update branch */
 
 	else {
+
+		/* Read the input file, and extract the information	*/
+		/* into the nodes array					*/
+
+		/* Read multicast addresses */
+
 		fin = fopen(infile, "rb");
 		printf("%s\n", infile);
 		while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
@@ -789,6 +810,8 @@ int	main(
 			}
 		}
 
+		/* Read node names */
+
 		nnodes = 0;
 		while(fread(buffer, 1, 1, fin) > 0) {
 			memcpy(length, buffer, 1);
@@ -800,10 +823,14 @@ int	main(
 
 		fclose(fin);
 
+		/* Accept update commands from the user and apply them	*/
+		/* the topology						*/
+
 		printf("\nEnter update commands, and insert \"insert\" at the end: \n");
 		scanf("%[^\n]", update_string);
 		getchar();
 		//change "insert" to update command constant later
+
 
 		while(strcmp(update_string, "insert") != 0) {
 			apply_update(update_string, symmetric);
@@ -811,7 +838,7 @@ int	main(
 			getchar();
 		}
 
-		// test for isolation, sending and receiving capabiliites
+		/* test for isolation, sending and receiving capabiliites */
 
 		for (i = 0; i < nnodes; i++) {
 			if (node_can_send(i)) {
@@ -822,6 +849,8 @@ int	main(
 			}
 		}
 	}
+
+	/* Analyze results */
 
 	analyze_results();
 
