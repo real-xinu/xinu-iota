@@ -645,11 +645,11 @@ int	main(
 		}
 	}
 
+	infile = argv[1];
 
 	if (parse) {
 		/*Reopen stdin to be the topology file */
 
-		infile = argv[1];
 		if (freopen(infile, "r", stdin) == NULL) {
 			fprintf(stderr, "error: cannot read input file %s\n", infile);
 			exit(1);
@@ -761,34 +761,7 @@ int	main(
 
 		/* Output a topology database */
 
-		outfile = malloc(strlen(infile)+3);
-		strcpy(outfile, infile);
-		strcat(outfile, ".0");
-		if ( (fout = fopen(outfile, "w") ) == NULL) {
-			fprintf(stderr,"error - cannot open output file %s\n", outfile);
-		}
-
-		/* Write the multicast address for each node */
-
-		for (nindex=0; nindex<nnodes; nindex++) {
-			fwrite(nodes[nindex].nmcast, 1, 6, fout);
-		}
-
-		/* Write the sentinel value */
-
-		fwrite(sentinel, 1, 6, fout);
-
-		/* Write the node names as a 1-byte length field followed by	*/
-		/*	a set of 9null-terminated) characters that form the	*/
-		/*	name of the node.  The length includes the null byte.	*/
-
-		for (nindex=0; nindex<nnodes; nindex++) {
-			nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
-			fwrite(&nlen, 1, 1, fout);
-			fwrite(nodes[nindex].nname, 1, nlen, fout);
-		}
-
-		fclose(fout);
+		
 	}
 
 	/* Update branch */
@@ -838,37 +811,35 @@ int	main(
 		/* Analyze the results */
 
 		analyze_results();
-
-		/* Output a topology database */
-
-		outfile = malloc(strlen(argv[1])+3);
-		strcpy(outfile, argv[1]);
-		strcat(outfile, ".1");
-		if ( (fout = fopen(outfile, "w") ) == NULL) {
-			fprintf(stderr,"error - cannot open output file %s\n", outfile);
-		}
-
-		/* Write the multicast address for each node */
-
-		for (nindex=0; nindex<nnodes; nindex++) {
-			fwrite(nodes[nindex].nmcast, 1, 6, fout);
-		}
-
-		/* Write the sentinel value */
-
-		fwrite(sentinel, 1, 6, fout);
-
-		/* Write the node names as a 1-byte length field followed by	*/
-		/*	a set of 9null-terminated) characters that form the	*/
-		/*	name of the node.  The length includes the null byte.	*/
-
-		for (nindex=0; nindex<nnodes; nindex++) {
-			nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
-			fwrite(&nlen, 1, 1, fout);
-			fwrite(nodes[nindex].nname, 1, nlen, fout);
-		}
-
-		fclose(fout);
 	}
+		/* Output a topology database */
+	outfile = malloc(strlen(infile)+3);
+	strcpy(outfile, infile);
+	strcat(outfile, ".0");
+	if ( (fout = fopen(outfile, "w") ) == NULL) {
+		fprintf(stderr,"error - cannot open output file %s\n", outfile);
+	}
+
+	/* Write the multicast address for each node */
+
+	for (nindex=0; nindex<nnodes; nindex++) {
+		fwrite(nodes[nindex].nmcast, 1, 6, fout);
+	}
+
+	/* Write the sentinel value */
+
+	fwrite(sentinel, 1, 6, fout);
+
+	/* Write the node names as a 1-byte length field followed by	*/
+	/*	a set of 9null-terminated) characters that form the	*/
+	/*	name of the node.  The length includes the null byte.	*/
+
+	for (nindex=0; nindex<nnodes; nindex++) {
+		nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
+		fwrite(&nlen, 1, 1, fout);
+		fwrite(nodes[nindex].nname, 1, nlen, fout);
+	}
+
+	fclose(fout);
 	exit(0);
 }
