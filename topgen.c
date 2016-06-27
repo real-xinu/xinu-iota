@@ -804,7 +804,7 @@ int	main(
 	fwrite(sentinel, 1, 6, fout);
 
 	/* Write the node names as a 1-byte length field followed by	*/
-	/*	a set of 9null-terminated) characters that form the	*/
+	/*	a set of (null-terminated) characters that form the	*/
 	/*	name of the node.  The length includes the null byte.	*/
 
 	for (nindex=0; nindex<nnodes; nindex++) {
