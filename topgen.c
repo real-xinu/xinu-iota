@@ -826,7 +826,7 @@ int	main(
 		/* Accept update commands from the user and apply them	*/
 		/* the topology						*/
 
-		printf("\nEnter update commands, and insert \"insert\" at the end: \n");
+		printf("\nEnter update commands, and enter \"insert\" at the end: \n");
 		scanf("%[^\n]", update_string);
 		getchar();
 		//change "insert" to update command constant later
