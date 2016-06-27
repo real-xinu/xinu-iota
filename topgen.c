@@ -527,6 +527,36 @@ void apply_update(char *update_string, int symmetric) {
 	}
 }
 
+void analyze_results() {
+	struct node *sptr;
+	char *msg;
+	int i, j;
+
+	for (int nindex=0; nindex<nnodes; nindex++) {
+	       	sptr = &nodes[nindex];
+		printf("Node %2d ", nindex);
+		msg="Can send & receive";
+		if (sptr->nsend == 0) {
+			msg = "Can only receive";
+			if (sptr->nrecv == 0) {
+				msg = "Completely isolated";
+			}
+		} else if (sptr->nrecv == 0) {
+	       		msg = "Can only send";
+		}
+		printf(" %-19s",msg);
+		printf(" (original name %s)\n", sptr->nname);
+		printf("         Multicast address: ");
+		for (i=0;i<6;i++) {
+			printf(" ");
+			for (j=7; j>=0; j--) {
+				printf("%d",(sptr->nmcast[i]>>j)&0x01);
+			}
+		}
+		printf("\n");
+	}
+}
+
 /************************************************************************/
 /*									*/
 /* main program								*/
@@ -807,29 +837,7 @@ int	main(
 
 		/* Analyze the results */
 
-		for (int nindex=0; nindex<nnodes; nindex++) {
-			sptr = &nodes[nindex];
-			printf("Node %2d ", nindex);
-			msg="Can send & receive";
-			if (sptr->nsend == 0) {
-				msg = "Can only receive";
-				if (sptr->nrecv == 0) {
-					msg = "Completely isolated";
-				}
-			} else if (sptr->nrecv == 0) {
-				msg = "Can only send";
-			}
-			printf(" %-19s",msg);
-			printf(" (original name %s)\n", sptr->nname);
-			printf("         Multicast address: ");
-			for (i=0;i<6;i++) {
-				printf(" ");
-				for (j=7; j>=0; j--) {
-					printf("%d",(sptr->nmcast[i]>>j)&0x01);
-				}
-			}
-			printf("\n");
-		}
+		analyze_results();
 
 		/* Output a topology database */
 
