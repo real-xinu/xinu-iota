@@ -462,6 +462,7 @@ void set_reset_send_all(int nodeid, int bit_op) {
   for (i = 0; i < nnodes; i++) {
     srbit(nodes[nodeid].nmcast, i, bit_op);
   }
+  srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET); // node can't send to itself
 }
 
 void set_reset_receive_all(int nodeid, int bit_op) {
@@ -469,6 +470,7 @@ void set_reset_receive_all(int nodeid, int bit_op) {
   for (i = 0; i < nnodes; i++) {
     srbit(nodes[i].nmcast, nodeid, bit_op);
   }
+  srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET); // node can't receive from itself
 }
 
 /************************************************************************/
@@ -776,11 +778,15 @@ int	main(
 			else if(strcmp(operand_2, "*") == 0) {
 				nodeid_1 = lookup(operand_1);
 				set_reset_send_all(nodeid_1, plus_minus);
+
 			}
 
 			else {
 				nodeid_1 = lookup(operand_1);
 				nodeid_2 = lookup(operand_2);
+				if (nodeid_1 == nodeid_2) {
+					errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
+				}
 				srbit(nodes[nodeid_1].nmcast, nodeid_2, plus_minus);
 				if(symmetric > 0) {
 					srbit(nodes[nodeid_2].nmcast, nodeid_1, plus_minus);
