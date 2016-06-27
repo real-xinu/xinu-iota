@@ -395,7 +395,7 @@ int	srbit (
 	/* If command specifies resetting, reset the bit to 0 */
 
 	if (cmd == BIT_RESET) {
-	        addr[aindex] &= (!mask);
+		addr[aindex] &= (!mask);
 		return 2;
 	}
 
@@ -541,10 +541,9 @@ int	main(
 	if (argc == 4) {
 		if (strcmp(argv[1], "-s") == 0) {
 			symmetric++;
-			argv++;
 			if (strcmp(argv[2], "-u") == 0) {
 				parse = 0;
-				argv++;
+				argv += 2;
 			}
 
 			else {
