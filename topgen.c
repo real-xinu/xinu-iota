@@ -438,6 +438,12 @@ int	lookup(
 	return i;
 }
 
+/************************************************************************/
+/*									*/
+/* node_can_send - checks if a node can send to any other node		*/
+/*									*/
+/************************************************************************/
+
 int node_can_send(int nodeid) {
   int i;
   for (i = 0; i < nnodes; i++) {
@@ -448,6 +454,12 @@ int node_can_send(int nodeid) {
   return 0;
 }
 
+/************************************************************************/
+/*									*/
+/* node_can_receive - checks if a node can receive from any other node 	*/
+/*									*/
+/************************************************************************/
+
 int node_can_receive(int nodeid) {
   int i;
   for (i = 0; i < nnodes; i++) {
@@ -457,6 +469,13 @@ int node_can_receive(int nodeid) {
   return 0;
 }
 
+/************************************************************************/
+/*									*/
+/* set_reset_send_all - allows/disallows a node from sending to all	*/
+/* other nodes								*/
+/*									*/
+/************************************************************************/
+
 void set_reset_send_all(int nodeid, int bit_op) {
   int i;
   for (i = 0; i < nnodes; i++) {
@@ -465,6 +484,13 @@ void set_reset_send_all(int nodeid, int bit_op) {
   srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET); // node can't send to itself
 }
 
+/************************************************************************/
+/*									*/
+/* set_reset_send_all - allows/disallows a node from receiving from all	*/
+/* other nodes								*/
+/*									*/
+/************************************************************************/
+
 void set_reset_receive_all(int nodeid, int bit_op) {
   int i;
   for (i = 0; i < nnodes; i++) {
@@ -472,6 +498,13 @@ void set_reset_receive_all(int nodeid, int bit_op) {
   }
   srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET); // node can't receive from itself
 }
+
+/************************************************************************/
+/*									*/
+/* apply_update - applies a user-supplied update to the input topology 	*/
+/* file - see topgen documentation for more   				*/
+/*									*/
+/************************************************************************/
 
 void apply_update(char *update_string, int symmetric) {
 	char op[1], snode[NAMLEN], rnode[NAMLEN];
@@ -526,6 +559,13 @@ void apply_update(char *update_string, int symmetric) {
 		}
 	}
 }
+
+/************************************************************************/
+/*									*/
+/* analyze_results - prints information about the nodes in the topology	*/
+/* (index, status, name, multicast address)   				*/
+/*									*/
+/************************************************************************/
 
 void analyze_results() {
 	struct node *sptr;
