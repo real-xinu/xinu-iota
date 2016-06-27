@@ -759,9 +759,6 @@ int	main(
 			printf("\n");
 		}
 
-		/* Output a topology database */
-
-		
 	}
 
 	/* Update branch */
@@ -808,11 +805,25 @@ int	main(
 			getchar();
 		}
 
+
+		// test for isolation, sending and receiving capabiliites
+
+		for (i = 0; i < nnodes; i++) {
+			if (node_can_send(i)) {
+				nodes[i].nsend = 1;
+			}
+			if (node_can_receive(i)) {
+				nodes[i].nrecv = 1;
+			}
+		}
+
 		/* Analyze the results */
 
 		analyze_results();
 	}
-		/* Output a topology database */
+
+
+	/* Output a topology database */
 	outfile = malloc(strlen(infile)+3);
 	strcpy(outfile, infile);
 	strcat(outfile, ".0");
