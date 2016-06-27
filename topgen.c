@@ -732,33 +732,6 @@ int	main(
 				break;
 			}
 		}
-
-		/* Analyze the results */
-
-		for (nindex=0; nindex<nnodes; nindex++) {
-			sptr = &nodes[nindex];
-			printf("Node %2d ", nindex);
-			msg="Can send & receive";
-			if (sptr->nsend == 0) {
-				msg = "Can only receive";
-				if (sptr->nrecv == 0) {
-					msg = "Completely isolated";
-				}
-			} else if (sptr->nrecv == 0) {
-				msg = "Can only send";
-			}
-			printf(" %-19s",msg);
-			printf(" (original name %s)\n", sptr->nname);
-			printf("         Multicast address: ");
-			for (i=0;i<6;i++) {
-				printf(" ");
-				for (j=7; j>=0; j--) {
-					printf("%d",(sptr->nmcast[i]>>j)&0x01);
-				}
-			}
-			printf("\n");
-		}
-
 	}
 
 	/* Update branch */
@@ -808,12 +781,9 @@ int	main(
 				nodes[i].nrecv = 1;
 			}
 		}
-
-		/* Analyze the results */
-
-		analyze_results();
 	}
 
+	analyze_results();
 
 	/* Output a topology database */
 	outfile = malloc(strlen(infile)+3);
