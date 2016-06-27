@@ -395,7 +395,7 @@ int	srbit (
 	/* If command specifies resetting, reset the bit to 0 */
 
 	if (cmd == BIT_RESET) {
-		addr[aindex] &= mask;
+		addr[aindex] &= ~mask;
 		return 2;
 	}
 
