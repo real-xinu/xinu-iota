@@ -779,18 +779,10 @@ int	main(
 		nnodes = 0;
 		while(fread(buffer, 1, 1, fin) > 0) {
 			memcpy(length, buffer, 1);
-			//sprintf(length, "%x", l);
-			printf("\nlength original: %x\n", buffer[0]);
-			//printf("\nlength: %d\n", l);
 			fread(namebuffer, 1, (int) buffer[0], fin);
 			memcpy(name, namebuffer, (int)buffer[0]);
-			//print_uc(length, 1);
 			nptr = &nodes[nnodes++];
 			strcpy(nptr->nname, name);
-			//printf("\nlength: %d\n", (int)strtol(length, NULL, 16));
-			printf("\nname: %s\n", nptr->nname);
-			printf("\nmulticast address: ");
-			//print_uc(nptr->nmcast, 6);
 		}
 
 		fclose(fin);
