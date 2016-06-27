@@ -566,6 +566,8 @@ int	main(
 	struct node *nptr;
 
 	int parse = 1;
+	sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
+			sentinel[4] = sentinel[5] = 0x00;
 
 	char	use[] = "error: use is topgen [-s] (filename | -u topname)\n";
 
@@ -744,8 +746,6 @@ int	main(
 
 		/* Write the sentinel value */
 
-		sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
-			sentinel[4] = sentinel[5] = 0x00;
 		fwrite(sentinel, 1, 6, fout);
 
 		/* Write the node names as a 1-byte length field followed by	*/
@@ -765,8 +765,6 @@ int	main(
 
 	else {
 		fin = fopen(argv[1], "rb");
-		sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
-			sentinel[4] = sentinel[5] = 0x00;
 		printf("%s\n", argv[1]);
 		while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
 			if(memcmp(buffer, sentinel, 6) == 0) {
@@ -851,8 +849,6 @@ int	main(
 
 		/* Write the sentinel value */
 
-		sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
-			sentinel[4] = sentinel[5] = 0x00;
 		fwrite(sentinel, 1, 6, fout);
 
 		/* Write the node names as a 1-byte length field followed by	*/
