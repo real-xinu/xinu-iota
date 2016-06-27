@@ -507,7 +507,7 @@ int	main(
 	unsigned char name[NAMLEN];
 	unsigned char length[1];
 	char op[1], operand_1[NAMLEN], operand_2[NAMLEN];
-	char update_string[260];
+	char update_string[sizeof(op) + 2 * NAMLEN + 3];
 	int nodeid_1, nodeid_2;
 	int plus_minus;
 	struct node *nptr;
