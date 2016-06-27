@@ -793,7 +793,6 @@ int	main(
 			//print_uc(nptr->nmcast, 6);
 		}
 
-		printf("sentinel: %llx\n", *sentinel);
 		fclose(fin);
 
 		scanf("%[^\n]", update_string);
