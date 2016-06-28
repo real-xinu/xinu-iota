@@ -663,7 +663,13 @@ void analyze_results()
 /*									*/
 /************************************************************************/
 
-void find_output_file(char *instring, char *infile, char *outfile) {
+void	find_output_file(
+	  char *instring,
+	  char *infile,
+	  char *outfile
+	)
+
+ {
 	regex_t preg;			/* Pointer to pattern buffer	*/
 	size_t nmatch = 3;		/* Number of matches		*/
 	regmatch_t pmatch[3];		/* Array to store matches	*/
