@@ -955,13 +955,13 @@ int	main(
 		/* Accept update commands from the user and apply them	*/
 		/* the topology						*/
 
-		printf("\nEnter update commands, and enter \"insert\" at the end: \n");
+		printf("\nEnter update commands, and enter \"write\" at the end: \n");
 		scanf("%[^\n]", update_string);
 		getchar();
 		//change "insert" to update command constant later
 
 
-		while(strcmp(update_string, "insert") != 0) {
+		while(strcmp(update_string, "write") != 0) {
 			apply_update(update_string, symmetric);
 			linenum++;
 		        scanf("%[^\n]", update_string);
