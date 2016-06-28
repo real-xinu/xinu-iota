@@ -811,6 +811,10 @@ int	main(
 		/*Reopen stdin to be the topology file */
 
 		infile = argv[1];
+		outfile = malloc(strlen(infile)+3);
+		strcpy(outfile, infile);
+		strcat(outfile, ".0");
+
 		if (freopen(infile, "r", stdin) == NULL) {
 			fprintf(stderr, "error: cannot read input file %s\n", infile);
 			exit(1);
@@ -893,9 +897,6 @@ int	main(
 				break;
 			}
 		}
-		outfile = malloc(strlen(infile)+3);
-		strcpy(outfile, infile);
-		strcat(outfile, ".0");
 	}
 
 	/* Update branch */
@@ -916,6 +917,7 @@ int	main(
 		  printf("Can't open file");
 		  exit(1);
 		}
+
 		printf("%s\n", infile);
 		while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
 			if(memcmp(buffer, sentinel, 6) == 0) {
