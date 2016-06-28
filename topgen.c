@@ -593,7 +593,7 @@ void	apply_update(
 		sindex = lookup(snode);
 		rindex = lookup(rnode);
 		if (sindex == rindex) {
-			errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
+			errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)sindex, linenum);
 		}
 		srbit(nodes[sindex].nmcast, rindex, plus_minus);
 		if(symmetric > 0) {
