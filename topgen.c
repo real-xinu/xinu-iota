@@ -643,6 +643,83 @@ void analyze_results()
 
 /************************************************************************/
 /*									*/
+/* find_output_file - if the input is a topology name (like X) that	*/
+/*	already has a topology_database, it will find the topology	*/
+/*	database name with the highest suffix, and increments it.	*/
+/*	If the input is a topology database name (like X.N), that will	*/
+/*	be used.							*/
+/*									*/
+/************************************************************************/
+
+void find_output_file(char *infile, char *topfile, char *outfile) {
+	regex_t preg;			/* Pointer to pattern buffer	*/
+	size_t nmatch = 3;		/* Number of matches		*/
+	regmatch_t pmatch[3];		/* Array to store matches	*/
+	struct dirent *pDirent;		/* Pointer to dirent structure	*/
+	DIR *pDir;			/* Pointer to directory stream	*/
+	char *pattern;		        /* Regex pattern		*/
+	int rc = 1;			/* Return value for match	*/
+	int seen_top_match = 0;		/* Seen a match for input	*/
+					/* topology?			*/
+	int suffix = -1;		/* Suffix value for topology	*/
+
+
+	char filename[256] = "[.]([0-9]+)$";
+	pattern = filename;
+
+	if ((rc = regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE)) != 0) {
+		printf("regcomp() failed, returning nonzero (%d)\n", rc);
+		exit(1);
+	}
+
+	if((rc = regexec(&preg, infile, nmatch, pmatch, 0)) == 0) {
+		strcpy(outfile, infile);
+		printf("%s", outfile);
+		regfree(&preg);
+	}
+
+	else {
+		pDir = opendir(".");
+		if(pDir == NULL) {
+			printf("Can't open current directory");
+			exit(1);
+		}
+
+		sprintf(filename, "^%s[.]([0-9]+)$", infile);
+		pattern = filename;
+		while ((pDirent = readdir(pDir)) != NULL) {
+			char *name = pDirent->d_name;
+
+			if ((rc = regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE)) != 0) {
+				printf("regcomp() failed, returning nonzero (%d)\n", rc);
+				exit(1);
+			}
+			if ((rc = regexec(&preg, name, nmatch, pmatch, 0)) == 0) {
+				seen_top_match = 1;
+				//printf("[%s]\n", pDirent->d_name);
+				//printf("%s", &name[pmatch[1].rm_so]);
+				if (suffix < atoi(&name[pmatch[1].rm_so]))
+				  suffix = atoi(&name[pmatch[1].rm_so]);
+			}
+
+		}
+		regfree(&preg);
+		if (seen_top_match) {
+			sprintf(topfile, "%s.%d", topfile, suffix);
+			suffix++;
+			sprintf(outfile, "%s.%d", infile, suffix);
+			//printf("\n%s", outfile);
+		}
+		else {
+			printf("No topology present");
+			exit(1);
+		}
+		closedir (pDir);
+	}
+}
+
+/************************************************************************/
+/*									*/
 /* main program								*/
 /*									*/
 /************************************************************************/
