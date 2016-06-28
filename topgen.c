@@ -559,6 +559,16 @@ void	apply_update(
 		exit(1);
 	}
 
+	if ( (snode[0]>='0') && (snode[0]<='9') ) {
+		printf("error: on line %d, token name '%s' starts with a digit\n", linenum, snode);
+		exit(1);
+	}
+
+	if ( (rnode[0]>='0') && (rnode[0]<='9') ) {
+		printf("error: on line %d, token name '%s' starts with a digit\n", linenum, snode);
+		exit(1);
+	}
+
 	if (strcmp(op, "+") == 0)
 		plus_minus = BIT_SET;
 	else
