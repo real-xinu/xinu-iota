@@ -702,8 +702,6 @@ void find_output_file(char *instring, char *infile, char *outfile) {
 			}
 			if ((rc = regexec(&preg, name, nmatch, pmatch, 0)) == 0) {
 				seen_top_match = 1;
-				//printf("[%s]\n", pDirent->d_name);
-				//printf("%s", &name[pmatch[1].rm_so]);
 				if (suffix < atoi(&name[pmatch[1].rm_so]))
 				  suffix = atoi(&name[pmatch[1].rm_so]);
 			}
@@ -714,7 +712,6 @@ void find_output_file(char *instring, char *infile, char *outfile) {
 			sprintf(infile, "%s.%d", instring, suffix);
 			suffix++;
 			sprintf(outfile, "%s.%d", instring, suffix);
-			//printf("\n%s", outfile);
 		}
 		else {
 			printf("No topology present");
