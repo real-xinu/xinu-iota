@@ -677,8 +677,10 @@ void find_output_file(char *instring, char *infile, char *outfile) {
 	}
 
 	if((rc = regexec(&preg, instring, nmatch, pmatch, 0)) == 0) {
-		strcpy(outfile, instring);
-		printf("%s", outfile);
+		strcpy(infile, instring);
+		suffix = atoi(&instring[pmatch[1].rm_so]);
+		suffix++;
+		sprintf(outfile, "%s.%d", instring, suffix);
 		regfree(&preg);
 	}
 
@@ -807,11 +809,11 @@ int	main(
 		}
 	}
 
-	infile = argv[1];
 
 	if (parse) {
 		/*Reopen stdin to be the topology file */
 
+		infile = argv[1];
 		if (freopen(infile, "r", stdin) == NULL) {
 			fprintf(stderr, "error: cannot read input file %s\n", infile);
 			exit(1);
@@ -894,11 +896,18 @@ int	main(
 				break;
 			}
 		}
+		outfile = malloc(strlen(infile)+3);
+		strcpy(outfile, infile);
+		strcat(outfile, ".0");
 	}
 
 	/* Update branch */
 
 	else {
+
+		infile = malloc(256);
+		outfile = malloc(256);
+		find_output_file(argv[1], infile, outfile);
 
 		/* Read the input file, and extract the information	*/
 		/* into the nodes array					*/
@@ -906,6 +915,10 @@ int	main(
 		/* Read multicast addresses */
 
 		fin = fopen(infile, "rb");
+		if (fin == NULL) {
+		  printf("Can't open file");
+		  exit(1);
+		}
 		printf("%s\n", infile);
 		while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
 			if(memcmp(buffer, sentinel, 6) == 0) {
@@ -963,9 +976,7 @@ int	main(
 	analyze_results();
 
 	/* Output a topology database */
-	outfile = malloc(strlen(infile)+3);
-	strcpy(outfile, infile);
-	strcat(outfile, ".0");
+
 	if ( (fout = fopen(outfile, "w") ) == NULL) {
 		fprintf(stderr,"error - cannot open output file %s\n", outfile);
 	}
