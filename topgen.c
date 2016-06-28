@@ -818,6 +818,7 @@ int	main(
 		}
 	}
 
+	/* Parse branch */
 
 	if (parse) {
 		/*Reopen stdin to be the topology file */
