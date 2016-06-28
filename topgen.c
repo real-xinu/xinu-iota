@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
+#include <regex.h>
 
 /************************************************************************/
 /*									*/
@@ -651,7 +653,7 @@ void analyze_results()
 /*									*/
 /************************************************************************/
 
-void find_output_file(char *infile, char *topfile, char *outfile) {
+void find_output_file(char *instring, char *infile, char *outfile) {
 	regex_t preg;			/* Pointer to pattern buffer	*/
 	size_t nmatch = 3;		/* Number of matches		*/
 	regmatch_t pmatch[3];		/* Array to store matches	*/
@@ -667,13 +669,15 @@ void find_output_file(char *infile, char *topfile, char *outfile) {
 	char filename[256] = "[.]([0-9]+)$";
 	pattern = filename;
 
+	strcpy(infile, instring);
+
 	if ((rc = regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE)) != 0) {
 		printf("regcomp() failed, returning nonzero (%d)\n", rc);
 		exit(1);
 	}
 
-	if((rc = regexec(&preg, infile, nmatch, pmatch, 0)) == 0) {
-		strcpy(outfile, infile);
+	if((rc = regexec(&preg, instring, nmatch, pmatch, 0)) == 0) {
+		strcpy(outfile, instring);
 		printf("%s", outfile);
 		regfree(&preg);
 	}
@@ -705,9 +709,9 @@ void find_output_file(char *infile, char *topfile, char *outfile) {
 		}
 		regfree(&preg);
 		if (seen_top_match) {
-			sprintf(topfile, "%s.%d", topfile, suffix);
+			sprintf(infile, "%s.%d", instring, suffix);
 			suffix++;
-			sprintf(outfile, "%s.%d", infile, suffix);
+			sprintf(outfile, "%s.%d", instring, suffix);
 			//printf("\n%s", outfile);
 		}
 		else {
