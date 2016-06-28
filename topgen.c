@@ -903,8 +903,8 @@ int	main(
 
 	else {
 
-		infile = malloc(256);
-		outfile = malloc(256);
+		infile = malloc(256 * sizeof(char));
+		outfile = malloc(256 * sizeof(char));
 		find_output_file(argv[1], infile, outfile);
 
 		/* Read the input file, and extract the information	*/
