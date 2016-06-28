@@ -980,6 +980,8 @@ int	main(
 		}
 	}
 
+	/* END of parse/update if conditional */
+
 	/* Analyze results */
 
 	analyze_results();
