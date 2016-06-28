@@ -690,7 +690,9 @@ void find_output_file(char *instring, char *infile, char *outfile) {
 		strcpy(infile, instring);
 		suffix = atoi(&instring[pmatch[1].rm_so]);
 		suffix++;
-		sprintf(outfile, "%s.%d", instring, suffix);
+		char temp[256];
+		snprintf(temp, pmatch[1].rm_so, instring);
+		sprintf(outfile, "%s.%d", temp, suffix);
 		regfree(&preg);
 	}
 
@@ -983,6 +985,8 @@ int	main(
 	analyze_results();
 
 	/* Output a topology database */
+
+	printf("\noutfile: %s\n", outfile);
 
 	if ( (fout = fopen(outfile, "w") ) == NULL) {
 		fprintf(stderr,"error - cannot open output file %s\n", outfile);
