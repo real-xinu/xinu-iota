@@ -958,8 +958,6 @@ int	main(
 		printf("\nEnter update commands, and enter \"write\" at the end: \n");
 		scanf("%[^\n]", update_string);
 		getchar();
-		//change "insert" to update command constant later
-
 
 		while(strcmp(update_string, "write") != 0) {
 			apply_update(update_string, symmetric);
