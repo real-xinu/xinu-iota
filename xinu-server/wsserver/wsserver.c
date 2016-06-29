@@ -118,6 +118,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
         cmsg_reply->cmsgtyp = htonl(C_TS_RESP);
         break;
     default:
+	kprintf("ERROR\n");
         cmsg_reply->cmsgtyp = htonl(C_ERR);
     }
 
@@ -166,9 +167,9 @@ void topo_update_mac(struct netpacket *pkt)
     int i;
     topo[nodeid].t_status = 1;
     memcpy(topo[nodeid].t_macaddr, pkt->net_ethsrc, ETH_ADDR_LEN);
-    for (i=0; i<6; i++) {
+    //for (i=0; i<6; i++) {
         //kprintf("%02x:", topo[nodeid].t_macaddr[i]);
-    }
+   // }
     //kprintf("\n");
     nodeid++;
 }
@@ -201,7 +202,7 @@ void print_topo()
  * comparisson old and new topology and send assign message
  * if it is necessary
  * ------------------------------------------------------*/
-void topo_compr()
+status topo_compr()
 {
     int i, j ,k;
     int flag = 0;
@@ -217,6 +218,11 @@ void topo_compr()
         for (j=0; j<6; j++)
             if (old_topo[i].t_neighbors[j] == topo[i].t_neighbors[j])
                 flag++;
+	if (nodeid < i)
+	{
+                freebuf((char *)pkt);
+		return SYSERR;
+	}
         if (flag == 6) {
             topo[i].t_status = 1;
             //kprintf("mcast addresses are the same\n");
@@ -234,14 +240,17 @@ void topo_compr()
             if(wsserver_assign(pkt) == OK) {
                 sleepms(10);
             } else {
-
-                exit();
-
-            }
+                    freebuf((char *)pkt);
+		    return SYSERR;
+	    }
 
         }
 
+
     }
+
+    freebuf((char *)pkt);
+    return OK;
 
 }
 /*----------------------------------------------------------
@@ -266,11 +275,17 @@ struct c_msg *newtop(struct c_msg ctlpkt)
 
     if (stat == OK) {
         nodeid = 0;
-        topo_compr();
-        cmsg_reply->cmsgtyp = htonl(C_OK);
+        if (topo_compr() == OK)
+             cmsg_reply->cmsgtyp = htonl(C_OK);
+	else
+	{
+             memcpy(&topo, &old_topo, sizeof(topo));
+	     cmsg_reply->cmsgtyp = htonl(C_ERR);
+	}
     } else {
 
         memcpy(&topo, &old_topo, sizeof(topo));
+	
         cmsg_reply->cmsgtyp = htonl(C_ERR);
     }
     return cmsg_reply;
@@ -616,7 +631,7 @@ void ack_handler(struct netpacket *pkt)
     if (ack == 16) {
         if (ack_info[5] == A_ASSIGN) {
             topo_update_mac(pkt);
-            //kprintf("--->Assign ACK message is received\n");
+            kprintf("--->Assign ACK message is received\n");
         } else if (ack_info[5] == A_PING) {
             ping_ack_flag[i] = 1;
             //kprintf("--->Ping ACK message is received\n");

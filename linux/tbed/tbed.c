@@ -308,7 +308,7 @@ void response_handler(struct c_msg *buf)
         printf("Reply from testbed server: OK\n");
         break;
     case C_ERR:
-        printf("Reply from testbed server:ERROR");
+        printf("Reply from testbed server:ERROR\n");
         break;
     case C_TOP_REPLY:
         topodump(buf);
