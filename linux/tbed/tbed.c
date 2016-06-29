@@ -308,7 +308,7 @@ void response_handler(struct c_msg *buf)
         printf("Reply from testbed server: OK\n");
         break;
     case C_ERR:
-        printf("Reply from testbed server:ERROR");
+        printf("Reply from testbed server:ERROR\n");
         break;
     case C_TOP_REPLY:
         topodump(buf);
@@ -423,7 +423,7 @@ void udp_process(const char *SRV_IP, char *file)
             command[strcspn(command, "\r\n")] = 0;
             message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp != htonl(ERR)) {
+            if (message.cmsgtyp != htonl(C_ERR)) {
                 if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
                     error_handler("The message is not sent to Testbed_Server()");
 
