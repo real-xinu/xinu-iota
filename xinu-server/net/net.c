@@ -30,7 +30,7 @@ void	net_init (void)
 	nbufs = UDP_SLOTS * UDP_QSIZ + ICMP_SLOTS * ICMP_QSIZ + 1;
 
 	netbufpool = mkbufpool(PACKLEN, nbufs);
-
+         
 	/* Initialize the ARP cache */
 
 	arp_init();
@@ -80,7 +80,7 @@ process	netin ()
 	while(1) {
 
 		/* Allocate a buffer */
-
+                
 		pkt = (struct netpacket *)getbuf(netbufpool);
 
 		/* Obtain next packet that arrives */
@@ -105,7 +105,6 @@ process	netin ()
 		    case ETH_IP:			/* Handle IP	*/
 			ip_in(pkt);
 			continue;
-	
 		    case ETH_IPv6:			/* Handle IPv6	*/
 			freebuf((char *)pkt);
 			continue;
@@ -113,12 +112,16 @@ process	netin ()
 			amsg_handler(pkt);
 			continue;
 		    case ETH_TYPE_B:
+			freebuf((char *)pkt);
 			continue;
 
 		    default:	/* Ignore all other incoming packets	*/
 			freebuf((char *)pkt);
 			continue;
 		}
+
+		//freebuf((char *)pkt);
+	  
 	}
 }
 

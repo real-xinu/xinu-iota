@@ -84,6 +84,7 @@ process	netin ()
 		/* Obtain next packet that arrives */
 
 		retval = read(ETHER0, (char *)pkt, PACKLEN);
+		//pdump(pkt);
 		if(retval == SYSERR) {
 			panic("Cannot read from Ethernet\n");
 		}
@@ -109,6 +110,7 @@ process	netin ()
 			continue;
 		    case ETH_TYPE_A:
 			 amsg_handler(pkt);
+			 continue;
 		    default:	/* Ignore all other incoming packets	*/
 			freebuf((char *)pkt);
 			continue;

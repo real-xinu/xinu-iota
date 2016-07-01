@@ -69,7 +69,7 @@ status wsnode_sendack(struct netpacket *pkt)
     ack_msg->amsgtyp = htonl(A_ACK);
     ack_msg->anodeid = htonl(info.nodeid);
     memcpy(ack_msg->aacking,(char *)(node_msg) + 14, 16);
-    int i;
+    //int i;
     /*for (i=0; i<16; i++)
     {
         //kprintf("aacking: %d\n", ack_msg->aacking[i]);
@@ -93,9 +93,9 @@ void print_info()
     for (j=0; j< 6; j++) {
         for (i=7; i>=0; i--) {
 
-            kprintf("%d ", (info.mcastaddr[j]>> i) &0x01);
+            // kprintf("%d ", (info.mcastaddr[j]>> i) &0x01);
         }
-        kprintf(" ");
+        //kprintf(" ");
     }
 
 }
@@ -116,30 +116,28 @@ void amsg_handler(struct netpacket *pkt)
     int i;
     switch(amsgtyp) {
     case A_ASSIGN:
-        pdump(pkt);
         info.nodeid = ntohl(node_msg->anodeid);
         if(wsnode_sendack(pkt)== OK) {
             for (i=0; i< 6; i++) {
                 info.mcastaddr[i] = node_msg->amcastaddr[i];
             }
             print_info();
-            kprintf("\n--->ACK message is sent\n");
+            kprintf("\n====>ACK message is sent\n");
         }
         break;
     case A_RESTART:
-        kprintf("<--- RESTART message is received\n");
+        kprintf("<==== RESTART message is received\n");
         break;
     case A_XOFF:
-        kprintf("<---XOF message is received\n");
+        kprintf("<====XOF message is received\n");
         break;
     case A_XON:
-        kprintf("<--- XON message is received\n");
+        kprintf("<==== XON message is received\n");
         break;
     case A_PING:
-        //pdump(pkt);
-        kprintf("<--- PING message is received\n");
+        kprintf("<==== PING message is received\n");
         if(wsnode_sendack(pkt) == OK) {
-            kprintf("----> ACK message is sent\n");
+            kprintf("====> ACK message is sent\n");
 
         }
 
@@ -147,9 +145,9 @@ void amsg_handler(struct netpacket *pkt)
     case A_PING_ALL:
         delay = (info.nodeid * 0.001);
         sleep(delay);
-        kprintf("<--- PINGALL message is received\n");
+        kprintf("<==== PINGALL message is received\n");
         if(wsnode_sendack(pkt) == OK) {
-            kprintf("----> ACK message is sent\n");
+            kprintf("====> ACK message is sent\n");
 
         }
 

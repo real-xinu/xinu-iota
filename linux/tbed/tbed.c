@@ -145,7 +145,6 @@ void topodump(struct c_msg *buf)
     if (ntohl(buf->topnum) == 0) {
         printf("Please enter newtop command\n");
 
-
     }
     if(ntohl(buf->topnum) > 0) {
 
@@ -277,9 +276,7 @@ void ping_reply_handler(struct c_msg *buf)
     for(i=0; i<counter; i++) {
         status = ntohl(buf->pingdata[i].pstatus);
         if(status == ALIVE) {
-
             printf("<----Reply from testbed server: Node %d is alive\n", ntohl(buf->pingdata[i].pnodeid));
-
 
         } else if((status  == NOTACTIV) && (counter == 1)) {
             printf("<----Reply from testbed server: Node %d is not in the active network topology\n", ntohl(buf->pingdata[i].pnodeid));
@@ -393,7 +390,6 @@ void udp_process(const char *SRV_IP, char *file)
             message = command_handler(command);                     /*create an appropiate control message to send to the testbed server */
 
             if (message.cmsgtyp != htonl(C_ERR)) {
-                //printf("type:%d\n", ntohl(message.cmsgtyp));
                 if(sendto(s, &message, sizeof(message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
                     error_handler("The message is not sent to Testbed_Server()");
 

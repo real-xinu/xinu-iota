@@ -21,7 +21,7 @@ status read_topology(char *name, char **buff, uint32 *size)
 
     /* Get size of topology file so we know how much to read */
     *size = control(RFILESYS, RFS_CTL_SIZE, 0, 0);
-    //kprintf("size:%d\n", *size);
+
     if (*size == SYSERR) {
         printf("WARNING: Could not get topology file size\n");
         close(fd);
@@ -45,9 +45,6 @@ status read_topology(char *name, char **buff, uint32 *size)
         return SYSERR;
     }
 
-    /* Set number of nodes for caller */
-    //*nodes = size / ETH_ADDR_LEN;
-
     close(fd);
     return OK;
 }
@@ -58,7 +55,7 @@ status read_topology(char *name, char **buff, uint32 *size)
  ***********************************************************************/
 int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
 {
-    int i, j ,k;
+    int i, j;
 
     int nnodes = 46;
 
@@ -102,10 +99,10 @@ int32 topo_update(char *buff, uint32 size, struct t_entry *topo)
                 counter++;
                 len_flag = 1;
             } else {
-                int name[name_size];
+                //int name[name_size];
 
                 for (j=0; j<name_size; j++) {
-                    name[j] = buff[counter + j];
+                    //name[j] = buff[counter + j];
                     //kprintf("%s",&name[j]);
                 }
                 //kprintf("\n");

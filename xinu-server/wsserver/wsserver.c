@@ -78,7 +78,6 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
         kprintf("Message type is %d\n", C_PING_REQ);
         if(online)
             cmsg_reply = nping_reply(ctlpkt);
-        //kprintf("after ping reply\n");
         break;
     case C_PING_ALL:
         kprintf("Message type is %d\n", C_PING_ALL);
@@ -118,7 +117,7 @@ struct c_msg * cmsg_handler(struct c_msg ctlpkt)
         cmsg_reply->cmsgtyp = htonl(C_TS_RESP);
         break;
     default:
-	kprintf("ERROR\n");
+        kprintf("ERROR\n");
         cmsg_reply->cmsgtyp = htonl(C_ERR);
     }
 
@@ -132,7 +131,8 @@ struct etherPkt *create_etherPkt()
 {
     struct etherPkt *msg;
     msg = (struct etherPkt *)getmem(sizeof(struct etherPkt));
-    memset(msg, 0, sizeof(msg));
+
+    //memset(msg, 0, sizeof(msg));
     return msg;
 }
 
@@ -164,13 +164,14 @@ status init_topo(char *filename)
  * ----------------------------------------------------------------*/
 void topo_update_mac(struct netpacket *pkt)
 {
-    int i;
     topo[nodeid].t_status = 1;
     memcpy(topo[nodeid].t_macaddr, pkt->net_ethsrc, ETH_ADDR_LEN);
     //for (i=0; i<6; i++) {
-        //kprintf("%02x:", topo[nodeid].t_macaddr[i]);
-   // }
+    //kprintf("%02x:", topo[nodeid].t_macaddr[i]);
+    // }
     //kprintf("\n");
+
+    freebuf((char *)pkt);
     nodeid++;
 }
 
@@ -218,11 +219,10 @@ status topo_compr()
         for (j=0; j<6; j++)
             if (old_topo[i].t_neighbors[j] == topo[i].t_neighbors[j])
                 flag++;
-	if (nodeid < i)
-	{
-                freebuf((char *)pkt);
-		return SYSERR;
-	}
+        if (nodeid < i) {
+            freebuf((char *)pkt);
+            return SYSERR;
+        }
         if (flag == 6) {
             topo[i].t_status = 1;
             //kprintf("mcast addresses are the same\n");
@@ -236,13 +236,13 @@ status topo_compr()
             }
             //kprintf("\n");
             //memcpy(&pkt->net_ethsrc, topo[i].t_macaddr, ETH_ADDR_LEN);
-            //kprintf("\nassign message should be sent\n");
+
             if(wsserver_assign(pkt) == OK) {
                 sleepms(10);
             } else {
-                    freebuf((char *)pkt);
-		    return SYSERR;
-	    }
+                freebuf((char *)pkt);
+                return SYSERR;
+            }
 
         }
 
@@ -276,16 +276,15 @@ struct c_msg *newtop(struct c_msg ctlpkt)
     if (stat == OK) {
         nodeid = 0;
         if (topo_compr() == OK)
-             cmsg_reply->cmsgtyp = htonl(C_OK);
-	else
-	{
-             memcpy(&topo, &old_topo, sizeof(topo));
-	     cmsg_reply->cmsgtyp = htonl(C_ERR);
-	}
+            cmsg_reply->cmsgtyp = htonl(C_OK);
+        else {
+            memcpy(&topo, &old_topo, sizeof(topo));
+            cmsg_reply->cmsgtyp = htonl(C_ERR);
+        }
     } else {
 
         memcpy(&topo, &old_topo, sizeof(topo));
-	
+
         cmsg_reply->cmsgtyp = htonl(C_ERR);
     }
     return cmsg_reply;
@@ -298,7 +297,9 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
 {
     int32 i;
     struct c_msg * cmsg_reply;
+
     cmsg_reply = (struct c_msg *) getmem(sizeof(struct c_msg));
+
     memset(cmsg_reply, 0, sizeof(struct c_msg));
 
 
@@ -307,7 +308,6 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
     i = ntohl(ctlpkt.pingnodeid);
 
     if (topo[i].t_status == 1) {
-
         status stat = nping(i);
 
         sleepms(10);
@@ -315,7 +315,7 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
         if (ping_ack_flag[i] == 1 && stat == OK) {
             cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
             cmsg_reply->pingdata[ping_num].pstatus = htonl(ALIVE);
-            //kprintf("ping ack flag:%d:%d\n", ping_ack_flag[i], stat);
+
             ping_ack_flag[i] = 0;
         } else if(ping_ack_flag[i] == 0 && stat == OK) {
             cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
@@ -328,7 +328,7 @@ struct c_msg * nping_reply(struct c_msg ctlpkt)
         cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTACTIV);
 
     }
-    //kprintf("pingnum: %d\n",ping_num);
+
     ping_num = 1;
     cmsg_reply->cmsgtyp = htonl(C_PING_REPLY);
     cmsg_reply->pingnum = htonl(ping_num);
@@ -343,6 +343,7 @@ status nping(int32 pingnodeid)
 {
     struct etherPkt *ping_msg;
     byte *seq_buf;
+
     seq_buf = (byte *)getmem(sizeof(byte) * 4);
 
     ping_msg = create_etherPkt();
@@ -373,7 +374,6 @@ status nping(int32 pingnodeid)
     retval = write(ETHER0, (char *)ping_msg, sizeof(struct etherPkt));
     freemem((char *)ping_msg, sizeof(struct etherPkt));
     if (retval > 0) {
-        ///kprintf("ping sent\n");
         return OK;
     } else
         return SYSERR;
@@ -508,7 +508,7 @@ process	wsserver ()
     uint32 timeout = TIME_OUT;
     struct c_msg ctlpkt;
     struct c_msg *replypkt;
-    printf("=== Started Wi-SUN testbed server ===\n");
+    printf("=========== Started Wi-SUN testbed server ===========\n");
 
     /* Register UDP port for use by server */
     slot = udp_register(0, 0, serverport);
@@ -529,8 +529,7 @@ process	wsserver ()
             exit(); /* may be better to have the server terminate? */
         } else {
             int32 mgm_msgtyp = ntohl(ctlpkt.cmsgtyp);
-            kprintf("* => Got control message %d\n", mgm_msgtyp);
-
+            kprintf("*====> Got control message %d\n", mgm_msgtyp);
             replypkt = cmsg_handler(ctlpkt);
 
             status sndval = udp_sendto(slot, remip, remport,
@@ -539,8 +538,9 @@ process	wsserver ()
             if (sndval == SYSERR) {
                 kprintf("WARNING: UDP send error in testbed server\n");
             } else {
+                //kprintf("here\n");
                 int32 reply_msgtyp = ntohl(replypkt->cmsgtyp);
-                kprintf("* <= Replied with %d\n", reply_msgtyp);
+                kprintf("* <==== Replied with %d\n", reply_msgtyp);
             }
 
             freemem((char *) replypkt, sizeof(struct c_msg));
@@ -568,6 +568,7 @@ status wsserver_senderr(struct netpacket *pkt)
     /*send packet over Ethernet */
     retval = write(ETHER0, (char *)err_msg, sizeof(struct etherPkt));
     freemem((char *)err_msg, sizeof(struct etherPkt));
+    freebuf((char *)pkt);
     if (retval > 0)
         return OK;
     else
@@ -583,31 +584,38 @@ status wsserver_assign(struct netpacket *pkt)
 {
     struct etherPkt *assign_msg;
 
+
     assign_msg = create_etherPkt();
+
     int32 retval;
     int i;
+
     /* fill out Ethernet packet fields */
 
     memcpy(assign_msg->src, NetData.ethucast, ETH_ADDR_LEN);
     memcpy(assign_msg->dst, pkt->net_ethsrc, ETH_ADDR_LEN);
+
     assign_msg->type = htons(ETH_TYPE_A);
     assign_msg->amsgtyp = htonl(A_ASSIGN);  /*Assign message */
     assign_msg->anodeid = htonl(nodeid);
     for (i=0; i<6; i++) {
         assign_msg->amcastaddr[i] = topo[nodeid].t_neighbors[i];
-        kprintf("%02x:", assign_msg->amcastaddr[i]);
+        //kprintf("%02x:", assign_msg->amcastaddr[i]);
     }
-    kprintf("\n Assigned Nodeid: %d\n",nodeid);
+    kprintf("\n*** Assigned Nodeid***: %d\n",nodeid);
 
     memset(ack_info, 0, sizeof(ack_info));
     memcpy(ack_info, (char *)(assign_msg) + 14, 16);
 
     retval = write(ETHER0, (char *)assign_msg, sizeof(struct etherPkt));
     freemem((char *)assign_msg, sizeof(struct etherPkt));
-    if(retval > 0)
+
+    freebuf((char *)pkt);
+    if(retval > 0) {
         return OK;
-    else
+    } else {
         return SYSERR;
+    }
 
 }
 
@@ -627,20 +635,20 @@ void ack_handler(struct netpacket *pkt)
         //kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
     }
     i = ntohl(node_msg->anodeid);
-    //kprintf("ack handler i: %d\n", i);
     if (ack == 16) {
         if (ack_info[5] == A_ASSIGN) {
             topo_update_mac(pkt);
-            kprintf("--->Assign ACK message is received\n");
+            kprintf("====>Assign ACK message is received\n");
         } else if (ack_info[5] == A_PING) {
+            freebuf((char *)pkt);
             ping_ack_flag[i] = 1;
             //kprintf("--->Ping ACK message is received\n");
         } else if (ack_info[5] == A_PING_ALL) {
             ping_ack_flag[i] = 1;
+            freebuf((char *)pkt);
         }
-    }
-
-    freemem((char *)node_msg, sizeof(struct etherPkt));
+    } else
+        freebuf((char *)pkt);
 
 }
 /*-----------------------------------------------------------------
@@ -648,36 +656,39 @@ void ack_handler(struct netpacket *pkt)
  * on a message which is received from a node.
  * ----------------------------------------------------------------*/
 
-void amsg_handler(struct netpacket *pkt)
+void  amsg_handler(struct netpacket *pkt)
 {
     struct etherPkt *node_msg;
     status retval;
     node_msg = (struct etherPkt *)pkt;
     int32 amsgtyp = ntohl(node_msg->amsgtyp);
+
+
     switch(amsgtyp) {
     case A_JOIN:
-        kprintf("--->Join message is received\n");
+        kprintf("====>Join message is received\n");
         if(online) {
             retval = wsserver_assign(pkt);
             if (retval == OK) {
-                kprintf("<---Assign message is sent\n");
-
+                kprintf("<====Assign message is sent\n");
             }
-        }
-
+        } else
+            freebuf((char *)pkt);
         break;
     case A_ACK:
         ack_handler(pkt);
         break;
     case A_ERR:
         wsserver_senderr(pkt);
-        kprintf("--->Error message is received\n");
+        kprintf("====>Error message is received\n");
         break;
-
+    default:
+        freebuf((char *)pkt);
+        break;
 
     }
 
-    freemem((char *)node_msg, sizeof(struct etherPkt));
+    return ;
 
 
 }

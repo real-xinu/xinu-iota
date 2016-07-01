@@ -35,5 +35,6 @@ syscall	freebuf(
 	bpptr->bpnext = (struct bpentry *)bufaddr;
 	signal(bpptr->bpsem);
 	restore(mask);
+	
 	return OK;
 }
