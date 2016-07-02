@@ -66,81 +66,81 @@ struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
     memset ( cmsg_reply, 0, sizeof ( struct c_msg ) );
 
     switch ( mgm_msgtyp ) {
-    case C_RESTART:
-        kprintf ( "Message type is %d\n", C_RESTART );
-        //cmsg_reply->cmsgtyp = htonl(C_OK);
-        break;
+        case C_RESTART:
+            kprintf ( "Message type is %d\n", C_RESTART );
+            //cmsg_reply->cmsgtyp = htonl(C_OK);
+            break;
 
-    case C_RESTART_NODES:
-        kprintf ( "Message type is %d\n", C_RESTART_NODES );
+        case C_RESTART_NODES:
+            kprintf ( "Message type is %d\n", C_RESTART_NODES );
 
-        if ( online )
+            if ( online )
+                cmsg_reply->cmsgtyp = htonl ( C_OK );
+
+            break;
+
+        case C_PING_REQ:
+            kprintf ( "Message type is %d\n", C_PING_REQ );
+
+            if ( online )
+                cmsg_reply = nping_reply ( ctlpkt );
+
+            break;
+
+        case C_PING_ALL:
+            kprintf ( "Message type is %d\n", C_PING_ALL );
+
+            if ( online )
+                cmsg_reply = nping_all_reply ( ctlpkt );
+
+            break;
+
+        case C_XOFF:
+            kprintf ( "Message type is %d\n", C_XOFF );
+
+            if ( online )
+                cmsg_reply->cmsgtyp = htonl ( C_OK );
+
+            break;
+
+        case C_XON:
+            kprintf ( "Message type is %d\n", C_XON );
+
+            if ( online )
+                cmsg_reply->cmsgtyp = htonl ( C_OK );
+
+            break;
+
+        case C_OFFLINE:
+            online = 0;
+            kprintf ( "Message type is %d\n", C_OFFLINE );
             cmsg_reply->cmsgtyp = htonl ( C_OK );
+            break;
 
-        break;
-
-    case C_PING_REQ:
-        kprintf ( "Message type is %d\n", C_PING_REQ );
-
-        if ( online )
-            cmsg_reply = nping_reply ( ctlpkt );
-
-        break;
-
-    case C_PING_ALL:
-        kprintf ( "Message type is %d\n", C_PING_ALL );
-
-        if ( online )
-            cmsg_reply = nping_all_reply ( ctlpkt );
-
-        break;
-
-    case C_XOFF:
-        kprintf ( "Message type is %d\n", C_XOFF );
-
-        if ( online )
+        case C_ONLINE:
+            online = 1;
+            kprintf ( "Message type is %d\n", C_ONLINE );
             cmsg_reply->cmsgtyp = htonl ( C_OK );
+            break;
 
-        break;
+        case C_TOP_REQ:
+            kprintf ( "Message type is %d\n", C_TOP_REQ );
+            cmsg_reply = toporeply();
+            break;
 
-    case C_XON:
-        kprintf ( "Message type is %d\n", C_XON );
+        case C_NEW_TOP:
+            kprintf ( "Message type is %d\n", C_NEW_TOP );
+            cmsg_reply = newtop ( ctlpkt );
+            break;
 
-        if ( online )
-            cmsg_reply->cmsgtyp = htonl ( C_OK );
+        case C_TS_REQ:
+            kprintf ( "Message type is %d\n", C_TS_REQ );
+            cmsg_reply->cmsgtyp = htonl ( C_TS_RESP );
+            break;
 
-        break;
-
-    case C_OFFLINE:
-        online = 0;
-        kprintf ( "Message type is %d\n", C_OFFLINE );
-        cmsg_reply->cmsgtyp = htonl ( C_OK );
-        break;
-
-    case C_ONLINE:
-        online = 1;
-        kprintf ( "Message type is %d\n", C_ONLINE );
-        cmsg_reply->cmsgtyp = htonl ( C_OK );
-        break;
-
-    case C_TOP_REQ:
-        kprintf ( "Message type is %d\n", C_TOP_REQ );
-        cmsg_reply = toporeply();
-        break;
-
-    case C_NEW_TOP:
-        kprintf ( "Message type is %d\n", C_NEW_TOP );
-        cmsg_reply = newtop ( ctlpkt );
-        break;
-
-    case C_TS_REQ:
-        kprintf ( "Message type is %d\n", C_TS_REQ );
-        cmsg_reply->cmsgtyp = htonl ( C_TS_RESP );
-        break;
-
-    default:
-        kprintf ( "ERROR\n" );
-        cmsg_reply->cmsgtyp = htonl ( C_ERR );
+        default:
+            kprintf ( "ERROR\n" );
+            cmsg_reply->cmsgtyp = htonl ( C_ERR );
     }
 
     return cmsg_reply;
@@ -663,33 +663,33 @@ void  amsg_handler ( struct netpacket *pkt )
     int32 amsgtyp = ntohl ( node_msg->amsgtyp );
 
     switch ( amsgtyp ) {
-    case A_JOIN:
-        kprintf ( "====>Join message is received\n" );
+        case A_JOIN:
+            kprintf ( "====>Join message is received\n" );
 
-        if ( online ) {
-            retval = wsserver_assign ( pkt );
+            if ( online ) {
+                retval = wsserver_assign ( pkt );
 
-            if ( retval == OK ) {
-                kprintf ( "<====Assign message is sent\n" );
-            }
+                if ( retval == OK ) {
+                    kprintf ( "<====Assign message is sent\n" );
+                }
 
-        } else
+            } else
+                freebuf ( ( char * ) pkt );
+
+            break;
+
+        case A_ACK:
+            ack_handler ( pkt );
+            break;
+
+        case A_ERR:
+            wsserver_senderr ( pkt );
+            kprintf ( "====>Error message is received\n" );
+            break;
+
+        default:
             freebuf ( ( char * ) pkt );
-
-        break;
-
-    case A_ACK:
-        ack_handler ( pkt );
-        break;
-
-    case A_ERR:
-        wsserver_senderr ( pkt );
-        kprintf ( "====>Error message is received\n" );
-        break;
-
-    default:
-        freebuf ( ( char * ) pkt );
-        break;
+            break;
     }
 
     return ;

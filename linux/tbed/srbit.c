@@ -60,42 +60,37 @@ int	srbit (
     int	aindex;		/* The byte index in the address array	*/
     /*	(0 through 5)			*/
     int	mask;		/* A byte with a 1 in the bit position	*/
+
     /*	to use and 0 in other positions	*/
-
     /* Ensure that the bit value is valid */
-
     if ( (nodeid < 0) || (nodeid > 45) ) {
         return SYSERR;
     }
 
     /* Compute a mask 2^(floor(nodeid modulo 8))*/
-
     mask = 1 << (nodeid % 8);
-
     /* Compute the appropriate array index */
-
     aindex = 5 - (nodeid >> 3);
 
     /* Adjust the mask one bit for the high-order byte */
-
     if (aindex == 0) {
         mask = mask << 1;
     }
 
     /*DEBUG*/ //printf("Bit number %2d is in address[%d] and the mask is 0x%02x",
+
     /*DEBUG*///			nodeid, aindex, mask);
 
     /* If command specifies setting, change set the bit */
-
     if (cmd == BIT_SET) {
         addr[aindex] |= mask;
         return 1;
     }
 
     /* Command specifies testing */
-
     if ( (addr[aindex] & mask) == 0) {
         return 0;	/* Bit is 0 */
+
     } else {
         return 1;	/* Bit is 1 */
     }
