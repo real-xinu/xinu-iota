@@ -9,4 +9,4 @@ $(TARGET): $(TARGET).c  $(TARGET2).c
 	$(CC) -o $(TARGET) $(TARGET).o  $(TARGET2).o
 
 clean:
-	$(RM) $(TARGET) $(TARGET).o $(TARGET2).o 
+	$(RM) $(TARGET) $(TARGET).o $(TARGET2).o $(TARGET).c.orig $(TARGET2).c.orig 
