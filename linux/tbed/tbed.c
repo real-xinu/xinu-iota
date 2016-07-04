@@ -104,11 +104,7 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_TS_REQ);
 
     } else if (!strcmp (array_token[0], "ts_check")) {
-        //int ts_count = ts_find();
-        //printf ("ts_count:%d\n", ts_count);
-        //if (ts_count > 1) {
-        //   error_handler ("More than one testbed server is running\n");
-        // }
+                message.cmsgtyp = htonl(C_TS_REQ);      
     } else {
         printf ("%s is not defined\n", array_token[0]);
         message.cmsgtyp = htonl (C_ERR);
@@ -335,7 +331,7 @@ void udp_process (const char *SRV_IP, char *file)
     tv.tv_usec = 0;
     FILE *type;
 
-    // int s = init_sock(SRV_IP);
+   
     if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) { // Create a UDP socket
         error_handler ("socket");
     }
@@ -345,8 +341,7 @@ void udp_process (const char *SRV_IP, char *file)
     if (setsockopt (s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof (int)) < 0)
         error_handler ("setsockopt(SO_REUSEADDR) failed");
 
-    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0)   // Set a timeout for the cases that the management server does not
-        //receive any response from the testbed server
+    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0) 
     {
         error_handler ("socket Option for timeout can not be set");
     }
@@ -385,9 +380,23 @@ void udp_process (const char *SRV_IP, char *file)
             memset (&message, 0, sizeof (struct c_msg));
             message = command_handler (command);                    /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp == htonl (C_TS_REQ)) {
+            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp(command,"ts_find")) {
                 ts_find();
             }
+	    if(message.cmsgtyp == htonl(C_TS_REQ) &&  !strcmp(command, "ts_check"))
+	    {
+
+                 int ntserver = ts_find();
+		 if (ntserver > 1)
+		 {
+                    printf("More than one server is running\n");			 
+                    close(s);
+		    exit(1);
+
+
+		 }
+
+	    }
 
             if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
                 if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
