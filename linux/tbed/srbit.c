@@ -7,7 +7,7 @@
 /*		that correspond to individual nodes.)			*/
 /*									*/
 /************************************************************************/
-#include "compatibility.h"
+#include "include/compatibility.h"
 void	mkaddr (
     byte	addr[]		/* Array to hold a 48-bit Ethernet	*/
     /*	multicast address		*/
