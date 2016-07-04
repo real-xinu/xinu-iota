@@ -24,7 +24,7 @@
 #include "control-protocol.h"
 #include "compatibility.h"
 
-
+int s;
 extern int srbit (byte addr[], int, int);
 
 

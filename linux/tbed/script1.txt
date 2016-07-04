@@ -1,3 +1,4 @@
+
 newtop Top1.0
 topdump
 nping 0
@@ -5,10 +6,17 @@ nping 1
 nping 2
 nping 3
 nping 4
+nping 5
+nping 6
+nping 7
+nping 8
+nping 9
+nping all
 offline
 nping 0
 online
 nping 0
+nping all
 newtop Top2.0
 topdump
 nping 0
@@ -16,4 +24,7 @@ nping 1
 nping 3
 nping 2
 nping 4 
+nping all
+newtop Top10.0
+topdump
 nping all

@@ -101,15 +101,14 @@ struct c_msg  command_handler (char command[BUFLEN])
 
     } else if (!strcmp (array_token[0], "help")) {
     } else if (!strcmp (array_token[0], "ts_find")) {
-        ts_find();
+        message.cmsgtyp = htonl (C_TS_REQ);
 
     } else if (!strcmp (array_token[0], "ts_check")) {
-        int ts_count = ts_find();
-
-        if (ts_count > 1) {
-            error_handler ("More than one testbed server is running\n");
-        }
-
+        //int ts_count = ts_find();
+        //printf ("ts_count:%d\n", ts_count);
+        //if (ts_count > 1) {
+        //   error_handler ("More than one testbed server is running\n");
+        // }
     } else {
         printf ("%s is not defined\n", array_token[0]);
         message.cmsgtyp = htonl (C_ERR);
@@ -169,8 +168,8 @@ int ts_find()
 {
     char *recvbuf;
     recvbuf = malloc (sizeof (struct c_msg));
-    struct sockaddr_in si_me, si_other;
-    int s;
+    struct sockaddr_in  si_other;
+    //int s;
     socklen_t slen = sizeof (si_other);
     struct c_msg *buf = malloc (sizeof (struct c_msg));
     struct c_msg message;
@@ -178,13 +177,11 @@ int ts_find()
     tv.tv_sec = 0;
     tv.tv_usec = TIME_OUT_TS;
     char list_ip[15][46];
-
-    if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) { /* Create a UDP socket */
-        error_handler ("socket");
-    }
-
-    memset ((char *)&si_me, 0, sizeof (si_me));
-    si_me.sin_family = AF_INET;
+    //if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+    //    error_handler ("socket");
+    // }
+    /*memset ((char *)&si_me, 0, sizeof (si_me));
+    //si_me.sin_family = AF_INET;
     si_me.sin_port = htons (PORT);
     si_me.sin_addr.s_addr = htonl (INADDR_ANY);
     int enable = 1;
@@ -194,14 +191,11 @@ int ts_find()
 
     if ( bind (s , (struct sockaddr*)&si_me, sizeof (si_me) ) == -1) {
         error_handler ("Sock can not bind to the address");
-    }
-
+    }*/
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons (PORT);
 
-    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0)   /* Set a timeout for the cases that the management server does not
-	                                                              receive any response from the testbed server */
-    {
+    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0) {
         error_handler ("socket Option for timeout can not be set");
     }
 
@@ -256,10 +250,21 @@ int ts_find()
         printf ("IP address of Testbed server %d is :%s\n", i + 1, list_ip[i]);
     }
 
-    close (s);
+    tv.tv_sec = TIME_OUT;
+
+    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0) {
+        error_handler ("socket Option for timeout can not be set");
+    }
+
+    bcast = 0;
+
+    if (setsockopt (s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof (bcast))) {
+        error_handler ("Broadcast socket option cannot be set");
+    }
+
+    //close (s);
     return j;
 }
-
 
 
 /*-----------------------------------------------------
@@ -326,6 +331,7 @@ void response_handler (struct c_msg *buf)
 }
 
 
+
 /*------------------------------------------------------------------------
  * this UDP process is used to communicate with testbed server
  *------------------------------------------------------------------------*/
@@ -333,9 +339,9 @@ void response_handler (struct c_msg *buf)
 void udp_process (const char *SRV_IP, char *file)
 {
     char *recvbuf;
-    //recvbuf = malloc(sizeof(struct c_msg));
     struct sockaddr_in si_me, si_other;
-    int s, enable;
+    //int s;
+    int enable;
     socklen_t slen = sizeof (si_other);
     struct c_msg *buf;
     char command[BUFLEN];
@@ -345,7 +351,8 @@ void udp_process (const char *SRV_IP, char *file)
     tv.tv_usec = 0;
     FILE *type;
 
-    if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) { /* Create a UDP socket */
+    // int s = init_sock(SRV_IP);
+    if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) { // Create a UDP socket
         error_handler ("socket");
     }
 
@@ -353,6 +360,12 @@ void udp_process (const char *SRV_IP, char *file)
 
     if (setsockopt (s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof (int)) < 0)
         error_handler ("setsockopt(SO_REUSEADDR) failed");
+
+    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0)   // Set a timeout for the cases that the management server does not
+        //receive any response from the testbed server
+    {
+        error_handler ("socket Option for timeout can not be set");
+    }
 
     memset ((char *)&si_me, 0, sizeof (si_me));
     si_me.sin_family = AF_INET;
@@ -371,12 +384,6 @@ void udp_process (const char *SRV_IP, char *file)
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons (PORT);
 
-    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0)   /* Set a timeout for the cases that the management server does not
-	                                                              receive any response from the testbed server */
-    {
-        error_handler ("socket Option for timeout can not be set");
-    }
-
     if (file == NULL) {
         type = stdin;
 
@@ -394,7 +401,11 @@ void udp_process (const char *SRV_IP, char *file)
             memset (&message, 0, sizeof (struct c_msg));
             message = command_handler (command);                    /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp != htonl (C_ERR)) {
+            if (message.cmsgtyp == htonl (C_TS_REQ)) {
+                ts_find();
+            }
+
+            if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
                 if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
                     error_handler ("The message is not sent to Testbed_Server()");
                 }
@@ -419,7 +430,11 @@ void udp_process (const char *SRV_IP, char *file)
             command[strcspn (command, "\r\n")] = 0;
             message = command_handler (command);                    /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp != htonl (C_ERR)) {
+            if (message.cmsgtyp == htonl (C_TS_REQ)) {
+                ts_find();
+            }
+
+            if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
                 if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
                     error_handler ("The message is not sent to Testbed_Server()");
                 }
