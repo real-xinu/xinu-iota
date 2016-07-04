@@ -6,6 +6,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <regex.h>
+#include <ctype.h>
 
 /************************************************************************/
 /*									*/
@@ -300,7 +301,7 @@ int	gettok(
 	/* Ensure that the first character of the token is not numeric */
 
 	if ( (tok[0]>='0') && (tok[0]<='9') ) {
-		errexit("error: on line %d, token name '%s' starts with a digit\n",linenum, (int)tok);
+		errexit("error: on line %d, token name '%s' starts with a digit\n",linenum, (long)tok);
 	}
 
 	if (ch == NEWLINE) {
@@ -549,12 +550,12 @@ void	apply_update(
 				/* setting or resetting bits		*/
 	int i;			/* Index for node list			*/
 
-	strcpy(op, strsep(&update_string, " "));
-	strcpy(snode, strsep(&update_string, " "));
-	strcpy(rnode, strsep(&update_string, " "));
+	strcpy(op, strtok(update_string, " "));
+	strcpy(snode, strtok(NULL, " "));
+	strcpy(rnode, strtok(NULL, " "));
 
 
-	if(!(strcmp(op, "+") == 0 || strcmp(op, "-") == 0) || snode == NULL || rnode == NULL) {
+	if(((strcmp(op, "+") != 0 || strcmp(op, "-") == 0)) || snode == NULL || rnode == NULL) {
 		fprintf(stderr, "%s", "Illegal operation");
 		exit(1);
 	}
@@ -697,7 +698,7 @@ void	find_output_file(
 		suffix = atoi(&instring[pmatch[1].rm_so]);
 		suffix++;
 		char temp[256];
-		snprintf(temp, pmatch[1].rm_so, instring);
+		snprintf(temp, pmatch[1].rm_so, "%s", instring);
 		sprintf(outfile, "%s.%d", temp, suffix);
 		regfree(&preg);
 	}
