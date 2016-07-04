@@ -1,5 +1,5 @@
-#include "headers.h"
-#include "prototypes.h"
+#include "include/headers.h"
+#include "include/prototypes.h"
 
 
 /*--------------------------------------------------------
@@ -104,7 +104,8 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_TS_REQ);
 
     } else if (!strcmp (array_token[0], "ts_check")) {
-                message.cmsgtyp = htonl(C_TS_REQ);      
+        message.cmsgtyp = htonl (C_TS_REQ);
+
     } else {
         printf ("%s is not defined\n", array_token[0]);
         message.cmsgtyp = htonl (C_ERR);
@@ -112,12 +113,10 @@ struct c_msg  command_handler (char command[BUFLEN])
 
     return message;
 }
-/******************************************************
+/*-----------------------------------------------------
 * Print the network topology based on control message
 which have been recevied from the testbed server.
-******************************************************/
-
-
+*-----------------------------------------------------*/
 void topodump (struct c_msg *buf)
 {
     fflush (stdout);
@@ -159,7 +158,9 @@ void topodump (struct c_msg *buf)
 }
 
 
-
+/*----------------------------------------------------------------------------
+ *ts_find: is used to implement ts_find and ts_check commands. 
+ * -------------------------------------------------------------------------*/
 int ts_find()
 {
     char *recvbuf;
@@ -242,7 +243,6 @@ int ts_find()
         error_handler ("Broadcast socket option cannot be set");
     }
 
-    //close (s);
     return j;
 }
 
@@ -304,16 +304,17 @@ void response_handler (struct c_msg *buf)
         case C_PING_ALL:
             ping_reply_handler (buf);
             break;
+	
 
-        case C_TS_RESP:
-            break;
     }
 }
 
 
 
 /*------------------------------------------------------------------------
- * this UDP process is used to communicate with testbed server
+ * this UDP process is used to communicate with testbed server on port
+ * 55000. The communication between managment app and testbed server
+ * is based on control protocol. 
  *------------------------------------------------------------------------*/
 
 void udp_process (const char *SRV_IP, char *file)
@@ -331,7 +332,6 @@ void udp_process (const char *SRV_IP, char *file)
     tv.tv_usec = 0;
     FILE *type;
 
-   
     if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) { // Create a UDP socket
         error_handler ("socket");
     }
@@ -341,8 +341,7 @@ void udp_process (const char *SRV_IP, char *file)
     if (setsockopt (s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof (int)) < 0)
         error_handler ("setsockopt(SO_REUSEADDR) failed");
 
-    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0) 
-    {
+    if (setsockopt (s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv)) < 0) {
         error_handler ("socket Option for timeout can not be set");
     }
 
@@ -380,23 +379,19 @@ void udp_process (const char *SRV_IP, char *file)
             memset (&message, 0, sizeof (struct c_msg));
             message = command_handler (command);                    /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp(command,"ts_find")) {
+            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
                 ts_find();
             }
-	    if(message.cmsgtyp == htonl(C_TS_REQ) &&  !strcmp(command, "ts_check"))
-	    {
 
-                 int ntserver = ts_find();
-		 if (ntserver > 1)
-		 {
-                    printf("More than one server is running\n");			 
-                    close(s);
-		    exit(1);
+            if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
+                int ntserver = ts_find();
 
-
-		 }
-
-	    }
+                if (ntserver > 1) {
+                    printf ("More than one server is running\n");
+                    close (s);
+                    exit (1);
+                }
+            }
 
             if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
                 if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
@@ -423,8 +418,18 @@ void udp_process (const char *SRV_IP, char *file)
             command[strcspn (command, "\r\n")] = 0;
             message = command_handler (command);                    /*create an appropiate control message to send to the testbed server */
 
-            if (message.cmsgtyp == htonl (C_TS_REQ)) {
+            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp(command, "ts_find")) {
                 ts_find();
+            }
+
+            if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
+                int ntserver = ts_find();
+
+                if (ntserver > 1) {
+                    printf ("More than one server is running\n");
+                    close (s);
+                    exit (1);
+                }
             }
 
             if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
