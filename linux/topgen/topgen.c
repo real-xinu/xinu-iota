@@ -555,7 +555,7 @@ void	apply_update(
 	strcpy(rnode, strtok(NULL, " "));
 
 
-	if(((strcmp(op, "+") != 0 || strcmp(op, "-") == 0)) || snode == NULL || rnode == NULL) {
+	if(((strcmp(op, "+") != 0 || strcmp(op, "-") != 0)) || snode == NULL || rnode == NULL) {
 		fprintf(stderr, "%s", "Illegal operation");
 		exit(1);
 	}
