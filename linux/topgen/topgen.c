@@ -540,7 +540,7 @@ void	apply_update(
 	)
 
 {
-	char op[1];		/* Operation - "+" (add link) or	*/
+	char op[5];		/* Operation - "+" (add link) or	*/
 				/*	       "-" (delete link)	*/
 	char snode[NAMLEN];	/* Name of sending node			*/
 	char rnode[NAMLEN];	/* Name of receiving node		*/
