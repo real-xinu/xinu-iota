@@ -1023,5 +1023,12 @@ int	main(
 	}
 
 	fclose(fout);
+
+	int status;
+	char cmpcommand[18 + 2*256];
+	sprintf(cmpcommand, "cmp %s %s > /dev/null", infile, outfile);
+	status = system(cmpcommand);
+	if (status == 0)
+		printf("\nWarning: no change in topology\n");
 	exit(0);
 }
