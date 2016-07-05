@@ -42,7 +42,7 @@ status wsnode_join()
     join_msg->amsgtyp = htonl ( A_JOIN );
     join_msg->anodeid = htons ( 0 );
     retval = write ( ETHER0, ( char * ) join_msg, sizeof ( struct etherPkt ) );
-
+    freemem((char *) join_msg , sizeof(struct etherPkt));
     if ( retval > 0 )
         return OK;
 
@@ -68,7 +68,7 @@ status wsnode_sendack ( struct netpacket *pkt )
         //kprintf("aacking: %d\n", ack_msg->aacking[i]);
     }*/
     retval = write ( ETHER0, ( char * ) ack_msg, sizeof ( struct etherPkt ) );
-
+    freebuf((char *)pkt);
     if ( retval > 0 )
         return OK;
 

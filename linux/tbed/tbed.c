@@ -262,12 +262,10 @@ int ts_find()
 }
 
 
-/*-----------------------------------------------------
- * ping reply control message which is received from
- * testbed server is handled in this function
- * it prints the staus of a node or a set of nodes
- * that have been  pinged.
- -----------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------
+ * ping reply control message which is received from testbed server is handled in this function
+ * it prints the staus of a node or a set of nodes  that have been  pinged.
+ -----------------------------------------------------------------------------------------------*/
 
 void ping_reply_handler (struct c_msg *buf)
 {
@@ -289,8 +287,7 @@ void ping_reply_handler (struct c_msg *buf)
     }
 }
 
-/*-----------------------------------------------------------
- *
+/*-----------------------------------------------------------*
  *  Control message response handler is used to handle
  *  responses from the testbed server
  *  ---------------------------------------------------------*/
@@ -299,6 +296,11 @@ void response_handler (struct c_msg *buf)
 {
     int32 cmsgtyp = ntohl (buf->cmsgtyp);
 
+    /*-------------------------------------------
+     * Control message type should be checked and
+     * an appropiate function should be called to
+     * handle it
+     * ------------------------------------------*/
     switch (cmsgtyp) {
         case C_OK:
             printf ("<====Reply from testbed server: OK\n");
@@ -370,6 +372,9 @@ void udp_process (const char *SRV_IP, char *file)
         error_handler ("Sock can not bind to the address");
     }
 
+    /*---------------------------------------------------------
+     * Determine the testbed server's IP address
+     * -------------------------------------------------------*/
     if (inet_aton (SRV_IP, &si_other.sin_addr) == 0) {
         fprintf (stderr, "inet_aton() failed\n");
         exit (1);
@@ -397,7 +402,7 @@ void udp_process (const char *SRV_IP, char *file)
             command[strcspn (command, "\r\n")] = 0;
             memset (&message, 0, sizeof (struct c_msg));
             /*--------------------------------------------------------------------
-            * create an appropiate control message to send to the testbed server
+            * create an appropiate control message and send to the testbed server
             * ------------------------------------------------------------------*/
             message = command_handler (command);
 
