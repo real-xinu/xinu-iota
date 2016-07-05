@@ -159,7 +159,7 @@ void topodump (struct c_msg *buf)
 
 
 /*----------------------------------------------------------------------------
- *ts_find: is used to implement ts_find and ts_check commands. 
+ *ts_find: is used to implement ts_find and ts_check commands.
  * -------------------------------------------------------------------------*/
 int ts_find()
 {
@@ -191,6 +191,9 @@ int ts_find()
         error_handler ("Broadcast socket option cannot be set");
     }
 
+    /* -----------------------------------------------------------
+     * Create a C_TS_REQ message and send it as broadcast message
+     *----------------------------------------------------------*/
     message.cmsgtyp = htonl (C_TS_REQ);
 
     if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
@@ -200,12 +203,18 @@ int ts_find()
     printf ("Looking for the Testbed Servers...\n");
     int i = 0, j = 0;
 
+    /* -------------------------------------------------------------
+     * Wait for 50 ms to collect responses from the testbed servers
+     *-------------------------------------------------------------*/
     while (i < 50) {
         if ((recvfrom (s, recvbuf, sizeof (struct c_msg), 0, (struct sockaddr *)&si_other, &slen)) < 0) {
         }
 
         buf = (struct c_msg*)recvbuf;
 
+        /*---------------------------------------------------------
+        * Create a list of running servers' IPv4 addresses
+         * -------------------------------------------------------*/
         if (ntohl (buf->cmsgtyp) == C_TS_RESP) {
             int k = 0;
             int flag = 0;
@@ -227,6 +236,9 @@ int ts_find()
 
     i = 0;
 
+    /*------------------------------------------------------
+     * print the list of IP addresses
+     * -----------------------------------------------------*/
     for (i = 0; i < j; i++) {
         printf ("IP address of Testbed server %d is :%s\n", i + 1, list_ip[i]);
     }
@@ -237,6 +249,9 @@ int ts_find()
         error_handler ("socket Option for timeout can not be set");
     }
 
+    /*--------------------------------------------------------------
+     * disable the broadcast option on UDP socket
+     * -----------------------------------------------------------*/
     bcast = 0;
 
     if (setsockopt (s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof (bcast))) {
@@ -251,7 +266,7 @@ int ts_find()
  * ping reply control message which is received from
  * testbed server is handled in this function
  * it prints the staus of a node or a set of nodes
- * that have been  pinged
+ * that have been  pinged.
  -----------------------------------------------------*/
 
 void ping_reply_handler (struct c_msg *buf)
@@ -304,8 +319,6 @@ void response_handler (struct c_msg *buf)
         case C_PING_ALL:
             ping_reply_handler (buf);
             break;
-	
-
     }
 }
 
@@ -314,7 +327,7 @@ void response_handler (struct c_msg *buf)
 /*------------------------------------------------------------------------
  * this UDP process is used to communicate with testbed server on port
  * 55000. The communication between managment app and testbed server
- * is based on control protocol. 
+ * is based on control protocol.
  *------------------------------------------------------------------------*/
 
 void udp_process (const char *SRV_IP, char *file)
@@ -332,7 +345,10 @@ void udp_process (const char *SRV_IP, char *file)
     tv.tv_usec = 0;
     FILE *type;
 
-    if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) { // Create a UDP socket
+    /*-------------------------------------------------------------------------
+     * Create a UDP socket on port 55000 to comuunicate with the testbed server
+     * -------------------------------------------------------------------*/
+    if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         error_handler ("socket");
     }
 
@@ -366,18 +382,24 @@ void udp_process (const char *SRV_IP, char *file)
         type = stdin;
 
         while (1) {
+            /*-----------------------------------------------------------------
+             * To receive command from command line
+             * ---------------------------------------------------------------*/
             memset (command, 0, sizeof (char) * BUFLEN);
-            printf ("\n(Enter Command)# ");                              /*receives command from the operator */
+            printf ("\n(Enter Command)# ");
             fgets (command, sizeof (command), type);
 
             while (!strcmp (command, "\n")) {
-                printf ("\n(Enter Command)# ");                              /*receives command from the operator */
+                printf ("\n(Enter Command)# ");
                 fgets (command, sizeof (command), type);
             }
 
             command[strcspn (command, "\r\n")] = 0;
             memset (&message, 0, sizeof (struct c_msg));
-            message = command_handler (command);                    /*create an appropiate control message to send to the testbed server */
+            /*--------------------------------------------------------------------
+            * create an appropiate control message to send to the testbed server
+            * ------------------------------------------------------------------*/
+            message = command_handler (command);
 
             if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
                 ts_find();
@@ -393,6 +415,9 @@ void udp_process (const char *SRV_IP, char *file)
                 }
             }
 
+            /*--------------------------------------------------------------------------------
+            * Send the messages to the testbed server
+            * -------------------------------------------------------------------------------*/
             if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
                 if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
                     error_handler ("The message is not sent to Testbed_Server()");
@@ -412,13 +437,19 @@ void udp_process (const char *SRV_IP, char *file)
         }
 
     } else {
+        /*---------------------------------------------------------------
+        * To receive command from a script of commands
+         * --------------------------------------------------------------*/
         type = fopen (file, "r");
 
         while ( fgets (command, sizeof (command), type) != NULL) {
             command[strcspn (command, "\r\n")] = 0;
-            message = command_handler (command);                    /*create an appropiate control message to send to the testbed server */
+            /*-----------------------------------------------------------------------
+             * create an appropiate control message to send to the testbed server
+             * ---------------------------------------------------------------------*/
+            message = command_handler (command);
 
-            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp(command, "ts_find")) {
+            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
                 ts_find();
             }
 

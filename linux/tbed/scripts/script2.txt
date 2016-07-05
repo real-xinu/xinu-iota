@@ -1,4 +1,5 @@
 ts_find
+ts_check
 newtop Top15.0
 nping all
 topdump

@@ -1,4 +1,3 @@
-
 newtop Top1.0
 topdump
 nping 0

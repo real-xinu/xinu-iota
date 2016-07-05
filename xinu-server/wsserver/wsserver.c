@@ -1,29 +1,34 @@
 /* wsserver.c - Wi-SUN emulation testbed server */
 
+/*--------------------
+ * headers
+ * ------------------*/
 #include <xinu.h>
 #include <stdio.h>
 #include <string.h>
 
-int32 nodeid = 0;
-int32 nnodes = 0;
 
-#define PORT 55000  /* UDP PORT */
+/*---------------
+ * UDP port
+ * TIME_OUT value
+ * ping status
+ * ------------*/
+#define PORT 55000
 #define TIME_OUT 600000
-
-byte ack_info[16];
-int ping_ack_flag[46];
-
-int online = 1;
-/* ping status */
 #define NOTACTIV 0
 #define ALIVE    1
 #define NOTRESP  -1
 
+int32 nodeid = 0;
+int32 nnodes = 0;
+byte ack_info[16];
+int ping_ack_flag[46];
+int online = 1;
 int32 *seqnum;
 
 /*-----------------------------------------------------------------
- * Network topology data strucutre which is used to keep current
- * network topology information in RAM.
+ * Network topology data strucutres which are used to keep current
+ * and old network topology information in the RAM.
  * --------------------------------------------------------------*/
 
 struct t_entry topo[MAXNODES];
@@ -53,11 +58,10 @@ void initialize_topo()
         ping_ack_flag[i] = 0;
 }
 
-/*-----------------------------------------------------------
- * controle message handler is used to
- * call appropiate function based on message
+/*---------------------------------------------------------------------------------
+ * controle message handler is used to call appropiate function based on message
  * which is received from the management server.
- * ---------------------------------------------------------*/
+ * ----------------------------------------------------------------------------*/
 struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
 {
     struct c_msg *cmsg_reply;
@@ -65,6 +69,11 @@ struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
     cmsg_reply = ( struct c_msg * ) getmem ( sizeof ( struct c_msg ) );
     memset ( cmsg_reply, 0, sizeof ( struct c_msg ) );
 
+    /*------------------------------------------------------
+     * The type of control message should be checked here
+     * and then an appropiate response message should be created
+     * returned to the caller.
+     * ----------------------------------------------------*/
     switch ( mgm_msgtyp ) {
         case C_RESTART:
             kprintf ( "Message type is %d\n", C_RESTART );
@@ -147,7 +156,7 @@ struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
 }
 
 /*--------------------------------------------------------------------
- * Create an Ethernet packet
+ * Create an Ethernet packet and allocate memory
 *--------------------------------------------------------------------*/
 struct etherPkt *create_etherPkt()
 {
@@ -160,7 +169,6 @@ struct etherPkt *create_etherPkt()
 
 /*------------------------------------------------------------------------
 *Use the remote file system to open and read a topology database file
-(Default file name=Top.0)
 --------------------------------------------------------------------------*/
 status init_topo ( char *filename )
 {
@@ -178,8 +186,8 @@ status init_topo ( char *filename )
     return OK;
 }
 /* -----------------------------------------------------------------
- * Thid function is used to update MAC address field in the topology
- * database.
+ * Thid function is used to update MAC address field for
+ * a node in the topology database which is kept in RAM.
  * ----------------------------------------------------------------*/
 void topo_update_mac ( struct netpacket *pkt )
 {
@@ -226,8 +234,8 @@ void print_topo()
 }
 
 /*---------------------------------------------------------
- * comparisson old and new topology and send assign message
- * if it is necessary
+ * comparisson old and new topology and send assign messages
+ * to the nodes that should receive a new multicast address
  * ------------------------------------------------------*/
 status topo_compr()
 {
@@ -417,13 +425,6 @@ struct c_msg * nping_all_reply ( struct c_msg ctlpkt )
                 }
             }
 
-            /*      else
-                  {
-
-                      cmsg_reply->pingdata[ping_num].pnodeid = htonl(i);
-                      cmsg_reply->pingdata[ping_num].pstatus = htonl(NOTACTIV);
-
-                  }*/
             ping_num++;
             //kprintf("pingnum: %d\n",ping_num);
         }
@@ -525,7 +526,7 @@ process	wsserver ()
 
         } else if ( retval == SYSERR ) {
             kprintf ( "WARNING: UDP receive error in testbed server\n" );
-            exit(); /* may be better to have the server terminate? */
+            exit();
 
         } else {
             int32 mgm_msgtyp = ntohl ( ctlpkt.cmsgtyp );
@@ -660,6 +661,9 @@ void  amsg_handler ( struct netpacket *pkt )
     struct etherPkt *node_msg;
     status retval;
     node_msg = ( struct etherPkt * ) pkt;
+    /* -------------------------------------------
+     * Extract message type for TYPE A frames
+     * ------------------------------------------*/
     int32 amsgtyp = ntohl ( node_msg->amsgtyp );
 
     switch ( amsgtyp ) {
