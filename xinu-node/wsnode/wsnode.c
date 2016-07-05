@@ -104,7 +104,10 @@ void amsg_handler ( struct netpacket *pkt )
     node_msg = ( struct etherPkt * ) pkt;
     int32 amsgtyp = ntohl ( node_msg->amsgtyp );
     int i;
-
+    /*--------------------------------------------------------------------------
+     * The message type for type A frames  should be check here an appropiate 
+     * function should be called to handle the request.
+     * -----------------------------------------------------------------------*/
     switch ( amsgtyp ) {
         case A_ASSIGN:
             info.nodeid = ntohl ( node_msg->anodeid );
