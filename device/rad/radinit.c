@@ -3,48 +3,68 @@
 #include <xinu.h>
 
 struct	radcblk radtab[1];
+struct	rad_fragentry rad_fragtab[RAD_NFRAG];
 
 /*------------------------------------------------------------------------
- * radinit  -  Initialize the radio device
+ * radinit  -  Initialize the Radio device
  *------------------------------------------------------------------------
  */
-devcall	radinit (
-		 struct	dentry *devptr	/* Address in device table	*/
-		)
+int32	radinit (
+	struct	dentry *devptr		/* Entry in device switch table	*/
+	)
 {
-	struct	radcblk *radptr;	/* Pointer to control block	*/
-
-	kprintf("radinit, minor %d\n", devptr->dvminor);
-
-	/* Initialize the control block pointer */
+	struct	radcblk *radptr;	/* Ptr to control block	*/
+	int32	i;			/* For loop index	*/
 
 	radptr = &radtab[devptr->dvminor];
 
-	/* Clear the control block */
+	memset(radptr, NULLCH, sizeof(struct radcblk));
+	radptr->state = RAD_STATE_DOWN;
 
-	memset(radptr, 0, sizeof(struct radcblk));
-
-	/* Set the SPI device */
-
-	if(devptr->dvminor == 0) {
-		radptr->spidev = SPI0;
+  /*
+	for(i = 0; i < 96; i++) {
+		if(!memcmp(ethertab[0].devAddress, xinube_macs[i], 6)) {
+			break;
+		}
 	}
-	else {
-		radptr->spidev = SPI1;
+	if(i >= 96) {
+		radptr->state = RAD_STATE_DOWN;
+		return SYSERR;
+	}
+  */
+
+	radptr->devAddress[7] = 101+i;
+
+	radptr->rxRingSize = 32;
+	radptr->isem = semcreate(32);
+	if(radptr->isem == SYSERR) {
+		return SYSERR;
+	}
+	radptr->inPool = mkbufpool(RAD_PKT_SIZE, radptr->rxRingSize);
+	if(radptr->inPool == SYSERR) {
+		return SYSERR;
+	}
+	radptr->rxHead = radptr->rxTail = 0;
+
+	radptr->txRingSize = 32;
+	radptr->osem = semcreate(32);
+	if(radptr->osem == SYSERR) {
+		freemem(radptr->rxBufs, radptr->rxRingSize * RAD_PKT_SIZE);
+		return SYSERR;
+	}
+	radptr->outPool = mkbufpool(RAD_PKT_SIZE, radptr->txRingSize);
+	if((int32)radptr->outPool == SYSERR) {
+		freemem((char *)radptr->rxBufs, radptr->rxRingSize * RAD_PKT_SIZE);
+		return SYSERR;
 	}
 
-	/* Set the address length and the MTU */
+	for(i = 0; i < RAD_NFRAG; i++) {
+		rad_fragtab[i].state = RAD_FRAG_FREE;
+	}
 
-	radptr->addrLen = RAD_ADDR_LEN;
-	radptr->mtu = 128;
+	radptr->_6lowpan = TRUE;
 
-	/* Put the device in 802.15.4 mode */
-
-	ticc1200_write(radptr, TICC1200_ADDR_PKTCFG2,
-			       TICC1200_PKTCFG2_FGMODE);
-	byte ret;
-	ticc1200_read(radptr, TICC1200_ADDR_PKTCFG2, &ret);
-	kprintf("radinit: PKTCFG2 %2x\n", ret);
+	radptr->state = RAD_STATE_UP;
 
 	return OK;
 }

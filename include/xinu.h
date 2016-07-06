@@ -25,9 +25,15 @@
 #include <radio.h>
 #include <gpio.h>
 #include <net.h>
+#include <nd.h>
+#include <netiface.h>
 #include <ip.h>
 #include <arp.h>
 #include <udp.h>
+#include <timer.h>
+#include <mq.h>
+#include <tcp.h>
+#include <tcb.h>
 #include <dhcp.h>
 #include <icmp.h>
 #include <tftp.h>
@@ -42,3 +48,4 @@
 #include <am335x_eth.h>
 #include <am335x_watchdog.h>
 #include <armv7a.h>
+#include <_6lowpan.h>

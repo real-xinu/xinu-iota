@@ -17,21 +17,10 @@
 
 #define UDP_HDR_LEN	8		/* Bytes in a UDP header	*/
 
-/* Format of UDP header */
-
-#pragma pack(1)
-struct	udphdr {
-	uint16	udpsport;	/* UDP source port	*/
-	uint16	udpdport;	/* UDP destination port	*/
-	uint16	udplen;		/* UDP header + data len*/
-	uint16	udpcksum;	/* UDP checksum		*/
-	byte	udpdata[];
-};
-#pragma pack()
-
 struct	udpentry {			/* Entry in the UDP endpoint tbl*/
 	int32	udstate;		/* State of entry: free/used	*/
-	uint32	udremip;		/* Remote IP address (zero	*/
+	int32	udiface;		/* Interface index		*/
+	byte	udremip[16];		/* Remote IP address (zero	*/
 					/*   means "don't care")	*/
 	uint16	udremport;		/* Remote protocol port number	*/
 	uint16	udlocport;		/* Local protocol port number	*/

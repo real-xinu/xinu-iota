@@ -5,14 +5,14 @@ extern	status	addargs(pid32, int32, int32[], int32,char *, void *);
 extern	int32	am335x_eth_init(struct ethcblk *);
 
 /* in file arp.c */
-
+/*
 extern	void	arp_init();
 extern	status	arp_resolve(uint32, byte[]);
 extern	void	arp_in(struct arppacket *);
 extern	int32	arp_alloc();
 extern	void	arp_ntoh(struct arppacket *);
 extern	void	arp_hton(struct arppacket *);
-
+*/
 /* in file ascdate.c */
 
 extern	status	ascdate(uint32, char *);
@@ -59,7 +59,7 @@ extern	void	ctxsw(void *, void *);
 
 /* in file dhcp.c */
 
-extern	uint32	getlocalip(void);
+/*extern	uint32	getlocalip(void);*/
 
 extern	uint32	getlocalip_boot(uint32 *, char *, uint32 *);
 
@@ -140,7 +140,7 @@ extern	status	getutime(uint32 *);
 extern	void	halt(void);
 
 /* in file icmp.c */
-
+/*
 extern	void	icmp_init(void);
 extern	void	icmp_in(struct netpacket *);
 extern	int32	icmp_register(uint32);
@@ -151,7 +151,7 @@ extern	status	icmp_release(int32);
 extern	uint16	icmp_cksum(char *, int32);
 extern	void	icmp_hton(struct netpacket *);
 extern	void	icmp_ntoh(struct netpacket *);
-
+*/
 /* in file init.c */
 extern	syscall	init(did32);
 
@@ -174,7 +174,7 @@ extern	status	ip_send(struct netpacket *);
 extern	void	ip_local(struct netpacket *);
 extern	status	ip_out(struct netpacket *);
 extern	int32	ip_route(uint32);
-extern	uint16	ipcksum(struct netpacket *);
+/*extern	uint16	ipcksum(struct netpacket *);*/
 extern	void	ip_ntoh(struct netpacket *);
 extern	void	ip_hton(struct netpacket *);
 extern	process	ipout(void);
@@ -314,6 +314,10 @@ extern	status	namcpy(char *, char *, int32);
 /* in file namopen.c */
 extern	devcall	namopen(struct dentry *, char *, char *);
 
+/* in file nd.c */
+extern	void	nd_init(int32);
+extern	process	nd_in(int32);
+
 /* in file newqueue.c */
 extern	qid16	newqueue(void);
 
@@ -360,8 +364,17 @@ extern	syscall	ptsend(int32, umsg32);
 /* in file putc.c */
 extern	syscall	putc(did32, char);
 
+/* in file radcontrol.c */
+extern  devcall radcontrol(struct dentry *, int32, int32, int32);
+
 /* in file radinit.c */
-extern	devcall	radinit(struct dentry *);
+extern  int32 radinit(struct dentry *);
+
+/* in file radread.c */
+extern  int32 radread(struct dentry *, char *, int32);
+
+/* in file radwrite.c */
+extern  int32 radwrite(struct dentry *, char *, int32);
 
 /* in file ramclose.c */
 extern	devcall	ramclose(struct dentry *);
@@ -580,7 +593,7 @@ extern	devcall	ttyread(struct dentry *, char *, int32);
 extern	devcall	ttywrite(struct dentry *, char *, int32);
 
 /* in file udp.c */
-
+/*
 extern	void	udp_init(void);
 extern	void	udp_in(struct netpacket *);
 extern	uid32	udp_register(uint32, uint16, uint16);
@@ -591,7 +604,7 @@ extern	status	udp_sendto(uid32, uint32, uint16, char *, int32);
 extern	status	udp_release(uid32);
 extern	void	udp_ntoh(struct netpacket *);
 extern	void	udp_hton(struct netpacket *);
-
+*/
 
 /* in file unsleep.c */
 extern	syscall	unsleep(pid32);
@@ -615,9 +628,15 @@ extern	void	xdone(void);
 extern	syscall	yield(void);
 
 /* NETWORK BYTE ORDER CONVERSION NOT NEEDED ON A BIG-ENDIAN COMPUTER */
+/*
 #define	htons(x)   ( ( 0xff & ((x)>>8) ) | ( (0xff & (x)) << 8 ) )
 #define	htonl(x)   (  (((x)>>24) & 0x000000ff) | (((x)>> 8) & 0x0000ff00) | \
 		      (((x)<< 8) & 0x00ff0000) | (((x)<<24) & 0xff000000) )
 #define	ntohs(x)   ( ( 0xff & ((x)>>8) ) | ( (0xff & (x)) << 8 ) )
 #define	ntohl(x)   (  (((x)>>24) & 0x000000ff) | (((x)>> 8) & 0x0000ff00) | \
 		      (((x)<< 8) & 0x00ff0000) | (((x)<<24) & 0xff000000) )
+*/
+#define	htons(x) (x)
+#define	htonl(x) (x)
+#define	ntohs(x) (x)
+#define	ntohl(x) (x)

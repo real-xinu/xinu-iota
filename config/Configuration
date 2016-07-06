@@ -41,53 +41,65 @@ eth:
 		-intr ethhandler
 
 /* type of a remote disk system device */
+/*
 rds:
 	on udp
 		-i rdsinit	-o rdsopen	-c rdsclose
 		-r rdsread	-g ioerr	-p ioerr
 		-w rdswrite	-s ioerr	-n rdscontrol
 		-intr ionull
+*/
 
 /* type of ram disk */
+/*
 ram:
 	on mem
 		-i raminit	-o ramopen	-c ramclose
 		-r ramread	-g ioerr	-p ioerr
 		-w ramwrite	-s ioerr	-n ioerr
 		-intr ionull
+*/
 
 /* type of a remote file system device */
+/*
 rfs:
 	on udp
 		-i rfsinit	-o rfsopen	-c ioerr
 		-r ioerr	-g ioerr	-p ioerr
 		-w ioerr	-s ioerr	-n rfscontrol
 		-intr ionull
+*/
 
 /* type of a remote file pseudo-device */
+/*
 rfl:
 	on rfs
 		-i rflinit	-o ioerr	-c rflclose
 		-r rflread	-g rflgetc	-p rflputc
 		-w rflwrite	-s rflseek	-n ioerr
 		-intr ionull
+*/
 
 /* type of a local file system master device */
+/*
 lfs:
 	on ram
 		-i lfsinit	-o lfsopen	-c ioerr
 		-r ioerr	-g ioerr	-p ioerr
 		-w ioerr	-s ioerr	-n ioerr
 		-intr ionull
+*/
 
 /* type of a local file pseudo-device */
+/*
 lfl:
 	on lfs
 		-i lflinit	-o ioerr	-c lflclose
 		-r lflread	-g lflgetc	-p lflputc
 		-w lflwrite	-s lflseek	-n lflcontrol
 		-intr ionull
-		
+*/
+
 /* type of namespace device */
 nam:
 	on top
@@ -96,12 +108,14 @@ nam:
 		-w ioerr 	-s ioerr 	-n ioerr
 		-intr ioerr
 
+/*
 spi:
 	on top
 		-i spiinit	-o ionull	-c ionull
 		-r ionull	-g ionull	-p ionull
 		-w ionull	-s ionull	-n spicontrol
 		-intr ionull
+*/
 
 rad:
 	on spi
@@ -109,6 +123,11 @@ rad:
 		-r ionull	-g ionull	-p ionull
 		-w ionull	-s ionull	-n ionull
 		-intr ionull
+	on eth
+		-i radinit	-o ioerr	-c ioerr
+		-r radread	-g ioerr	-p ioerr
+		-w radwrite	-s ioerr	-n radcontrol
+		-intr ioerr
 %%
 
 /* Actual device declarations that each give the name of a device that	*/
@@ -127,17 +146,17 @@ rad:
    NAMESPACE is nam on top
 
    /* Define a remote disk system device */
-   RDISK is rds on udp
+   /*RDISK is rds on udp*/
    
    /* Define a ram disk device */
-   RAM0 is ram on mem
+   /*RAM0 is ram on mem*/
  
    /* Define the remote file system device */
 
-   RFILESYS is rfs on udp
+   /*RFILESYS is rfs on udp*/
 
    /* Define remote file pseudo-devices */
-
+   /*
    RFILE0 is rfl on rfs
    RFILE1 is rfl on rfs
    RFILE2 is rfl on rfs
@@ -148,29 +167,34 @@ rad:
    RFILE7 is rfl on rfs
    RFILE8 is rfl on rfs
    RFILE9 is rfl on rfs
+   */
   
    /* Define the local file system master device (one per system) */
 
-   LFILESYS is lfs on ram
+   /*LFILESYS is lfs on ram*/
 
    /* Define local file pseudo-devices (multiple per system) */
 
+   /*
    LFILE0 is lfl on lfs
    LFILE1 is lfl on lfs
    LFILE2 is lfl on lfs
    LFILE3 is lfl on lfs
    LFILE4 is lfl on lfs
    LFILE5 is lfl on lfs
+   */
 
    /* SPI devices */
 
+   /*
    SPI0 is spi on top csr 0x48030000
    SPI1 is spi on top csr 0x481A0000
+   */
 
    /* Radio device */
 
-   RADIO0 is rad on spi
-   RADIO1 is rad on spi
+   RADIO0 is rad on eth
+   /*RADIO1 is rad on spi*/
 
 %%
 

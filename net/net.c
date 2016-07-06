@@ -1,139 +1,117 @@
-/* net.c - net_init, netin, eth_hton */
+/* net.c - net_init, netin */
 
 #include <xinu.h>
-#include <stdio.h>
 
-struct	network	NetData;
 bpid32	netbufpool;
-
+int32	beserver;
+extern	process nd_timer(void);
 /*------------------------------------------------------------------------
- * net_init  -  Initialize network data structures and processes
+ * net_init  -  Initialize the network
  *------------------------------------------------------------------------
  */
-
 void	net_init (void)
 {
-	int32	nbufs;			/* Total no of buffers		*/
+	char	procname[50];	/* Netin process name	*/
+	int32	iface;		/* Interface number	*/
+	char	buf[10] = {0};
 
-	/* Initialize the network data structure */
+	/* Initialize the interfaces */
 
-	memset((char *)&NetData, NULLCH, sizeof(struct network));
+	netiface_init();
 
-	/* Obtain the Ethernet MAC address */
-
-	control(ETHER0, ETH_CTRL_GET_MAC, (int32)NetData.ethucast, 0);
-
-	memset((char *)NetData.ethbcast, 0xFF, ETH_ADDR_LEN);
-
-	/* Create the network buffer pool */
-
-	nbufs = UDP_SLOTS * UDP_QSIZ + ICMP_SLOTS * ICMP_QSIZ + 1;
-
-	netbufpool = mkbufpool(PACKLEN, nbufs);
-
-	/* Initialize the ARP cache */
-
-	arp_init();
-
-	/* Initialize UDP */
+	ip_init();
 
 	udp_init();
 
-	/* Initialize ICMP */
+	tcp_init();
 
-	icmp_init();
+	/* Create the network buffer pool */
 
-	/* Initialize the IP output queue */
-
-	ipoqueue.iqhead = 0;
-	ipoqueue.iqtail = 0;
-	ipoqueue.iqsem = semcreate(0);
-	if((int32)ipoqueue.iqsem == SYSERR) {
-		panic("Cannot create ip output queue semaphore");
-		return;
+	netbufpool = mkbufpool(PACKLEN, 40);
+	if((int32)netbufpool == SYSERR) {
+		panic("Cannot create network buffer pool\n");
 	}
 
-	/* Create the IP output process */
+	while(TRUE) {
+		kprintf("Enter the backend number of the server: ");
+		memset(buf, 0, 10);
+		read(CONSOLE, buf, 10);
+		beserver = atoi(buf);
+		if((beserver < 101) || (beserver > 196)) {
+			kprintf("Invalid backend number, must be in range [101,196]\n");
+			continue;
+		}
+		beserver -= 101;
+		break;
+	}
 
-	resume(create(ipout, NETSTK, NETPRIO, "ipout", 0, NULL));
+	/* Create the ND timer process */
 
-	/* Create a network input process */
+	resume(create(nd_timer, NETSTK, NETPRIO+10, "nd_timer", 0, NULL));
 
-	resume(create(netin, NETSTK, NETPRIO, "netin", 0, NULL));
+	/* Create a netin process for each interface */
+
+	for(iface = 0; iface < NIFACES; iface++) {
+
+		if(if_tab[iface].if_state == IF_DOWN) {
+			continue;
+		}
+
+		sprintf(procname, "netin_%d", iface);
+		resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
+	}
+
+	resume(create(rawin, NETSTK, NETPRIO+1, "rawin", 0, NULL));
 }
 
-
 /*------------------------------------------------------------------------
- * netin  -  Repeatedly read and process the next incoming packet
+ * netin  -  Network input process
  *------------------------------------------------------------------------
  */
-
-process	netin ()
+process	netin (
+	int32	iface
+	)
 {
-	struct	netpacket *pkt;		/* Ptr to current packet	*/
-	int32	retval;			/* Return value from read	*/
+	struct	ifentry *ifptr;	/* Pointer to interface	*/
+	struct	netpacket *pkt;	/* Pointer to packet	*/
+	int32	i;
 
-	/* Do forever: read a packet from the network and process */
+	if((iface < 0) || (iface > NIFACES)) {
+		return SYSERR;
+	}
 
-	while(1) {
+	ifptr = &if_tab[iface];
 
-		/* Allocate a buffer */
+	while(TRUE) {
 
+		wait(ifptr->isem);
+
+		pkt = ifptr->pktbuf[ifptr->head];
+		ifptr->head++;
+		if(ifptr->head >= 10) {
+			ifptr->head = 0;
+		}
+
+		/*
 		pkt = (struct netpacket *)getbuf(netbufpool);
-
-		/* Obtain next packet that arrives */
-
-		retval = read(ETHER0, (char *)pkt, PACKLEN);
-		if(retval == SYSERR) {
-			panic("Cannot read from Ethernet\n");
+		if((int32)pkt == SYSERR) {
+			panic("netin cannot get buffer for packet\n");
 		}
 
-		/* Convert Ethernet Type to host order */
+		read(RADIO0, (char *)pkt, PACKLEN);
+		*/
 
-		eth_ntoh(pkt);
+		kprintf("IN: "); pdump(pkt);
 
-		/* Demultiplex on Ethernet type */
-
-		switch (pkt->net_ethtype) {
-
-		    case ETH_ARP:			/* Handle ARP	*/
-			arp_in((struct arppacket *)pkt);
-			continue;
-
-		    case ETH_IP:			/* Handle IP	*/
+		if((pkt->net_ipvtch&0xf0) == 0x60) {
+			pkt->net_iface = iface;
 			ip_in(pkt);
-			continue;
-	
-		    case ETH_IPv6:			/* Handle IPv6	*/
+			//freebuf((char *)pkt);
+		}
+		else {
 			freebuf((char *)pkt);
-			continue;
-
-		    default:	/* Ignore all other incoming packets	*/
-			freebuf((char *)pkt);
-			continue;
 		}
 	}
-}
 
-/*------------------------------------------------------------------------
- * eth_hton  -  Convert Ethernet type field to network byte order
- *------------------------------------------------------------------------
- */
-void 	eth_hton(
-	  struct netpacket *pktptr
-	)
-{
-	pktptr->net_ethtype = htons(pktptr->net_ethtype);
-}
-
-
-/*------------------------------------------------------------------------
- * eth_ntoh  -  Convert Ethernet type field to host byte order
- *------------------------------------------------------------------------
- */
-void 	eth_ntoh(
-	  struct netpacket *pktptr
-	)
-{
-	pktptr->net_ethtype = ntohs(pktptr->net_ethtype);
+	return OK;
 }

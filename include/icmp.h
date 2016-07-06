@@ -9,18 +9,29 @@
 #define	ICMP_USED	1		/* entry is being used		*/
 #define	ICMP_RECV	2		/* entry has a process waiting	*/
 
-#define ICMP_HDR_LEN	8		/* bytes in an ICMP header	*/
+#define ICMP_HDR_LEN	4		/* bytes in an ICMP header	*/
 
 /* ICMP message types for ping */
 
-#define	ICMP_ECHOREPLY	0		/* ICMP Echo Reply message	*/
-#define ICMP_ECHOREQST	8		/* ICMP Echo Request message	*/
+#define	ICMP_ECHOREPLY	129		/* ICMP Echo Reply message	*/
+#define ICMP_ECHOREQST	128		/* ICMP Echo Request message	*/
+
+/* Format of ICMPv6 echo packets */
+
+struct	icmp_echo {
+	uint16	id;	/* Identifier	*/
+	uint16	seq;	/* Sequence no.	*/
+};
 
 /* table of processes that are waiting for ping replies */
 
 struct	icmpentry {			/* entry in the ICMP table	*/
 	int32	icstate;		/* state of entry: free/used	*/
-	uint32	icremip;		/* remote IP address		*/
+	int32	iciface;		/* interface index		*/
+	byte	iclocip[16];		/* local IP address		*/
+	byte	icremip[16];		/* remote IP address		*/
+	byte	ictype;			/* ICMP type			*/
+	byte	iccode;			/* ICMP code			*/
 	int32	ichead;			/* index of next packet to read	*/
 	int32	ictail;			/* index of next slot to insert	*/
 	int32	iccount;		/* count of packets enqueued	*/
