@@ -23,8 +23,9 @@
 #include <sys/time.h>
 #include "control-protocol.h"
 #include "compatibility.h"
-
+#include <time.h>
 int s;
+FILE *fp;
 extern int srbit (byte addr[], int, int);
 
 

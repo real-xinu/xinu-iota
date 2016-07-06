@@ -43,7 +43,7 @@ struct c_msg  command_handler (char command[BUFLEN])
             message.xonoffid = htonl (num);
 
         } else {
-            printf ("Incorrect ID\n");
+            fprintf (fp, "Incorrect ID\n");
             message.cmsgtyp = htonl (ERR);
         }
 
@@ -55,7 +55,7 @@ struct c_msg  command_handler (char command[BUFLEN])
             message.xonoffid = htonl (num);
 
         } else {
-            printf ("Incorrect ID\n");
+            fprintf (fp, "Incorrect ID\n");
             message.cmsgtyp = htonl (ERR);
         }
 
@@ -68,7 +68,7 @@ struct c_msg  command_handler (char command[BUFLEN])
             message.pingnodeid = htonl (num);
 
         } else {
-            printf ("Incorrect ID\n");
+            fprintf (fp, "Incorrect ID\n");
             message.cmsgtyp = htonl (ERR);
         }
 
@@ -96,7 +96,7 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_ERR);
 
     } else if (!strcmp (array_token[0], "exit")) {
-        printf ("====Management app is closed=====\n");
+        fprintf (fp, "====Management app is closed=====\n");
         exit (1);
 
     } else if (!strcmp (array_token[0], "help")) {
@@ -107,7 +107,7 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_TS_REQ);
 
     } else {
-        printf ("%s is not defined\n", array_token[0]);
+        fprintf (fp, "%s is not defined\n", array_token[0]);
         message.cmsgtyp = htonl (C_ERR);
     }
 
@@ -122,38 +122,38 @@ void topodump (struct c_msg *buf)
     fflush (stdout);
 
     if (ntohl (buf->topnum) == 0) {
-        printf ("Please enter newtop command\n");
+        fprintf (fp, "Please enter newtop command\n");
     }
 
     if (ntohl (buf->topnum) > 0) {
-        printf ("Number of Nodes: %d\n", ntohl (buf->topnum));
+        fprintf (fp, "Number of Nodes: %d\n", ntohl (buf->topnum));
     }
 
     int entries = ntohl (buf->topnum);
     byte mcaddr[6];
 
     for (int i = 0; i < entries; i++) {
-        printf ("%d ,", ntohl (buf->topdata[i].t_nodeid));
-        printf ("%d ,", ntohl (buf->topdata[i].t_status));
+        fprintf (fp, "%d ,", ntohl (buf->topdata[i].t_nodeid));
+        fprintf (fp, "%d ,", ntohl (buf->topdata[i].t_status));
 
         for (int j = 0; j < 6; j++) {
             for (int k = 7; k >= 0; k--) {
-                printf ("%d", (buf->topdata[i].t_neighbors[j] >> k) & 0x01);
+                fprintf (fp, "%d", (buf->topdata[i].t_neighbors[j] >> k) & 0x01);
             }
 
-            printf (" ");
+            fprintf (fp, " ");
             mcaddr[j] = buf->topdata[i].t_neighbors[j];
         }
 
-        printf ("\nThe neighbors of node %d are: ", ntohl (buf->topdata[i].t_nodeid));
+        fprintf (fp, "\nThe neighbors of node %d are: ", ntohl (buf->topdata[i].t_nodeid));
 
         for (int j = 0; j < 46; j++) {
             if (srbit (mcaddr, j, BIT_TEST) == 1) {
-                printf ("%d ", j);
+                fprintf (fp, "%d ", j);
             }
         }
 
-        printf ("\n");
+        fprintf (fp, "\n");
     }
 }
 
@@ -200,7 +200,7 @@ int ts_find()
         error_handler ("The message is not sent to Testbed_Server()");
     }
 
-    printf ("Looking for the Testbed Servers...\n");
+    fprintf (fp, "Looking for the Testbed Servers...\n");
     int i = 0, j = 0;
 
     /* -------------------------------------------------------------
@@ -240,7 +240,7 @@ int ts_find()
      * print the list of IP addresses
      * -----------------------------------------------------*/
     for (i = 0; i < j; i++) {
-        printf ("IP address of Testbed server %d is :%s\n", i + 1, list_ip[i]);
+        fprintf (fp, "IP address of Testbed server %d is :%s\n", i + 1, list_ip[i]);
     }
 
     tv.tv_sec = TIME_OUT;
@@ -276,13 +276,13 @@ void ping_reply_handler (struct c_msg *buf)
         status = ntohl (buf->pingdata[i].pstatus);
 
         if (status == ALIVE) {
-            printf ("<====Reply from testbed server: Node %d is alive\n", ntohl (buf->pingdata[i].pnodeid));
+            fprintf (fp, "<====Reply from testbed server: Node %d is alive\n", ntohl (buf->pingdata[i].pnodeid));
 
         } else if ((status  == NOTACTIV) && (counter == 1)) {
-            printf ("<====Reply from testbed server: Node %d is not in the active network topology\n", ntohl (buf->pingdata[i].pnodeid));
+            fprintf (fp, "<====Reply from testbed server: Node %d is not in the active network topology\n", ntohl (buf->pingdata[i].pnodeid));
 
         } else if (status == NOTRESP) {
-            printf ("<====Reply from testbed server: Node %d is not responding \n", ntohl (buf->pingdata[i].pnodeid));
+            fprintf (fp, "<====Reply from testbed server: Node %d is not responding \n", ntohl (buf->pingdata[i].pnodeid));
         }
     }
 }
@@ -303,11 +303,11 @@ void response_handler (struct c_msg *buf)
      * ------------------------------------------*/
     switch (cmsgtyp) {
         case C_OK:
-            printf ("<====Reply from testbed server: OK\n");
+            fprintf (fp, "<====Reply from testbed server: OK\n");
             break;
 
         case C_ERR:
-            printf ("<====Reply from testbed server:ERROR\n");
+            fprintf (fp, "<====Reply from testbed server:ERROR\n");
             break;
 
         case C_TOP_REPLY:
@@ -414,7 +414,7 @@ void udp_process (const char *SRV_IP, char *file)
                 int ntserver = ts_find();
 
                 if (ntserver > 1) {
-                    printf ("More than one server is running\n");
+                    fprintf (fp, "More than one server is running\n");
                     close (s);
                     exit (1);
                 }
@@ -431,7 +431,7 @@ void udp_process (const char *SRV_IP, char *file)
                 recvbuf = malloc (sizeof (struct c_msg));
 
                 if ((recvfrom (s, recvbuf, sizeof (struct c_msg), 0, (struct sockaddr *)&si_other, &slen)) < 0) {
-                    printf ("Timeout, Please try again\n");
+                    fprintf (fp, "Timeout, Please try again\n");
                 }
 
                 buf = malloc (sizeof (struct c_msg));
@@ -462,7 +462,7 @@ void udp_process (const char *SRV_IP, char *file)
                 int ntserver = ts_find();
 
                 if (ntserver > 1) {
-                    printf ("More than one server is running\n");
+                    fprintf (fp, "More than one server is running\n");
                     close (s);
                     exit (1);
                 }
@@ -476,7 +476,7 @@ void udp_process (const char *SRV_IP, char *file)
                 recvbuf = malloc (sizeof (struct c_msg));
 
                 if ((recvfrom (s, recvbuf, sizeof (struct c_msg), 0, (struct sockaddr *)&si_other, &slen)) < 0) {
-                    printf ("Timeout, Please try again\n");
+                    fprintf (fp, "Timeout, Please try again\n");
                 }
 
                 buf = (struct c_msg*)recvbuf;
@@ -492,7 +492,36 @@ void udp_process (const char *SRV_IP, char *file)
 /* Main- Call UDP process */
 int main (int argc, char **argv)
 {
-    const char *SRV_IP = argv[1];
-    udp_process (SRV_IP, argv[2]);
+    struct timeval  tv1, tv2;
+    gettimeofday (&tv1, NULL);
+    const char *SRV_IP;
+    char	use[] = "error: use is tbed <Server's IP> ( | <script> log | <script> stdout )\n";
+
+    if ( (argc != 2)  && (argc != 4) ) {
+        fprintf (stderr, "%s", use);
+        exit (1);
+    }
+
+    if (argv[2] != NULL) {
+        if (!strcmp ("stdout", argv[3])) {
+            fp = stdout;
+
+        } else if (!strcmp ("log", argv[3] )) {
+            fp = fopen ("log.txt", "w");
+        }
+
+        SRV_IP = argv[1];
+        udp_process (SRV_IP, argv[2]);
+
+    } else {
+        fp = stdout;
+        SRV_IP = argv[1];
+        udp_process (SRV_IP, NULL);
+    }
+
+    gettimeofday (&tv2, NULL);
+    fprintf (fp, "Emulation time = %f seconds\n",
+             (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
+             (double) (tv2.tv_sec - tv1.tv_sec));
     return 0;
 }
