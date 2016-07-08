@@ -93,7 +93,7 @@ process	netin ()
 		/* Convert Ethernet Type to host order */
 
 		eth_ntoh(pkt);
-
+        
 		/* Demultiplex on Ethernet type */
 
 		switch (pkt->net_ethtype) {

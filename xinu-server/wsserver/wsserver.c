@@ -161,7 +161,7 @@ struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
 struct etherPkt *create_etherPkt()
 {
     struct etherPkt *msg;
-    msg = ( struct etherPkt * ) getmem ( sizeof ( struct etherPkt ) );
+    msg = ( struct etherPkt * ) getmem (sizeof(struct etherPkt));
     //memset(msg, 0, sizeof(msg));
     return msg;
 }
@@ -587,6 +587,11 @@ status wsserver_assign ( struct netpacket *pkt )
     int32 retval;
     int i;
     /* fill out Ethernet packet fields */
+    //for (i=0;i < 6;i++)
+    //{
+
+    //kprintf("%02x:", pkt->net_ethsrc[i]);
+    //}
     memcpy ( assign_msg->src, NetData.ethucast, ETH_ADDR_LEN );
     memcpy ( assign_msg->dst, pkt->net_ethsrc, ETH_ADDR_LEN );
     assign_msg->type = htons ( ETH_TYPE_A );
@@ -601,8 +606,8 @@ status wsserver_assign ( struct netpacket *pkt )
     kprintf ( "\n*** Assigned Nodeid***: %d\n", nodeid );
     memset ( ack_info, 0, sizeof ( ack_info ) );
     memcpy ( ack_info, ( char * ) ( assign_msg ) + 14, 16 );
-    retval = write ( ETHER0, ( char * ) assign_msg, sizeof ( struct etherPkt ) );
-    freemem ( ( char * ) assign_msg, sizeof ( struct etherPkt ) );
+    retval = write ( ETHER0, ( char * ) assign_msg, sizeof(struct etherPkt) );
+    freemem ( ( char * ) assign_msg, sizeof(struct etherPkt) );
     freebuf ( ( char * ) pkt );
 
     if ( retval > 0 ) {
