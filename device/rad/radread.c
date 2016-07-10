@@ -73,7 +73,7 @@ int32	radread (
 
 	return len < count ? len : count;
 }
-
+#if 0
 process	rawin (void) {
 
 	struct	netpacket *pkt;
@@ -113,3 +113,4 @@ process	rawin (void) {
 
 	return OK;
 }
+#endif

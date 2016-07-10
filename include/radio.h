@@ -86,3 +86,7 @@ struct	rad_fragentry {
 };
 
 extern	struct rad_fragentry rad_fragtab[];
+
+struct rad_rx_desc {
+	byte	buffer[1514];
+};

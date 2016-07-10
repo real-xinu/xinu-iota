@@ -31,7 +31,7 @@ void	net_init (void)
 	if((int32)netbufpool == SYSERR) {
 		panic("Cannot create network buffer pool\n");
 	}
-
+/*
 	while(TRUE) {
 		kprintf("Enter the backend number of the server: ");
 		memset(buf, 0, 10);
@@ -44,7 +44,7 @@ void	net_init (void)
 		beserver -= 101;
 		break;
 	}
-
+*/
 	/* Create the ND timer process */
 
 	resume(create(nd_timer, NETSTK, NETPRIO+10, "nd_timer", 0, NULL));
@@ -57,8 +57,10 @@ void	net_init (void)
 			continue;
 		}
 
-		sprintf(procname, "netin_%d", iface);
-		resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
+		if(if_tab[iface].if_type == IF_TYPE_RADIO) {
+			sprintf(procname, "netin_%d", iface);
+			resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
+		}
 	}
 
 	resume(create(rawin, NETSTK, NETPRIO+1, "rawin", 0, NULL));
@@ -74,6 +76,7 @@ process	netin (
 {
 	struct	ifentry *ifptr;	/* Pointer to interface	*/
 	struct	netpacket *pkt;	/* Pointer to packet	*/
+	int32	count;
 	int32	i;
 
 	if((iface < 0) || (iface > NIFACES)) {
@@ -83,7 +86,7 @@ process	netin (
 	ifptr = &if_tab[iface];
 
 	while(TRUE) {
-
+		/*
 		wait(ifptr->isem);
 
 		pkt = ifptr->pktbuf[ifptr->head];
@@ -91,17 +94,19 @@ process	netin (
 		if(ifptr->head >= 10) {
 			ifptr->head = 0;
 		}
-
-		/*
-		pkt = (struct netpacket *)getbuf(netbufpool);
-		if((int32)pkt == SYSERR) {
-			panic("netin cannot get buffer for packet\n");
-		}
-
-		read(RADIO0, (char *)pkt, PACKLEN);
 		*/
 
-		kprintf("IN: "); pdump(pkt);
+		pkt = (struct netpacket *)getbuf(netbufpool);
+		if(pkt == SYSERR) {
+			panic("netin: Cannot allocate memory for packets");
+		}
+
+		count = read(ifptr->if_dev, (char *)pkt, PACKLEN);
+		if(count == SYSERR) {
+			panic("netin: Cannot read from device");
+		}
+
+		//kprintf("IN: "); pdump(pkt);
 
 		if((pkt->net_ipvtch&0xf0) == 0x60) {
 			pkt->net_iface = iface;
@@ -110,6 +115,52 @@ process	netin (
 		}
 		else {
 			freebuf((char *)pkt);
+		}
+	}
+
+	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * rawin  -  Raw network input process to read from ethernet device
+ *------------------------------------------------------------------------
+ */
+process rawin(void) {
+
+	struct	etherPkt *pkt;
+	int32	count;
+
+	while(TRUE) {
+
+		pkt = (struct etherPkt *)getbuf(netbufpool);
+		if(pkt == SYSERR) {
+			panic("rawin: cannot allocate memory");
+		}
+
+		count = read(ETHER0, pkt, PACKLEN);
+		if(count == SYSERR) {
+			panic("rawin: cannot read from ethernet");
+		}
+
+		switch(ntohs(pkt->type)) {
+
+		case 0x0000:
+			if(semcount(radtab[0].isem) >= radtab[0].rxRingSize) {
+				freebuf((char *)pkt);
+				continue;
+			}
+
+			memcpy(((struct rad_rx_desc *)radtab[0].rxRing)[radtab[0].rxTail].buffer, pkt, count);
+			radtab[0].rxTail = (radtab[0].rxTail + 1) % radtab[0].rxRingSize;
+
+			freebuf((char *)pkt);
+			signal(radtab[0].isem);
+			break;
+
+		default:
+			kprintf("rawin: unknown ethernet type: %02x\n", pkt->type);
+			freebuf((char *)pkt);
+			break;
 		}
 	}
 

@@ -21,6 +21,13 @@ int32	radinit (
 	memset(radptr, NULLCH, sizeof(struct radcblk));
 	radptr->state = RAD_STATE_DOWN;
 
+	radptr->isem = semcreate(0);
+	radptr->rxRingSize = 32;
+	radptr->rxRing = getmem(sizeof(struct rad_rx_desc) * radptr->rxRingSize);
+
+	radptr->rxHead = radptr->rxTail = 0;
+
+	return OK;
   /*
 	for(i = 0; i < 96; i++) {
 		if(!memcmp(ethertab[0].devAddress, xinube_macs[i], 6)) {
