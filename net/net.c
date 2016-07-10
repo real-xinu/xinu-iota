@@ -59,7 +59,7 @@ void	net_init (void)
 
 		if(if_tab[iface].if_type == IF_TYPE_RADIO) {
 			sprintf(procname, "netin_%d", iface);
-			resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
+			//resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
 		}
 	}
 
@@ -157,8 +157,12 @@ process rawin(void) {
 			signal(radtab[0].isem);
 			break;
 
+		case 0x88b5:
+			kprintf("TYPE A\n");
+			break;
+
 		default:
-			kprintf("rawin: unknown ethernet type: %02x\n", pkt->type);
+			kprintf("rawin: unknown ethernet type: %02x\n", ntohs(pkt->type));
 			freebuf((char *)pkt);
 			break;
 		}
