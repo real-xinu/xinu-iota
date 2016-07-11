@@ -192,11 +192,12 @@ status init_topo ( char *filename )
 void topo_update_mac ( struct netpacket *pkt )
 {
     topo[nodeid].t_status = 1;
+    int i;
     memcpy ( topo[nodeid].t_macaddr, pkt->net_ethsrc, ETH_ADDR_LEN );
-    //for (i=0; i<6; i++) {
-    //kprintf("%02x:", topo[nodeid].t_macaddr[i]);
-    // }
-    //kprintf("\n");
+    for (i=0; i<6; i++) {
+    kprintf("%02x:", topo[nodeid].t_macaddr[i]);
+     }
+    kprintf("\n");
     freebuf ( ( char * ) pkt );
     nodeid++;
 }
@@ -597,7 +598,7 @@ status wsserver_assign ( struct netpacket *pkt )
     assign_msg->type = htons ( ETH_TYPE_A );
     assign_msg->amsgtyp = htonl ( A_ASSIGN ); /*Assign message */
     assign_msg->anodeid = htonl ( nodeid );
-
+    //kprintf("Assgin type NBO:%d:%d\n", htonl(A_ASSIGN), htonl(nodeid));
     for ( i = 0; i < 6; i++ ) {
         assign_msg->amcastaddr[i] = topo[nodeid].t_neighbors[i];
         //kprintf("%02x:", assign_msg->amcastaddr[i]);
@@ -606,7 +607,8 @@ status wsserver_assign ( struct netpacket *pkt )
     kprintf ( "\n*** Assigned Nodeid***: %d\n", nodeid );
     memset ( ack_info, 0, sizeof ( ack_info ) );
     memcpy ( ack_info, ( char * ) ( assign_msg ) + 14, 16 );
-    retval = write ( ETHER0, ( char * ) assign_msg, sizeof(struct etherPkt) );
+    retval = write ( ETHER0, ( char * ) assign_msg, sizeof(struct etherPkt));
+    //kprintf("size:%d:%d\n", retval, sizeof(struct etherPkt));
     freemem ( ( char * ) assign_msg, sizeof(struct etherPkt) );
     freebuf ( ( char * ) pkt );
 
@@ -633,11 +635,11 @@ void ack_handler ( struct netpacket *pkt )
             ack++;
         }
 
-        //kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
+        kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
     }
 
     i = ntohl ( node_msg->anodeid );
-
+    kprintf("ACK info 5:%d:%d\n", ack_info[5], A_ASSIGN);
     if ( ack == 16 ) {
         if ( ack_info[5] == A_ASSIGN ) {
             topo_update_mac ( pkt );
@@ -670,7 +672,7 @@ void  amsg_handler ( struct netpacket *pkt )
      * Extract message type for TYPE A frames
      * ------------------------------------------*/
     int32 amsgtyp = ntohl ( node_msg->amsgtyp );
-
+    kprintf("type:%d\n", amsgtyp);
     switch ( amsgtyp ) {
         case A_JOIN:
             kprintf ( "====>Join message is received\n" );

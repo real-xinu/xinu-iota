@@ -20,6 +20,7 @@ struct c_msg  command_handler (char command[BUFLEN])
     char array_token[2][20];
     char seps[]   = " ";
     char *token;
+    char beagle[10];
     int num;
     int i;
     i = 0;
@@ -106,6 +107,35 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "ts_check")) {
         message.cmsgtyp = htonl (C_TS_REQ);
 
+    } else if (!strcmp (array_token[0], "download") && array_token[1] != NULL && array_token[2] != NULL) {
+        if (!strcmp (array_token[1], "t")) {
+	    
+	    memset(beagle,0,sizeof(beagle));
+            strcpy (beagle, "beagle");
+            strcat (beagle, array_token[2]);
+            download_img (SERVERIMG, "cortex", beagle, XINUSERVER);
+            message.cmsgtyp = htonl (C_ERR);
+
+        } else if (!strcmp (array_token[1], "b")) {
+        } else if (!strcmp(array_token[1], "n")) {
+            
+            memset(beagle,0,sizeof(beagle));
+	    strcpy (beagle, "beagle");
+            strcat (beagle, array_token[2]);
+            download_img (NODEIMG, "cortex", beagle, XINUSERVER);
+            message.cmsgtyp = htonl (C_ERR);
+        }
+
+    } else if (!strcmp (array_token[0], "pcycle")) {
+       
+        if (atoi (array_token[1]) > 101 && atoi (array_token[1]) < 184) {
+            memset(beagle,0,sizeof(beagle));
+            strcpy (beagle, "beagle");
+            strcat (beagle, array_token[1]);
+            powercycle_bgnd ("cortex", beagle, XINUSERVER);
+	    message.cmsgtyp = htonl(C_ERR);
+        }
+
     } else {
         fprintf (fp, "%s is not defined\n", array_token[0]);
         message.cmsgtyp = htonl (C_ERR);
@@ -113,6 +143,75 @@ struct c_msg  command_handler (char command[BUFLEN])
 
     return message;
 }
+
+
+
+int download_img (char * filename, char * class, char * connection, char * host)
+{
+    pid_t pid_dwnld;
+    pid_dwnld = fork();
+
+    if (pid_dwnld == 0) {
+        /* Child Process */
+        char conn[128];
+        int fd;
+
+        if ( ( fd = open (filename, O_RDONLY ) ) < 0 ) {
+            perror ( "open()" );
+            exit ( 1 );
+        }
+
+        if ( dup2 ( fd, 0 ) < 0 ) {
+            perror ( "dup2()" );
+            exit ( 1 );
+        }
+
+        close ( fd );
+        sprintf (conn, "%s%s", connection, "-dl");
+        execlp (EXEC, EXEC, "-t", "-f", "-c", DOWNLOAD, "-s", host, conn, NULL);
+        fprintf (stderr, "execlp() failes\n");
+        return -1;
+
+    } else if (pid_dwnld < 0) {
+        fprintf (stdout, "\nfork() Error\n");
+        return -1;
+    }
+
+    return 1;
+}
+
+int powercycle_bgnd (char * class, char * connection, char * host)
+{
+    pid_t pid_dwnld;
+    pid_dwnld = fork();
+
+    /* Child process to execute cs-console command */
+    if (pid_dwnld == 0) {
+        /* Child Process */
+        char conn[128];
+        sprintf (conn, "%s%s", connection, "-pc");
+        execlp (EXEC, EXEC, "-t", "-f", "-c", POWERCYCLE, "-s", host, conn, NULL);
+        fprintf (stderr, "execlp() failes\n");
+        return -1;
+
+    } else if (pid_dwnld < 0) {
+        fprintf (stdout, "\nfork() Error\n");
+        return -1;
+    }
+
+    return 1;
+}
+
+int connect_bgnd (char * class, char * connection, char * host)
+{
+    /* Make connection */
+    int ret = makeConnection (connection, class, host);
+    return ret;
+}
+
+
+
+
 /*-----------------------------------------------------
 * Print the network topology based on control message
 which have been recevied from the testbed server.

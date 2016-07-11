@@ -36,6 +36,7 @@ struct	etherPkt {
 	};
 };
 
+
 #define	ETH_HDR_LEN		14	/* Length of Ethernet packet 	*/
 					/*  header			*/
 
