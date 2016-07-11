@@ -37,9 +37,10 @@ pcycle 116
 pcycle 117
 pcycle 118
 pcycle 119
-delay 35000000
+delay 40000000
 ts_find
 ts_check
+nping all
 newtop Top15.0
 nping all
 topdump

@@ -116,7 +116,7 @@ process	netin (
 			panic("netin: Cannot read from device");
 		}
 
-		//kprintf("IN: "); pdump(pkt);
+		kprintf("IN: "); pdump(pkt);
 
 		if((pkt->net_ipvtch&0xf0) == 0x60) {
 			pkt->net_iface = iface;
@@ -173,7 +173,8 @@ process rawin(void) {
 
 		case ETH_TYPE_A:
 			kprintf("TYPE A\n");
-			int i=0;
+			/*int i=0;
+
 			for (i=0;i<6;i++)
 			{
                              kprintf("%02x:", pkt->src[i]);
@@ -186,7 +187,7 @@ process rawin(void) {
                           kprintf("%02x:", pkt->dst[i]);
 
 			}
-			kprintf("\n");
+			kprintf("\n");*/
 			amsg_handler(pkt);
 			break;
 

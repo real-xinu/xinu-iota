@@ -379,10 +379,10 @@ status nping ( int32 pingnodeid )
     }*/
     //kprintf("\n");
     ping_msg->type = htons ( ETH_TYPE_A );
-    ping_msg->amsgtyp = htonl ( A_PING ); /* Error message */
+    ping_msg->msg.amsgtyp = htonl ( A_PING ); /* Error message */
     seq_buf = ( byte * ) seqnum;
     //kprintf("seq num: %d, seq buf: %d\n", *seqnum , *seq_buf);
-    memcpy ( ping_msg->apingdata , seq_buf , sizeof ( byte ) * 4 );
+    memcpy ( ping_msg->msg.apingdata , seq_buf , sizeof ( byte ) * 4 );
     *seqnum = *seqnum + 1;
     memset ( ack_info, 0, sizeof ( ack_info ) );
     memcpy ( ack_info, ( char * ) ( ping_msg ) + 14, 16 );
@@ -451,10 +451,10 @@ status nping_all()
     memcpy ( ping_msg->src, NetData.ethucast, ETH_ADDR_LEN );
     memcpy ( ping_msg->dst, NetData.ethbcast, ETH_ADDR_LEN );
     ping_msg->type = htons ( ETH_TYPE_A );
-    ping_msg->amsgtyp = htonl ( A_PING_ALL ); /* Error message */
+    ping_msg->msg.amsgtyp = htonl ( A_PING_ALL ); /* Error message */
     seq_buf = ( byte * ) seqnum;
     //kprintf("seq num: %d, seq buf: %d\n", *seqnum , *seq_buf);
-    memcpy ( ping_msg->apingdata , seq_buf , sizeof ( byte ) * 4 );
+    memcpy ( ping_msg->msg.apingdata , seq_buf , sizeof ( byte ) * 4 );
     *seqnum = *seqnum + 1;
     memset ( ack_info, 0, sizeof ( ack_info ) );
     memcpy ( ack_info, ( char * ) ( ping_msg ) + 14, 16 );
@@ -565,7 +565,7 @@ status wsserver_senderr ( struct netpacket *pkt )
     memcpy ( err_msg->src, NetData.ethucast, ETH_ADDR_LEN );
     memcpy ( err_msg->dst, pkt->net_ethsrc, ETH_ADDR_LEN );
     err_msg->type = htons ( ETH_TYPE_A );
-    err_msg->amsgtyp = htonl ( A_ERR ); /* Error message */
+    err_msg->msg.amsgtyp = htonl ( A_ERR ); /* Error message */
     /*send packet over Ethernet */
     retval = write ( ETHER0, ( char * ) err_msg, sizeof ( struct etherPkt ) );
     freemem ( ( char * ) err_msg, sizeof ( struct etherPkt ) );
@@ -596,11 +596,11 @@ status wsserver_assign ( struct netpacket *pkt )
     memcpy ( assign_msg->src, NetData.ethucast, ETH_ADDR_LEN );
     memcpy ( assign_msg->dst, pkt->net_ethsrc, ETH_ADDR_LEN );
     assign_msg->type = htons ( ETH_TYPE_A );
-    assign_msg->amsgtyp = htonl ( A_ASSIGN ); /*Assign message */
-    assign_msg->anodeid = htonl ( nodeid );
+    assign_msg->msg.amsgtyp = htonl ( A_ASSIGN ); /*Assign message */
+    assign_msg->msg.anodeid = htonl ( nodeid );
     //kprintf("Assign type: %d:%d\n", htonl(A_ASSIGN), htonl(nodeid)); 
     for ( i = 0; i < 6; i++ ) {
-        assign_msg->amcastaddr[i] = topo[nodeid].t_neighbors[i];
+        assign_msg->msg.amcastaddr[i] = topo[nodeid].t_neighbors[i];
         //kprintf("%02x:", assign_msg->amcastaddr[i]);
     }
    
@@ -631,14 +631,14 @@ void ack_handler ( struct netpacket *pkt )
     ack = 0;
 
     for ( i = 0; i < 16; i++ ) {
-        if ( node_msg->aacking[i] == ack_info[i] ) {
+        if ( node_msg->msg.aacking[i] == ack_info[i] ) {
             ack++;
         }
 
         //kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
     }
 
-    i = ntohl ( node_msg->anodeid );
+    i = ntohl ( node_msg->msg.anodeid );
 
     if ( ack == 16 ) {
         if ( ack_info[3] == A_ASSIGN ) {
@@ -672,7 +672,7 @@ void  amsg_handler ( struct netpacket *pkt )
     /* -------------------------------------------
      * Extract message type for TYPE A frames
      * ------------------------------------------*/
-    int32 amsgtyp = ntohl ( node_msg->amsgtyp );
+    int32 amsgtyp = ntohl ( node_msg->msg.amsgtyp );
     //kprintf("type:%d\n", amsgtyp); 
     switch ( amsgtyp ) {
         case A_JOIN:

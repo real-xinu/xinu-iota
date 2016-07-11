@@ -90,9 +90,9 @@
 				/*  or more fields of an incoming	*/
 				/*  message contains an invalid value.	*/
 
-struct	a_msg	{
-	int32	amsgtyp;	/* Message type as specified above	*/
-	int32	anodeid;	/* Node ID (zero in an A_JOIN, sent by	*/
+//struct	a_msg	{
+//	int32	amsgtyp;	/* Message type as specified above	*/
+//	int32	anodeid;	/* Node ID (zero in an A_JOIN, sent by	*/
 				/*  the server in an A_ASSIGN, and sent	*/
 				/*  the node in other messages.		*/
 
@@ -101,22 +101,22 @@ struct	a_msg	{
 	/*  is set to zero.  Typically, the entire structure will be	*/
 	/*  set to zero first and then specific fields will be assigned.*/
 
-	union {
-		byte	amcastaddr[6];	/* In an A_ASSIGN, the multicast*/
-					/*  address a node should use	*/
+//	union {
+///		byte	amcastaddr[6];	/* In an A_ASSIGN, the multicast*/
+//					/*  address a node should use	*/
 					/*  when sending radio packets.	*/
 
-		byte	apingdata[8];	/* 8 octets of data that will be*/
+//		byte	apingdata[8];	/* 8 octets of data that will be*/
 					/*  returned in the A_ACK, and	*/
 					/*  can be used to associate the*/
 					/*  ack with a specific ping.	*/
 	
-		byte	aacking[16];	/* In an A_ACK, the first 16	*/
+//		byte	aacking[16];	/* In an A_ACK, the first 16	*/
 					/*  octets of the message being	*/
 					/*  acked.			*/
 
-		byte	aerrmsg[16];	/* In an A_ERR, the first 16	*/
+//		byte	aerrmsg[16];	/* In an A_ERR, the first 16	*/
 					/*  octets of the message that	*/
 					/*  caused the error.		*/
-	};
-};
+//	};
+//};

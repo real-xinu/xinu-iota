@@ -40,8 +40,8 @@ status wsnode_join()
     memcpy ( join_msg->dst, NetData.ethbcast, ETH_ADDR_LEN );
     join_msg->type = htons ( ETH_TYPE_A );
     /*fill out Ethernet packet data fields */
-    join_msg->amsgtyp = htonl ( A_JOIN );
-    join_msg->anodeid = htons ( 0 );
+    join_msg->msg.amsgtyp = htonl ( A_JOIN );
+    join_msg->msg.anodeid = htons ( 0 );
     retval = write ( ETHER0, ( char * ) join_msg, sizeof ( struct etherPkt ) );
     freemem((char *) join_msg , sizeof(struct etherPkt));
     if ( retval > 0 )
@@ -60,9 +60,9 @@ status wsnode_sendack ( struct etherPkt *node_msg )
     //node_msg = ( struct etherPkt * ) pkt;
     ack_msg = create_etherPkt (node_msg);
     int32 retval;
-    ack_msg->amsgtyp = htonl ( A_ACK );
-    ack_msg->anodeid = htonl ( info.nodeid );
-    memcpy ( ack_msg->aacking, ( char * ) ( node_msg ) + 14, 16 );
+    ack_msg->msg.amsgtyp = htonl ( A_ACK );
+    ack_msg->msg.anodeid = htonl ( info.nodeid );
+    memcpy ( ack_msg->msg.aacking, ( char * ) ( node_msg ) + 14, 16 );
     //int i;
  /*   for (i=0; i<16; i++)
     {
@@ -103,7 +103,7 @@ void amsg_handler ( struct etherPkt *node_msg )
     float delay;
     //struct etherPkt *node_msg;
     //node_msg = ( struct etherPkt * ) pkt;
-    int32 amsgtyp = ntohl ( node_msg->amsgtyp );
+    int32 amsgtyp = ntohl ( node_msg->msg.amsgtyp );
     int i;
     /*for (i=0; i< 6; i++) 
     {
@@ -128,11 +128,11 @@ void amsg_handler ( struct etherPkt *node_msg )
      * -----------------------------------------------------------------------*/
     switch ( amsgtyp ) {
         case A_ASSIGN:
-            info.nodeid = ntohl ( node_msg->anodeid );
+            info.nodeid = ntohl ( node_msg->msg.anodeid );
 
             if ( wsnode_sendack (node_msg) == OK ) {
                 for ( i = 0; i < 6; i++ ) {
-                    info.mcastaddr[i] = node_msg->amcastaddr[i];
+                    info.mcastaddr[i] = node_msg->msg.amcastaddr[i];
                 }
 
                 print_info();

@@ -11,12 +11,8 @@
 typedef	unsigned char	Eaddr[ETH_ADDR_LEN];/* a physical Ethernet address*/
 
 /* Ethernet packet header */
-#pragma pack(1)
-struct	etherPkt {
-	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
-	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
-	uint16	type;			/* Ether type field		*/
-	//byte	data[1];		/* Packet payload		*/
+struct a_msg
+{
 	int32 amsgtyp;                 /* message type */
 	int32 anodeid;                /*node id */
 
@@ -34,6 +30,32 @@ struct	etherPkt {
 
 
 	};
+
+};
+
+#pragma pack(1)
+struct	etherPkt {
+	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
+	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
+	uint16	type;			/* Ether type field		*/
+	//byte	data[1];		/* Packet payload		*/
+	//int32 amsgtyp;                 /* message type */
+	//int32 anodeid;                /*node id */
+        struct a_msg msg;
+
+	/*union
+	{
+           byte  amcastaddr[6];
+
+	   byte apingdata[8];
+
+	   byte aacking[16];
+
+	   byte aerrmsg[16];
+     
+
+
+	};*/
 };
 #pragma pack()
 
