@@ -194,10 +194,10 @@ void topo_update_mac ( struct netpacket *pkt )
     topo[nodeid].t_status = 1;
     int i;
     memcpy ( topo[nodeid].t_macaddr, pkt->net_ethsrc, ETH_ADDR_LEN );
-    for (i=0; i<6; i++) {
+  /*  for (i=0; i<6; i++) {
     kprintf("%02x:", topo[nodeid].t_macaddr[i]);
      }
-    kprintf("\n");
+    kprintf("\n");*/
     freebuf ( ( char * ) pkt );
     nodeid++;
 }
@@ -635,22 +635,22 @@ void ack_handler ( struct netpacket *pkt )
             ack++;
         }
 
-        kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
+       // kprintf("aacking:%d:%d\n", node_msg->aacking[i],ack_info[i]);
     }
 
     i = ntohl ( node_msg->anodeid );
-    kprintf("ACK info 5:%d:%d\n", ack_info[5], A_ASSIGN);
+    //kprintf("ACK info 5:%d:%d\n", ack_info[5], A_ASSIGN);
     if ( ack == 16 ) {
-        if ( ack_info[5] == A_ASSIGN ) {
+        if ( ack_info[3] == A_ASSIGN ) {
             topo_update_mac ( pkt );
             kprintf ( "====>Assign ACK message is received\n" );
 
-        } else if ( ack_info[5] == A_PING ) {
+        } else if ( ack_info[3] == A_PING ) {
             freebuf ( ( char * ) pkt );
             ping_ack_flag[i] = 1;
             //kprintf("--->Ping ACK message is received\n");
 
-        } else if ( ack_info[5] == A_PING_ALL ) {
+        } else if ( ack_info[3] == A_PING_ALL ) {
             ping_ack_flag[i] = 1;
             freebuf ( ( char * ) pkt );
         }

@@ -109,7 +109,7 @@ process	netin ()
 			freebuf((char *)pkt);
 			continue;
 		    case ETH_TYPE_A:
-                        pdump(pkt);
+                        //pdump(pkt);
 			amsg_handler(pkt);
 			continue;
 		    case ETH_TYPE_B:
