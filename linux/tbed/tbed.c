@@ -1,9 +1,10 @@
 #include "include/headers.h"
 #include "include/prototypes.h"
 
-
+const char *SRV_IP;
 char map_list[46][100];
 char map_serv[15];
+char ip_serv[15];
 char map_brouter[15];
 /*--------------------------------------------------------
 This function is used for handling errors
@@ -25,7 +26,6 @@ void mapping_list (char *fname)
     char *file_name = (char *) malloc (1 + strlen (path) + strlen (fname));
     strcpy (file_name, path);
     strcat (file_name, fname);
-    //printf("file %s\n", file_name);
     FILE *fp;
     unsigned char nmcast[6];
     int zeros = 0;
@@ -48,7 +48,6 @@ void mapping_list (char *fname)
 
         if (zeros == 6) {
             flag = 1;
-            //printf("separator...\n");
             break;
 
         } else
@@ -204,6 +203,9 @@ struct c_msg  command_handler (char command[BUFLEN])
             strcpy (beagle, "beagle");
             strcat (beagle, array_token[2]);
             strcpy (map_serv, beagle);
+            strcat (ip_serv, NETIP);
+            strcat (ip_serv, array_token[2]);
+            //printf("ip: %s", ip_serv);
             download_img (array_token[3], "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
 
@@ -226,6 +228,14 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "pcycle")) {
         if (!strcmp (array_token[1], "t")) {
             powercycle_bgnd ("cortex", map_serv, XINUSERVER);
+            SRV_IP = ip_serv;
+
+            if (inet_aton (SRV_IP, &si_other.sin_addr) == 0) {
+                fprintf (stderr, "inet_aton() failed\n");
+                exit (1);
+            }
+
+           
             message.cmsgtyp = htonl (C_ERR);
 
         } else if (atoi (array_token[1]) > 101 && atoi (array_token[1]) < 184) {
@@ -534,7 +544,7 @@ void response_handler (struct c_msg *buf)
 void udp_process (const char *SRV_IP, char *file)
 {
     char *recvbuf;
-    struct sockaddr_in si_me, si_other;
+    struct sockaddr_in si_me;//, si_other;
     //int s;
     int enable;
     socklen_t slen = sizeof (si_other);
@@ -693,29 +703,28 @@ int main (int argc, char **argv)
 {
     struct timeval  tv1, tv2;
     gettimeofday (&tv1, NULL);
-    const char *SRV_IP;
-    char	use[] = "error: use is tbed <Server's IP> ( | <script> log | <script> stdout )\n";
+    char  use[] = "error: use is tbed (  | <script> log | <script> stdout )\n";
 
-    if ( (argc != 2)  && (argc != 4) ) {
+    if ( (argc != 1)  && (argc != 3) ) {
         fprintf (stderr, "%s", use);
         exit (1);
     }
 
     if (argv[2] != NULL) {
-        if (!strcmp ("stdout", argv[3])) {
+        if (!strcmp ("stdout", argv[2])) {
             fp = stdout;
 
-        } else if (!strcmp ("log", argv[3] )) {
+        } else if (!strcmp ("log", argv[2] )) {
             fp = fopen ("log.txt", "w");
         }
 
-        SRV_IP = argv[1];
-        udp_process (SRV_IP, argv[2]);
+        SRV_IP = "0.0.0.0";
+        udp_process (SRV_IP, argv[1]);
 
     } else {
         fp = stdout;
-        SRV_IP = argv[1];
-        udp_process (SRV_IP, NULL);
+        SRV_IP = "0.0.0.0";
+        udp_process (SRV_IP, argv[1]);
     }
 
     gettimeofday (&tv2, NULL);

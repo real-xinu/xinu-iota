@@ -21,6 +21,7 @@
 #define NODEIMG   "xinu.boot.n"
 #define XINUSERVER "xinuserver.cs.purdue.edu"
 #define SERVER "beagle183"
+#define NETIP   "128.10.137."
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,5 +40,5 @@ int s;
 FILE *fp;
 char *path = "/homes/arastega/Wi-sun-repo/xinu-bbb/remote-file-server/";
 extern int srbit (byte addr[], int, int);
-
+struct sockaddr_in si_other;
 
