@@ -2,6 +2,8 @@
 #include "include/prototypes.h"
 
 
+char map_list[46][100];
+
 /*--------------------------------------------------------
 This function is used for handling errors
 ------------------------------------------------------*/
@@ -9,6 +11,76 @@ void error_handler (char *s)
 {
     perror (s);
     exit (1);
+}
+/*--------------------------------------------------------------
+ * Make a mapping list between nodes' name and nodes' ID
+ * ------------------------------------------------------------*/
+void mapping_list (char *fname)
+{
+    int i;
+    //char name[100];
+    unsigned char name_size[1];
+    //char *path = "/homes/arastega/Wi-sun-repo/xinu-bbb/remote-file-server/";
+    char *file_name = (char *) malloc (1 + strlen (path) + strlen (fname));
+    strcpy (file_name, path);
+    strcat (file_name, fname);
+    //printf("file %s\n", file_name);
+    FILE *fp;
+    unsigned char nmcast[6];
+    int zeros = 0;
+    int flag = 0;
+    int nnodes = 0;
+    fp = fopen (file_name, "rb");
+
+    if (fp == NULL) {
+        printf ("Cannot open the file. \n");
+        return;
+    }
+
+    memset (map_list, 0, sizeof (map_list));
+
+    while (fread (nmcast, sizeof (nmcast), 1, fp) > 0) {
+        for (i = 0; i < 6; i++) {
+            if ((int)nmcast[i] == 0)
+                zeros++;
+        }
+
+        if (zeros == 6) {
+            flag = 1;
+            //printf("separator...\n");
+            break;
+
+        } else
+            nnodes++;
+
+        zeros = 0;
+    }
+
+    //printf("number of nodes: %d\n",nnodes);
+    i = 0;
+
+    while (i < nnodes) {
+        fread (name_size, sizeof (name_size), 1, fp);
+        fread (map_list[i], (int) *name_size, 1, fp);
+        //printf("name is: %s:%d\n" ,map_list[i], (int)*name_size);
+        i++;
+    }
+}
+
+/*---------------------------------------------------------
+ * ISNUMERIC Function
+ * -------------------------------------------------------*/
+int isnumeric (char *str)
+{
+    int len = strlen (str);
+    int i;
+
+    for (i = 0; i < len; i++) {
+        if ((int)str[i] < 48 || (int)str[i] > 57)
+            return 0;
+    }
+
+    return 1;
 }
 /*----------------------------------------------------------
  This function is used to handle operator commands.
@@ -23,6 +95,7 @@ struct c_msg  command_handler (char command[BUFLEN])
     char beagle[10];
     int num;
     int i;
+    int flag = 0;
     i = 0;
     token = strtok (command, seps );
 
@@ -45,7 +118,7 @@ struct c_msg  command_handler (char command[BUFLEN])
 
         } else {
             fprintf (fp, "Incorrect ID\n");
-            message.cmsgtyp = htonl (ERR);
+            message.cmsgtyp = htonl (C_ERR);
         }
 
     } else if (!strcmp (array_token[0], "xoff")) {
@@ -57,20 +130,36 @@ struct c_msg  command_handler (char command[BUFLEN])
 
         } else {
             fprintf (fp, "Incorrect ID\n");
-            message.cmsgtyp = htonl (ERR);
+            message.cmsgtyp = htonl (C_ERR);
         }
 
     } else if ((!strcmp (array_token[0], "nping")) && strcmp (array_token[1], " ") && strcmp (array_token[1], "all")) {
         message.cmsgtyp = htonl (C_PING_REQ);
         message.clength = htonl (sizeof (message));
-        num = atoi (array_token[1]);
 
-        if ((num >= 0) && (num <= 45)) {
-            message.pingnodeid = htonl (num);
+        if (isnumeric (array_token[1]) == 1) {
+            num = atoi (array_token[1]);
+
+            if ((num >= 0) && (num <= 45)) {
+                message.pingnodeid = htonl (num);
+
+            } else {
+                fprintf (fp, "Incorrect ID\n");
+                message.cmsgtyp = htonl (C_ERR);
+            }
 
         } else {
-            fprintf (fp, "Incorrect ID\n");
-            message.cmsgtyp = htonl (ERR);
+            for (i = 0; i < 46; i++) {
+                if (! (strcmp (map_list[i], array_token[1]))) {
+                    message.pingnodeid = htonl (i);
+                    flag = 1;
+                }
+            }
+
+            if (flag == 0) {
+                fprintf (fp, "Incorrect Node Name\n");
+                message.cmsgtyp = htonl (C_ERR);
+            }
         }
 
     } else if ((!strcmp (array_token[0], "nping")) && strcmp (array_token[1], " ") && (!strcmp (array_token[1], "all"))) {
@@ -84,6 +173,7 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_NEW_TOP);
         message.flen = htonl (strlen (array_token[1]));
         strcpy ((char *)message.fname , array_token[1]);
+        mapping_list ((char *)message.fname);
 
     } else if (!strcmp (array_token[0], "online")) {
         message.cmsgtyp = htonl (C_ONLINE);
@@ -109,31 +199,28 @@ struct c_msg  command_handler (char command[BUFLEN])
 
     } else if (!strcmp (array_token[0], "download") && array_token[1] != NULL && array_token[2] != NULL) {
         if (!strcmp (array_token[1], "t")) {
-	    
-	    memset(beagle,0,sizeof(beagle));
+            memset (beagle, 0, sizeof (beagle));
             strcpy (beagle, "beagle");
             strcat (beagle, array_token[2]);
             download_img (SERVERIMG, "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
 
         } else if (!strcmp (array_token[1], "b")) {
-        } else if (!strcmp(array_token[1], "n")) {
-            
-            memset(beagle,0,sizeof(beagle));
-	    strcpy (beagle, "beagle");
+        } else if (!strcmp (array_token[1], "n")) {
+            memset (beagle, 0, sizeof (beagle));
+            strcpy (beagle, "beagle");
             strcat (beagle, array_token[2]);
             download_img (NODEIMG, "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
         }
 
     } else if (!strcmp (array_token[0], "pcycle")) {
-       
         if (atoi (array_token[1]) > 101 && atoi (array_token[1]) < 184) {
-            memset(beagle,0,sizeof(beagle));
+            memset (beagle, 0, sizeof (beagle));
             strcpy (beagle, "beagle");
             strcat (beagle, array_token[1]);
             powercycle_bgnd ("cortex", beagle, XINUSERVER);
-	    message.cmsgtyp = htonl(C_ERR);
+            message.cmsgtyp = htonl (C_ERR);
         }
 
     } else {

@@ -39,23 +39,10 @@ struct	etherPkt {
 	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
 	uint16	type;			/* Ether type field		*/
 	//byte	data[1];		/* Packet payload		*/
-	//int32 amsgtyp;                 /* message type */
-	//int32 anodeid;                /*node id */
-        struct a_msg msg;
 
-	/*union
-	{
-           byte  amcastaddr[6];
-
-	   byte apingdata[8];
-
-	   byte aacking[16];
-
-	   byte aerrmsg[16];
-     
+        struct a_msg msg;               /* Struct of a_msg */
 
 
-	};*/
 };
 #pragma pack()
 

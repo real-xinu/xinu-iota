@@ -37,7 +37,7 @@ pcycle 116
 pcycle 117
 pcycle 118
 pcycle 119
-delay 40000000
+delay 38000000
 ts_find
 ts_check
 nping all
@@ -49,6 +49,9 @@ nping 1
 nping 2
 nping 3
 nping 20
+nping a
+nping b
+nping c
 offline
 nping all
 online

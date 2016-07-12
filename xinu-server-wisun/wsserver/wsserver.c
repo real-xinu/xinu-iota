@@ -308,7 +308,9 @@ struct c_msg *newtop ( struct c_msg ctlpkt )
         nodeid = 0;
 
         if ( topo_compr() == OK )
-            cmsg_reply->cmsgtyp = htonl ( C_OK );
+	{
+		cmsg_reply->cmsgtyp = htonl ( C_OK );
+	}
 
         else {
             memcpy ( &topo, &old_topo, sizeof ( topo ) );

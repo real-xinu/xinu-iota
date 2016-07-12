@@ -42,23 +42,7 @@ struct	etherPkt {
 	uint16	type;			/* Ether type field		*/
 	
         struct a_msg msg;	
-	/*int32 amsgtyp;
-	int32 anodeid;
 
-	union
-	{
-           byte amcastaddr[6];
-
-	   byte apingdata[8];
-
-	   byte aacking[16];
-
-
-	   byte aerrmsg[16];
-
-
-
-	};*/
 };
 #pragma pack()
 

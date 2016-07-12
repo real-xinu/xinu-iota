@@ -24,10 +24,10 @@ process	main(void)
 	pkt->type = 0x1234;
 
 	int i;
-	for(i = 0; i  <10; i++) {
-		write(ETHER0, pkt, 100);
-		sleep(1);
-	}
+	//for(i = 0; i  <10; i++) {
+	//	write(ETHER0, pkt, 100);
+		sleep(3);
+//	}
 
 	kprintf("\n...creating a node\n");
 	recvclr();

@@ -37,6 +37,7 @@
 #include "console_connect.h"
 int s;
 FILE *fp;
+char *path = "/homes/arastega/Wi-sun-repo/xinu-bbb/remote-file-server/";
 extern int srbit (byte addr[], int, int);
 
 
