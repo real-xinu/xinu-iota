@@ -3,7 +3,8 @@
 
 
 char map_list[46][100];
-
+char map_serv[15];
+char map_brouter[15];
 /*--------------------------------------------------------
 This function is used for handling errors
 ------------------------------------------------------*/
@@ -202,20 +203,32 @@ struct c_msg  command_handler (char command[BUFLEN])
             memset (beagle, 0, sizeof (beagle));
             strcpy (beagle, "beagle");
             strcat (beagle, array_token[2]);
-            download_img (SERVERIMG, "cortex", beagle, XINUSERVER);
+            strcpy (map_serv, beagle);
+            download_img (array_token[3], "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
 
         } else if (!strcmp (array_token[1], "b")) {
+            memset (beagle, 0, sizeof (beagle));
+            strcpy (beagle, "beagle");
+            strcat (beagle, array_token[2]);
+            strcpy (map_brouter, beagle);
+            download_img (array_token[3], "cortex", beagle, XINUSERVER);
+            message.cmsgtyp = htonl (C_ERR);
+
         } else if (!strcmp (array_token[1], "n")) {
             memset (beagle, 0, sizeof (beagle));
             strcpy (beagle, "beagle");
             strcat (beagle, array_token[2]);
-            download_img (NODEIMG, "cortex", beagle, XINUSERVER);
+            download_img (array_token[3], "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
         }
 
     } else if (!strcmp (array_token[0], "pcycle")) {
-        if (atoi (array_token[1]) > 101 && atoi (array_token[1]) < 184) {
+        if (!strcmp (array_token[1], "t")) {
+            powercycle_bgnd ("cortex", map_serv, XINUSERVER);
+            message.cmsgtyp = htonl (C_ERR);
+
+        } else if (atoi (array_token[1]) > 101 && atoi (array_token[1]) < 184) {
             memset (beagle, 0, sizeof (beagle));
             strcpy (beagle, "beagle");
             strcat (beagle, array_token[1]);
