@@ -172,23 +172,9 @@ process rawin(void) {
 			break;
 
 		case ETH_TYPE_A:
-			kprintf("TYPE A\n");
-			/*int i=0;
-
-			for (i=0;i<6;i++)
-			{
-                             kprintf("%02x:", pkt->src[i]);
-
-			}
-			kprintf("\n");
-
-			for(i=0;i<6; i++)
-			{
-                          kprintf("%02x:", pkt->dst[i]);
-
-			}
-			kprintf("\n");*/
 			amsg_handler(pkt);
+			break;
+		case ETH_TYPE_B:
 			break;
 
 		default:

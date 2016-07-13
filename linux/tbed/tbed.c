@@ -29,7 +29,7 @@ void mapping_list (char *fname)
     FILE *fp;
     unsigned char nmcast[6];
     int zeros = 0;
-    int flag = 0;
+    //int flag = 0;
     int nnodes = 0;
     fp = fopen (file_name, "rb");
 
@@ -47,7 +47,7 @@ void mapping_list (char *fname)
         }
 
         if (zeros == 6) {
-            flag = 1;
+            //flag = 1;
             break;
 
         } else
@@ -193,6 +193,7 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "help")) {
     } else if (!strcmp (array_token[0], "ts_find")) {
         message.cmsgtyp = htonl (C_TS_REQ);
+        printf ("hello\n");
 
     } else if (!strcmp (array_token[0], "ts_check")) {
         message.cmsgtyp = htonl (C_TS_REQ);
@@ -235,7 +236,6 @@ struct c_msg  command_handler (char command[BUFLEN])
                 exit (1);
             }
 
-           
             message.cmsgtyp = htonl (C_ERR);
 
         } else if (atoi (array_token[1]) > 101 && atoi (array_token[1]) < 184) {
@@ -584,6 +584,7 @@ void udp_process (const char *SRV_IP, char *file)
     /*---------------------------------------------------------
      * Determine the testbed server's IP address
      * -------------------------------------------------------*/
+
     if (inet_aton (SRV_IP, &si_other.sin_addr) == 0) {
         fprintf (stderr, "inet_aton() failed\n");
         exit (1);
@@ -608,6 +609,7 @@ void udp_process (const char *SRV_IP, char *file)
                 fgets (command, sizeof (command), type);
             }
 
+            printf ("here");
             command[strcspn (command, "\r\n")] = 0;
             memset (&message, 0, sizeof (struct c_msg));
             /*--------------------------------------------------------------------
@@ -703,9 +705,9 @@ int main (int argc, char **argv)
 {
     struct timeval  tv1, tv2;
     gettimeofday (&tv1, NULL);
-    char  use[] = "error: use is tbed (  | <script> log | <script> stdout )\n";
+    char  use[] = "error: use is tbed ( IP | <script> log | <script> stdout )\n";
 
-    if ( (argc != 1)  && (argc != 3) ) {
+    if ( (argc != 2)  && (argc != 4) ) {
         fprintf (stderr, "%s", use);
         exit (1);
     }
@@ -723,8 +725,8 @@ int main (int argc, char **argv)
 
     } else {
         fp = stdout;
-        SRV_IP = "0.0.0.0";
-        udp_process (SRV_IP, argv[1]);
+        SRV_IP = argv[1];
+        udp_process (SRV_IP, argv[2]);
     }
 
     gettimeofday (&tv2, NULL);
