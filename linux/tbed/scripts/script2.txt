@@ -48,6 +48,8 @@ nping 0
 nping 1
 nping 2
 nping 3
+nping a
+nping b
 nping 20
 nping a
 nping b

@@ -1,15 +1,15 @@
-download n 102
-download n 103
-download n 104
-download n 105
-download n 106
-download n 107
-download n 108
-download n 109
-download n 110
-download n 111
-download t 183
-pcycle 183
+download n 102 xinu.boot.n
+download n 103 xinu.boot.n
+download n 104 xinu.boot.n
+download n 105 xinu.boot.n
+download n 106 xinu.boot.n
+download n 107 xinu.boot.n
+download n 108 xinu.boot.n
+download n 109 xinu.boot.n
+download n 110 xinu.boot.n
+download n 111 xinu.boot.n
+download t 183 xinu.boot.s
+pcycle t
 delay 20000000
 pcycle 102
 pcycle 103

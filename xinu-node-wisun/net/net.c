@@ -69,7 +69,7 @@ void	net_init (void)
 
 		if(if_tab[iface].if_type == IF_TYPE_RADIO) {
 			sprintf(procname, "netin_%d", iface);
-			//resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
+			resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
 		}
 	}
 

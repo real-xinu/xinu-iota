@@ -193,7 +193,7 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "help")) {
     } else if (!strcmp (array_token[0], "ts_find")) {
         message.cmsgtyp = htonl (C_TS_REQ);
-        printf ("hello\n");
+      
 
     } else if (!strcmp (array_token[0], "ts_check")) {
         message.cmsgtyp = htonl (C_TS_REQ);
@@ -707,7 +707,7 @@ int main (int argc, char **argv)
     gettimeofday (&tv1, NULL);
     char  use[] = "error: use is tbed ( IP | <script> log | <script> stdout )\n";
 
-    if ( (argc != 2)  && (argc != 4) ) {
+    if ( (argc != 2)  && (argc != 3) ) {
         fprintf (stderr, "%s", use);
         exit (1);
     }
