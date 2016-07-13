@@ -41,4 +41,4 @@ FILE *fp;
 char *path = "/homes/arastega/Wi-sun-repo/xinu-bbb/remote-file-server/";
 extern int srbit (byte addr[], int, int);
 struct sockaddr_in si_other;
-
+extern int makeConnection(char *, char *, char *); 
