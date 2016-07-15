@@ -22,14 +22,12 @@ void mapping_list (char *fname)
     int i;
     //char name[100];
     unsigned char name_size[1];
-    //char *path = "/homes/arastega/Wi-sun-repo/xinu-bbb/remote-file-server/";
     char *file_name = (char *) malloc (1 + strlen (path) + strlen (fname));
     strcpy (file_name, path);
     strcat (file_name, fname);
     FILE *fp;
     unsigned char nmcast[6];
     int zeros = 0;
-    //int flag = 0;
     int nnodes = 0;
     fp = fopen (file_name, "rb");
 
@@ -47,7 +45,6 @@ void mapping_list (char *fname)
         }
 
         if (zeros == 6) {
-            //flag = 1;
             break;
 
         } else
@@ -68,7 +65,7 @@ void mapping_list (char *fname)
 }
 
 /*---------------------------------------------------------
- * ISNUMERIC Function
+ * ISNUMERIC Function: To check a string is number or not
  * -------------------------------------------------------*/
 int isnumeric (char *str)
 {
@@ -254,7 +251,10 @@ struct c_msg  command_handler (char command[BUFLEN])
 }
 
 
-
+/*------------------------------------------------------------------------------
+ *
+ *download_img: dowload an image (node or testbed server image) to a specefic backend 
+ *-------------------------------------------------------------------------------*/
 int download_img (char * filename, char * class, char * connection, char * host)
 {
     pid_t pid_dwnld;
@@ -288,6 +288,9 @@ int download_img (char * filename, char * class, char * connection, char * host)
 
     return 1;
 }
+/*----------------------------------------------------------
+ * Powercycle_bgnd: powercycle a backend
+ * --------------------------------------------------------*/
 
 int powercycle_bgnd (char * class, char * connection, char * host)
 {
@@ -311,6 +314,9 @@ int powercycle_bgnd (char * class, char * connection, char * host)
     return 1;
 }
 
+/*-------------------------------------------------------------
+ * Connect to backened to download an image or powercycle it
+ *-----------------------------------------------------------*/
 int connect_bgnd (char * class, char * connection, char * host)
 {
     /* Make connection */
