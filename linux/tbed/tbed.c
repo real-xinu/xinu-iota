@@ -193,7 +193,6 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "help")) {
     } else if (!strcmp (array_token[0], "ts_find")) {
         message.cmsgtyp = htonl (C_TS_REQ);
-      
 
     } else if (!strcmp (array_token[0], "ts_check")) {
         message.cmsgtyp = htonl (C_TS_REQ);
@@ -609,7 +608,7 @@ void udp_process (const char *SRV_IP, char *file)
                 fgets (command, sizeof (command), type);
             }
 
-            printf ("here");
+            //printf ("here");
             command[strcspn (command, "\r\n")] = 0;
             memset (&message, 0, sizeof (struct c_msg));
             /*--------------------------------------------------------------------

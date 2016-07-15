@@ -543,6 +543,9 @@ extern	syscall	signaln(sid32, int32);
 extern	syscall	sleepms(int32);
 extern	syscall	sleep(int32);
 
+/* in file srbit.c */
+extern int srbit(byte[], int, int);
+
 /* in file spicontrol.c */
 extern	devcall	spicontrol(struct dentry *, int32, int32, int32);
 
@@ -625,7 +628,8 @@ extern	syscall	write(did32, char *, uint32);
 extern void amsg_handler(struct etherPkt *);
 extern status wsnode_join();
 extern status wsnode_sendack(struct etherPkt *);
-
+extern process wsnodeapp();
+extern void process_typb(struct etherPkt *);
 /* in file xdone.c */
 extern	void	xdone(void);
 

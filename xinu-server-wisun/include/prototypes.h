@@ -614,6 +614,7 @@ extern	syscall	write(did32, char *, uint32);
 /* in file wsserver.c */
 extern	process	wsserver(void);
 extern status wsserver_assign(struct netpacket *);
+extern status wsserver_xonoff(int, int);
 extern void amsg_handler(struct netpacket *);
 extern struct c_msg *toporeply();
 extern struct c_msg  *newtop(struct c_msg);

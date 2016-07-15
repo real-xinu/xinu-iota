@@ -21,8 +21,8 @@
 #include <lfilesys.h>
 #include <spi.h>
 #include <ticc1200.h>
-#include <ether.h>
 #include <radio.h>
+#include <ether.h>
 #include <gpio.h>
 #include <net.h>
 #include <nd.h>

@@ -95,7 +95,7 @@ process	netin ()
 		eth_ntoh(pkt);
         
 		/* Demultiplex on Ethernet type */
-
+                //pdump(pkt);
 		switch (pkt->net_ethtype) {
 
 		    case ETH_ARP:			/* Handle ARP	*/

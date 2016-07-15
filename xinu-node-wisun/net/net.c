@@ -69,7 +69,7 @@ void	net_init (void)
 
 		if(if_tab[iface].if_type == IF_TYPE_RADIO) {
 			sprintf(procname, "netin_%d", iface);
-			resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
+			//resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
 		}
 	}
 
@@ -116,7 +116,7 @@ process	netin (
 			panic("netin: Cannot read from device");
 		}
 
-		kprintf("IN: "); pdump(pkt);
+		//kprintf("IN: "); pdump(pkt);
 
 		if((pkt->net_ipvtch&0xf0) == 0x60) {
 			pkt->net_iface = iface;
@@ -140,8 +140,10 @@ process rawin(void) {
 	struct	etherPkt *pkt;
 	//struct netpacket *pkt;
 	int32	count;
-
+	int i;
+        //control(ETHER0, ETH_CTRL_PROMISC_ENABLE, 0,0);
 	while(TRUE) {
+
 
 		pkt = (struct etherPkt *)getbuf(netbufpool);
 		//pkt = (struct netpacket *)getbuf(netbufpool);
@@ -175,6 +177,7 @@ process rawin(void) {
 			amsg_handler(pkt);
 			break;
 		case ETH_TYPE_B:
+			process_typb(pkt);
 			break;
 
 		default:

@@ -40,8 +40,13 @@ struct	etherPkt {
 	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
 	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
 	uint16	type;			/* Ether type field		*/
-	
-        struct a_msg msg;	
+
+	union
+	{
+        struct a_msg msg;
+	struct radpacket radpkt;
+
+	};
 
 };
 #pragma pack()

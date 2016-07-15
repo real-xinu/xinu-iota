@@ -18,6 +18,8 @@
 #define NOTACTIV 0
 #define ALIVE    1
 #define NOTRESP  -1
+#define XOFF     0
+#define XON      1
 
 int32 nodeid = 0;
 int32 nnodes = 0;
@@ -64,6 +66,7 @@ void initialize_topo()
  * ----------------------------------------------------------------------------*/
 struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
 {
+    int xonoffid;
     struct c_msg *cmsg_reply;
     int32 mgm_msgtyp = ntohl ( ctlpkt.cmsgtyp );
     cmsg_reply = ( struct c_msg * ) getmem ( sizeof ( struct c_msg ) );
@@ -107,16 +110,30 @@ struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
         case C_XOFF:
             kprintf ( "Message type is %d\n", C_XOFF );
 
-            if ( online )
-                cmsg_reply->cmsgtyp = htonl ( C_OK );
+            if ( online ) {
+                xonoffid = ntohl (ctlpkt.xonoffid);
+
+                if (wsserver_xonoff (XOFF, xonoffid) == OK)
+                    cmsg_reply->cmsgtyp = htonl ( C_OK );
+
+                else
+                    cmsg_reply->cmsgtyp = htonl (C_ERR);
+            }
 
             break;
 
         case C_XON:
             kprintf ( "Message type is %d\n", C_XON );
 
-            if ( online )
-                cmsg_reply->cmsgtyp = htonl ( C_OK );
+            if ( online ) {
+                xonoffid = ntohl (ctlpkt.xonoffid);
+
+                if (wsserver_xonoff (XON, xonoffid) == OK)
+                    cmsg_reply->cmsgtyp = htonl ( C_OK );
+
+                else
+                    cmsg_reply->cmsgtyp = htonl (C_ERR);
+            }
 
             break;
 
@@ -161,7 +178,7 @@ struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
 struct etherPkt *create_etherPkt()
 {
     struct etherPkt *msg;
-    msg = ( struct etherPkt * ) getmem (sizeof(struct etherPkt));
+    msg = ( struct etherPkt * ) getmem (sizeof (struct etherPkt));
     //memset(msg, 0, sizeof(msg));
     return msg;
 }
@@ -194,11 +211,12 @@ void topo_update_mac ( struct netpacket *pkt )
     topo[nodeid].t_status = 1;
     int i;
     memcpy ( topo[nodeid].t_macaddr, pkt->net_ethsrc, ETH_ADDR_LEN );
-    for (i=0; i<6; i++) {
+    /*for (i=0; i<6; i++) {
     kprintf("%02x:", topo[nodeid].t_macaddr[i]);
      }
-    kprintf("\n");
+    kprintf("\n");*/
     freebuf ( ( char * ) pkt );
+    wsserver_xonoff (XON, nodeid);
     nodeid++;
 }
 
@@ -284,6 +302,12 @@ status topo_compr()
         }
     }
 
+    for (i = nnodes; i < 46; i++) {
+        if (old_topo[i].t_status == 1) {
+            wsserver_xonoff (XOFF, i);
+        }
+    }
+
     freebuf ( ( char * ) pkt );
     return OK;
 }
@@ -307,12 +331,10 @@ struct c_msg *newtop ( struct c_msg ctlpkt )
     if ( stat == OK ) {
         nodeid = 0;
 
-        if ( topo_compr() == OK )
-	{
-		cmsg_reply->cmsgtyp = htonl ( C_OK );
-	}
+        if ( topo_compr() == OK ) {
+            cmsg_reply->cmsgtyp = htonl ( C_OK );
 
-        else {
+        } else {
             memcpy ( &topo, &old_topo, sizeof ( topo ) );
             cmsg_reply->cmsgtyp = htonl ( C_ERR );
         }
@@ -323,6 +345,43 @@ struct c_msg *newtop ( struct c_msg ctlpkt )
     }
 
     return cmsg_reply;
+}
+
+/*-----------------------------------------------------------------
+ * X_OFF and X_ON Function
+ * ---------------------------------------------------------------*/
+status wsserver_xonoff (int cmd, int xonoffid)
+{
+    struct etherPkt *xonoff_msg;
+    xonoff_msg = create_etherPkt();
+    int32 retval;
+    xonoff_msg->type = htons ( ETH_TYPE_A );
+
+    if (cmd == 0) {
+        xonoff_msg->msg.amsgtyp = htonl (A_XOFF);
+
+    } else
+        xonoff_msg->msg.amsgtyp = htonl (A_XON);
+
+    if (xonoffid == -1) {
+        xonoff_msg->msg.anodeid = 0;
+        memcpy ( xonoff_msg->src, NetData.ethucast, ETH_ADDR_LEN );
+        memcpy ( xonoff_msg->dst, NetData.ethbcast, ETH_ADDR_LEN );
+
+    } else {
+        xonoff_msg->msg.anodeid = xonoffid;
+        memcpy ( xonoff_msg->src, NetData.ethucast, ETH_ADDR_LEN );
+        memcpy ( xonoff_msg->dst, topo[xonoffid].t_macaddr, ETH_ADDR_LEN );
+    }
+
+    retval = write ( ETHER0, ( char * ) xonoff_msg, sizeof ( struct etherPkt ) );
+    freemem ( ( char * ) xonoff_msg, sizeof ( struct etherPkt ) );
+
+    if ( retval > 0 ) {
+        return OK;
+
+    } else
+        return SYSERR;
 }
 /*-----------------------------------------------------------------
  *  Make the PING REPLY message
@@ -592,7 +651,6 @@ status wsserver_assign ( struct netpacket *pkt )
     /* fill out Ethernet packet fields */
     //for (i=0;i < 6;i++)
     //{
-
     //kprintf("%02x:", pkt->net_ethsrc[i]);
     //}
     memcpy ( assign_msg->src, NetData.ethucast, ETH_ADDR_LEN );
@@ -600,18 +658,18 @@ status wsserver_assign ( struct netpacket *pkt )
     assign_msg->type = htons ( ETH_TYPE_A );
     assign_msg->msg.amsgtyp = htonl ( A_ASSIGN ); /*Assign message */
     assign_msg->msg.anodeid = htonl ( nodeid );
-    //kprintf("Assign type: %d:%d\n", htonl(A_ASSIGN), htonl(nodeid)); 
+
+    //kprintf("Assign type: %d:%d\n", htonl(A_ASSIGN), htonl(nodeid));
     for ( i = 0; i < 6; i++ ) {
         assign_msg->msg.amcastaddr[i] = topo[nodeid].t_neighbors[i];
         //kprintf("%02x:", assign_msg->amcastaddr[i]);
     }
-   
+
     kprintf ( "\n*** Assigned Nodeid***: %d\n", nodeid );
     memset ( ack_info, 0, sizeof ( ack_info ) );
     memcpy ( ack_info, ( char * ) ( assign_msg ) + 14, 16 );
-    retval = write ( ETHER0, ( char * ) assign_msg, sizeof(struct etherPkt) );
-    
-    freemem ( ( char * ) assign_msg, sizeof(struct etherPkt) );
+    retval = write ( ETHER0, ( char * ) assign_msg, sizeof (struct etherPkt) );
+    freemem ( ( char * ) assign_msg, sizeof (struct etherPkt) );
     freebuf ( ( char * ) pkt );
 
     if ( retval > 0 ) {
@@ -675,7 +733,8 @@ void  amsg_handler ( struct netpacket *pkt )
      * Extract message type for TYPE A frames
      * ------------------------------------------*/
     int32 amsgtyp = ntohl ( node_msg->msg.amsgtyp );
-    //kprintf("type:%d\n", amsgtyp); 
+
+    //kprintf("type:%d\n", amsgtyp);
     switch ( amsgtyp ) {
         case A_JOIN:
             kprintf ( "====>Join message is received\n" );

@@ -9,7 +9,7 @@ download n 109 xinu.boot.n
 download n 110 xinu.boot.n
 download n 111 xinu.boot.n
 download n 112 xinu.boot.n
-donwload n 113 xinu.boot.n
+download n 113 xinu.boot.n
 download n 114 xinu.boot.n
 download n 115 xinu.boot.n
 download n 116 xinu.boot.n

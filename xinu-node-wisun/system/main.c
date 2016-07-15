@@ -17,24 +17,25 @@ process	main(void)
 {
 	/* Start the network */
 	net_init();
-
-	struct etherPkt *pkt = getmem(1514);
-	memset(pkt->dst, 0xff, 6);
-	memcpy(pkt->src, ethertab[0].devAddress, 6);
-	pkt->type = 0x1234;
-
-	int i;
-	//for(i = 0; i  <10; i++) {
-	//	write(ETHER0, pkt, 100);
-		sleep(3);
-//	}
+	
+	
+        sleep(3);
 
 	kprintf("\n...creating a node\n");
 	recvclr();
+
+
+       
 	//resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
 
 	/* Wait for shell to exit and recreate it */
         wsnode_join();
+	sleep(1);
+        resume(create(wsnodeapp, 8192, 50, "wsnodeapp", 1, CONSOLE));
+
+	
+
+
 	/*while (TRUE) {
 		receive();
 		sleepms(200);
