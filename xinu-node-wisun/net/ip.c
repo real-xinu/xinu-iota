@@ -208,7 +208,7 @@ int32	ip_send (
 	int32	iface;		/* Interface index	*/
 	intmask	mask;		/* Saved interrupt mask	*/
 	int32	retval;		/* Return value		*/
-	int32	i;		/* For loop index	*/
+	//int32	i;		/* For loop index	*/
 
 	if(pkt == NULL) {
 		return SYSERR;
@@ -367,7 +367,7 @@ int32	ip_send_eth (
 	intmask	mask;		/* Saved interrupt mask	*/
 	int32	pktlen;		/* Length of packet	*/
 	int32	retval;		/* Return value		*/
-	int32	i;		/* For loop index	*/
+	//int32	i;		/* For loop index	*/
 
 	if(pkt == NULL) {
 		return SYSERR;
@@ -565,6 +565,7 @@ void	ip_print (
 	)
 {
 	int32	i;
+	i = 0;
 	uint16	*ptr16;
 
 	if(ip == NULL) {

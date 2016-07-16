@@ -87,7 +87,7 @@ process	netin (
 	struct	ifentry *ifptr;	/* Pointer to interface	*/
 	struct	netpacket *pkt;	/* Pointer to packet	*/
 	int32	count;
-	int32	i;
+	//int32	i;
 
 	if((iface < 0) || (iface > NIFACES)) {
 		return SYSERR;
@@ -140,7 +140,7 @@ process rawin(void) {
 	struct	etherPkt *pkt;
 	//struct netpacket *pkt;
 	int32	count;
-	int i;
+	//int i;
         //control(ETHER0, ETH_CTRL_PROMISC_ENABLE, 0,0);
 	while(TRUE) {
 

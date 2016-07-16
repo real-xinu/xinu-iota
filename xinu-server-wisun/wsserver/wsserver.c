@@ -209,7 +209,7 @@ status init_topo ( char *filename )
 void topo_update_mac ( struct netpacket *pkt )
 {
     topo[nodeid].t_status = 1;
-    int i;
+    //int i;
     memcpy ( topo[nodeid].t_macaddr, pkt->net_ethsrc, ETH_ADDR_LEN );
     /*for (i=0; i<6; i++) {
     kprintf("%02x:", topo[nodeid].t_macaddr[i]);

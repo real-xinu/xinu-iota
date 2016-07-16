@@ -14,11 +14,11 @@ int32	tcpparse(
 	  int32		*active		/* Ptr to active/passive value	*/
 	)
 {
-	char		*ipstart;	/* Start of IP address		*/
-	char		ch;		/* One character from the string*/
-	int32		i;		/* Index used during copy	*/
-	char		tmpstr[20];	/* Temporary to hold IP portion	*/
-	uint32		port;		/* Port value during calculation*/
+	//char		*ipstart;	/* Start of IP address		*/
+	//char		ch;		/* One character from the string*/
+	//int32		i;		/* Index used during copy	*/
+	//char		tmpstr[20];	/* Temporary to hold IP portion	*/
+	//uint32		port;		/* Port value during calculation*/
 
 	return OK;
 

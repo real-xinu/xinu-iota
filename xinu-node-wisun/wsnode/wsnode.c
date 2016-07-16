@@ -172,7 +172,7 @@ status wsnode_sendack ( struct etherPkt *node_msg )
 -----------------------------------------------------------------*/
 void print_info()
 {
-    int i, j;
+    //int i, j;
     kprintf ( "node id:%d\n", info.nodeid );
     /*for ( j = 0; j < 6; j++ ) {
         for ( i = 7; i >= 0; i-- ) {

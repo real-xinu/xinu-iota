@@ -1,3 +1,7 @@
+/* in file _6lowpan.c */
+extern int32 _6lpwrite(void *, void *, byte *, byte *);
+extern int32 _6lpread(void *, uint32, void *, byte *, byte *);
+
 /* in file addargs.c */
 extern	status	addargs(pid32, int32, int32[], int32,char *, void *);
 
@@ -117,6 +121,9 @@ extern	syscall	getc(did32);
 
 /* in file getitem.c */
 extern	pid32	getfirst(qid16);
+extern pid32 getlast(qid16);
+extern pid32 getitem(pid32);
+
 
 /* in file getmem.c */
 extern	char	*getmem(uint32);
@@ -133,6 +140,8 @@ extern	char	*getstk(uint32);
 /* in file gettime.c */
 extern	status	gettime(uint32 *);
 
+
+
 /* in file getutime.c */
 extern	status	getutime(uint32 *);
 
@@ -140,18 +149,21 @@ extern	status	getutime(uint32 *);
 extern	void	halt(void);
 
 /* in file icmp.c */
-/*
+
 extern	void	icmp_init(void);
 extern	void	icmp_in(struct netpacket *);
-extern	int32	icmp_register(uint32);
-extern	int32	icmp_recv(int32, char *, int32, uint32);
-extern	status	icmp_send(uint32, uint16, uint16, uint16, char *, int32);
+extern	int32	icmp_register(int32, byte[], byte[], byte, byte);
+extern	int32	icmp_recv(int32, char *, uint32, uint32);
+extern int32 icmp_recvn(int32[], uint32, char *, uint32 *, uint32);
+extern	int32	icmp_send(int32, byte, byte, struct ipinfo *, char *, int32);
 extern	struct	netpacket *icmp_mkpkt(uint32, uint16, uint16, uint16, char *, int32);
+extern int32 icmp_recvaddr(int32, char *, uint32, uint32, struct ipinfo *);
+extern int32 icmp_recvnaddr(int32[], uint32, char *, uint32 *, uint32, struct ipinfo *);
 extern	status	icmp_release(int32);
-extern	uint16	icmp_cksum(char *, int32);
+extern	uint16	icmp_cksum(struct netpacket *);
 extern	void	icmp_hton(struct netpacket *);
 extern	void	icmp_ntoh(struct netpacket *);
-*/
+
 /* in file init.c */
 extern	syscall	init(did32);
 
@@ -174,6 +186,13 @@ extern	status	ip_send(struct netpacket *);
 extern	void	ip_local(struct netpacket *);
 extern	status	ip_out(struct netpacket *);
 extern	int32	ip_route(uint32);
+extern int32 ip_init(void);
+extern void ip_recv(struct netpacket *);
+extern int32  ip_send_rad(struct netpacket *);
+extern int32 ip_send_eth(struct netpacket *);
+extern int32 ip_prochbh(byte *);
+extern void ip_print(byte *);
+
 /*extern	uint16	ipcksum(struct netpacket *);*/
 extern	void	ip_ntoh(struct netpacket *);
 extern	void	ip_hton(struct netpacket *);
@@ -303,6 +322,17 @@ extern	bpid32	mkbufpool(int32, int32);
 extern	syscall	mount(char *, char *, did32);
 extern	int32	namlen(char *, int32);
 
+/* in file mq.c */
+extern void mqinit(void);
+extern int32 mqcreate(int32);
+extern int32 mqdelete(int32);
+extern int32 mqsend(int32, int32);
+extern int32 mqrecv(int32);
+extern int32 mqpoll(int32);
+extern int32 mqdisable(int32);
+extern int32 mqenable(int32);
+
+
 /* in file naminit.c */
 extern	status	naminit(void);
 
@@ -317,6 +347,17 @@ extern	devcall	namopen(struct dentry *, char *, char *);
 /* in file nd.c */
 extern	void	nd_init(int32);
 extern	process	nd_in(int32);
+extern void nd_in_rtrsol(int32, struct nd_rtrsol *, uint32, struct ipinfo *);
+extern void nd_in_rtradv(int32, struct nd_rtradv *, uint32, struct ipinfo *);
+extern void nd_in_nbrsol(int32, struct nd_nbrsol *, uint32, struct ipinfo *);
+extern void nd_in_nbradv(int32, struct nd_nbradv *, int32, struct ipinfo *);
+extern int32 nd_reg_address(int32, int32, byte[]);
+extern int32 nd_resolve_eth(int32, byte *, byte *);
+extern process nd_nud(int32, int32);
+
+/* in file netifac.c */
+extern void netiface_init(void);
+
 
 /* in file newqueue.c */
 extern	qid16	newqueue(void);
@@ -363,6 +404,11 @@ extern	syscall	ptsend(int32, umsg32);
 
 /* in file putc.c */
 extern	syscall	putc(did32, char);
+
+/* in file queue.c*/
+extern pid32 dequeue(qid16);
+extern pid32 enqueue(pid32, qid16);
+
 
 /* in file radcontrol.c */
 extern  devcall radcontrol(struct dentry *, int32, int32, int32);
@@ -565,6 +611,100 @@ extern	int32	insw(int32, int32 ,int32);
 /* in file suspend.c */
 extern	syscall	suspend(pid32);
 
+/* in file tcbclear.c */
+extern void tcbclear(struct tcb *);
+
+/* in file tcbref.c */
+extern void tcbref(struct tcb *);
+extern void tcbunref(struct tcb *);
+
+/* in file tcp_cksum.c */
+//static uint16 localcksum(char *, int32);
+extern uint16 tcp_cksum(struct netpacket *);
+
+/* in file tcp_close */
+extern int32 tcp_close(int32);
+
+/* in file tcp_hton.c */
+extern void tcp_hton(struct netpacket *);
+extern void tcp_ntoh(struct netpacket *);
+
+/* in file tcp_in.c */
+extern void tcp_in(struct netpacket *);
+
+/* in file tcp_init.c */
+extern int32 tcp_init(void);
+
+/* in file tcp_out.c */
+extern process tcp_out(void);
+
+/* in file tcp_recv */
+extern int32 tcp_recv(int32, char *, int32);
+
+/* in file tcp_register.c */
+//extern static int32 checktuple(byte[], uint16, byte[], uint16);
+extern int32 tcp_register(int32, byte[], uint16, int32);
+
+/*in file tcp_send.c */
+extern int32 tcp_send(int32, char *, int32);
+
+/*in file tcpabort.c */
+extern void tcpabort(struct tcb *);
+
+
+/* in file tcpack.c */
+
+extern void tcpack(struct tcb *, int32);
+
+/* in file tcpalloc.c */
+extern struct netpacket *tcpalloc(struct tcb *, int32);
+
+/* in file tcpclosing.c */
+//extern int32 tcpclosing(struct tcb *, struct netpacket *);
+/* in file tcpdata.c */
+extern int32 tcpdata(struct tcb *, struct netpacket *);
+
+/* in file tcpdisp.c */
+extern int32 tcpnull(struct tcb *, struct netpacket *);
+extern void tcpdisp(struct tcb *, struct netpacket *);
+
+/* in file tcpreset.c*/
+extern int32 tcpreset(struct netpacket *);
+
+/* in file tcprto.c */
+extern int32 tcprto(struct tcb *);
+
+
+
+/* in file tcpnextseg.c */
+extern int32 tcpnextseg(struct tcb *, int32 *);
+
+/*in file tcpsendseg.c */
+extern void tcpsendseg(struct tcb *, int32, int32, int32);
+
+/* in file tcptimer.c */
+extern void tcptmset(int32, struct tcb *, int32);
+extern void tcptmdel(struct tcb *, int32);
+
+
+/*in file tcpupdate.c */
+extern int32 tcpupdate(struct tcb *, struct netpacket *);
+
+/* in file tcpxmit.c */
+extern int32 tcpxmit(struct tcb *);
+
+/*in file tcpwake.c */
+extern int32 tcpwake(struct tcb *, int32);
+
+
+/* in file timer.c */
+extern void tminit(void);
+extern process timer(void);
+extern int32 tmfire();
+extern int32 tmset(int32, int32, int32);
+extern int32 tmdel(int32, int32);
+
+
 /* in file ttycontrol.c */
 extern	devcall	ttycontrol(struct dentry *, int32, int32, int32);
 
@@ -596,18 +736,18 @@ extern	devcall	ttyread(struct dentry *, char *, int32);
 extern	devcall	ttywrite(struct dentry *, char *, int32);
 
 /* in file udp.c */
-/*
+
 extern	void	udp_init(void);
 extern	void	udp_in(struct netpacket *);
-extern	uid32	udp_register(uint32, uint16, uint16);
-extern	int32	udp_recv(uid32, char *, int32, uint32);
-extern	int32	udp_recvaddr(uid32, uint32 *, uint16 *, char *, int32, uint32);
-extern	status	udp_send(uid32, char *, int32);
+//extern	int32	udp_register(int32, byte[],uint16, uint16);
+extern	int32	udp_recv(int32, char *, int32, uint32);
+extern	int32	udp_recvaddr(int32, char *, int32, uint32, struct ipinfo *);
+extern	int32	udp_send(int32, char *, int32);
 extern	status	udp_sendto(uid32, uint32, uint16, char *, int32);
-extern	status	udp_release(uid32);
 extern	void	udp_ntoh(struct netpacket *);
 extern	void	udp_hton(struct netpacket *);
-*/
+extern uint16 udp_cksum(struct netpacket *);
+
 
 /* in file unsleep.c */
 extern	syscall	unsleep(pid32);
