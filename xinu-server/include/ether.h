@@ -12,6 +12,7 @@ typedef	unsigned char	Eaddr[ETH_ADDR_LEN];/* a physical Ethernet address*/
 
 /* Ethernet packet header */
 
+#pragma pack(1)
 struct	etherPkt {
 	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
 	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
@@ -35,6 +36,7 @@ struct	etherPkt {
 
 	};
 };
+#pragma pack()
 
 #define	ETH_HDR_LEN		14	/* Length of Ethernet packet 	*/
 					/*  header			*/

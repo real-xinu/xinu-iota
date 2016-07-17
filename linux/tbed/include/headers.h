@@ -13,6 +13,16 @@
 #define NOTRESP -1
 #define NOTACTIV 0
 
+//cs-console commands
+#define DOWNLOAD "DOWNLOAD"
+#define POWERCYCLE "POWERCYCLE"
+#define EXEC "cs-console"
+#define SERVERIMG "xinu.boot.s"
+#define NODEIMG   "xinu.boot.n"
+#define XINUSERVER "xinuserver.cs.purdue.edu"
+#define SERVER "beagle183"
+#define NETIP   "128.10.137."
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,8 +34,11 @@
 #include "control-protocol.h"
 #include "compatibility.h"
 #include <time.h>
+#include <fcntl.h>
+#include "console_connect.h"
 int s;
 FILE *fp;
+char *path = "/homes/arastega/Wi-sun-repo/xinu-bbb/remote-file-server/";
 extern int srbit (byte addr[], int, int);
-
-
+struct sockaddr_in si_other;
+extern int makeConnection(char *, char *, char *); 

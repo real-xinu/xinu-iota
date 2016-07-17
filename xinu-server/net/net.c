@@ -93,9 +93,9 @@ process	netin ()
 		/* Convert Ethernet Type to host order */
 
 		eth_ntoh(pkt);
-        
+                //kprintf("%2x\n", pkt->net_ethtype);       
 		/* Demultiplex on Ethernet type */
-
+                
 		switch (pkt->net_ethtype) {
 
 		    case ETH_ARP:			/* Handle ARP	*/
@@ -109,6 +109,7 @@ process	netin ()
 			freebuf((char *)pkt);
 			continue;
 		    case ETH_TYPE_A:
+                        //pdump(pkt);
 			amsg_handler(pkt);
 			continue;
 		    case ETH_TYPE_B:

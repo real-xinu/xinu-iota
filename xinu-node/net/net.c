@@ -84,6 +84,7 @@ process	netin ()
 		/* Obtain next packet that arrives */
 
 		retval = read(ETHER0, (char *)pkt, PACKLEN);
+		//kprintf("size:%d\n", retval);
 		//pdump(pkt);
 		if(retval == SYSERR) {
 			panic("Cannot read from Ethernet\n");

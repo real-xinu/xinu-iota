@@ -1,10 +1,10 @@
 Management Client
 =================
 
-This directory contains files for the Linux management client that will
+This directory contains files for the management application that will
 connect to the testbed server.
 
-USAGE: ./mgmt-server "ip address of testbed server"
+USAGE: ./tbed ( `<IP>` | `<script>`  `<log>` | `<script>` `<stdout>`) 
 
 
 
