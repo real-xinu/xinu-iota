@@ -59,23 +59,4 @@ nping all
 online
 ts_find
 nping all
-newtop Top10.0
-topdump
-nping 0
-nping 4
-nping all
-offline 
-nping all
-online
-nping all
-topdump
-newtop Top1.0
-topdump
-nping all
-nping 0
-nping 1
-nping 2
-offline 
-nping all
-online
 nping all

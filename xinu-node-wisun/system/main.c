@@ -31,8 +31,9 @@ process	main(void)
 	/* Wait for shell to exit and recreate it */
         wsnode_join();
 	sleep(1);
+	//init_udp_monitor();
         resume(create(wsnodeapp, 8192, 50, "wsnodeapp", 1, CONSOLE));
-
+        
 	
 
 

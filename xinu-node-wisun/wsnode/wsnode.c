@@ -3,6 +3,8 @@
 #include <xinu.h>
 #include <stdio.h>
 int xon = 1;
+#define PORT 55001
+int32 slot;
 /*------------------------------------------------------------------
  a data strucure to keep assigned multicast address and the node ID.
 *------------------------------------------------------------------*/
@@ -20,7 +22,7 @@ struct node_info info;
 void process_typb (struct etherPkt *pkt)
 {
     int i;
-
+    
     if (xon) {
         if (srbit (pkt->dst, info.nodeid, 1 )) {
             for (i = 0; i < 6; i++) {
@@ -34,6 +36,7 @@ void process_typb (struct etherPkt *pkt)
             }
 
             kprintf ("\ndata:%s\n", pkt->radpkt.rad_data);
+	    //udp_send(slot, (char *) pkt, sizeof(struct etherPkt));
         }
 
         freebuf ((char *)pkt);
@@ -64,7 +67,7 @@ process wsnodeapp()
 
     //kprintf("\n");
     while (TRUE) {
-        sleep (1);
+	sleepms(8);
         int flag = 0;
         kprintf ("xon:%d\n", xon);
 
@@ -83,7 +86,8 @@ process wsnodeapp()
                 struct radpacket radpkt;
                 char *buf;
                 buf = (char *)getmem (50 * sizeof (char));
-                buf = "Hello world";
+                //buf = info.nodeid;
+		sprintf(buf, "%d", info.nodeid);
                 memcpy (radpkt.rad_data, buf, 50 * sizeof (char) );
                 pkt = ( struct etherPkt * ) getmem ( sizeof ( struct etherPkt) );
                 memcpy (pkt->src, NetData.ethucast, ETH_ADDR_LEN );
