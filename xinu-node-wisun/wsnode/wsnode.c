@@ -24,9 +24,9 @@ void process_typb (struct etherPkt *pkt)
     int i;
     
     if (xon) {
-        if (srbit (pkt->dst, info.nodeid, 1 )) {
+        /*if (srbit (pkt->dst, info.nodeid, 1 )) {
             for (i = 0; i < 6; i++) {
-                kprintf ("%02x:", pkt->src[i]);
+                //kprintf ("%02x:", pkt->src[i]);
             }
 
             kprintf ("\n");
@@ -37,7 +37,7 @@ void process_typb (struct etherPkt *pkt)
 
             kprintf ("\ndata:%s\n", pkt->radpkt.rad_data);
 	    //udp_send(slot, (char *) pkt, sizeof(struct etherPkt));
-        }
+        }*/
 
         freebuf ((char *)pkt);
 
@@ -67,9 +67,9 @@ process wsnodeapp()
 
     //kprintf("\n");
     while (TRUE) {
-	sleepms(8);
+	sleepms(500);
         int flag = 0;
-        kprintf ("xon:%d\n", xon);
+        //kprintf ("xon:%d\n", xon);
 
         if (xon) {
             if (info.mcastaddr[0] == 1) {
@@ -80,6 +80,8 @@ process wsnodeapp()
                         flag++;
                 }
             }
+	    else if(info.mcastaddr[0] == 0)
+		    flag = 6;
 
             if (flag != 6) {
                 struct etherPkt *pkt;

@@ -107,30 +107,79 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_RESTART);
 
     } else if (!strcmp (array_token[0], "xon")) {
-        message.cmsgtyp = htonl (C_XON);
-        num = atoi (array_token[1]);
-
-        if (((num >= 0) && (num <= 45)) || (num == -1)) {
-            message.xonoffid = htonl (num);
+        if (!strcmp (array_token[1], "-all")) {
+            message.cmsgtyp = htonl (C_XON);
+            message.xonoffid = htonl (ALL);
 
         } else {
-            fprintf (fp, "Incorrect ID\n");
-            message.cmsgtyp = htonl (C_ERR);
+             message.cmsgtyp = htonl (C_XON);
+            if (isnumeric (array_token[1]) == 1) {
+                num = atoi (array_token[1]);
+
+            if ((num >= 0) && (num <= 45)) {
+                message.xonoffid = htonl (num);
+
+            } else {
+                fprintf (fp, "Incorrect ID\n");
+                message.cmsgtyp = htonl (C_ERR);
+            }
+
+        } else {
+            for (i = 0; i < 46; i++) {
+		//printf("name:input %s:%s \n",map_list[i] , array_token[1]);
+                if (! (strcmp (map_list[i], array_token[1]))) {
+                    message.xonoffid = htonl (i);
+                    flag = 1;
+		    //break;
+                }
+            }
+
+            if (flag == 0) {
+                fprintf (fp, "Incorrect Node Name\n");
+                message.cmsgtyp = htonl (C_ERR);
+            }
         }
+  
+            }
 
     } else if (!strcmp (array_token[0], "xoff")) {
-        message.cmsgtyp = htonl (C_XOFF);
-        num = atoi (array_token[1]);
-
-        if (((num >= 0) && (num <= 45)) || (num == -1)) {
-            message.xonoffid = htonl (num);
+        if (!strcmp (array_token[1], "-all")) {
+            message.cmsgtyp = htonl (C_XOFF);
+            message.xonoffid = htonl (ALL);
 
         } else {
-            fprintf (fp, "Incorrect ID\n");
-            message.cmsgtyp = htonl (C_ERR);
+            message.cmsgtyp = htonl (C_XOFF);
+            if (isnumeric (array_token[1]) == 1) {
+                num = atoi (array_token[1]);
+
+            if ((num >= 0) && (num <= 45)) {
+                message.xonoffid = htonl (num);
+
+            } else {
+                fprintf (fp, "Incorrect ID\n");
+                message.cmsgtyp = htonl (C_ERR);
+            }
+
+        } else {
+            for (i = 0; i < 46; i++) {
+		//printf("name:input %s:%s \n",map_list[i] , array_token[1]);
+                if (! (strcmp (map_list[i], array_token[1]))) {
+                    message.xonoffid = htonl (i);
+                    flag = 1;
+		    //break;
+                }
+            }
+
+            if (flag == 0) {
+                fprintf (fp, "Incorrect Node Name\n");
+                message.cmsgtyp = htonl (C_ERR);
+            }
         }
 
-    } else if ((!strcmp (array_token[0], "nping")) && strcmp (array_token[1], " ") && strcmp (array_token[1], "all")) {
+
+        }
+
+    } else if ((!strcmp (array_token[0], "nping")) && strcmp (array_token[1], " ") && strcmp (array_token[1], "-all")) {
         message.cmsgtyp = htonl (C_PING_REQ);
         message.clength = htonl (sizeof (message));
 
@@ -147,9 +196,11 @@ struct c_msg  command_handler (char command[BUFLEN])
 
         } else {
             for (i = 0; i < 46; i++) {
+		//printf("name:input %s:%s \n",map_list[i] , array_token[1]);
                 if (! (strcmp (map_list[i], array_token[1]))) {
                     message.pingnodeid = htonl (i);
                     flag = 1;
+		    //break;
                 }
             }
 
@@ -159,7 +210,7 @@ struct c_msg  command_handler (char command[BUFLEN])
             }
         }
 
-    } else if ((!strcmp (array_token[0], "nping")) && strcmp (array_token[1], " ") && (!strcmp (array_token[1], "all"))) {
+    } else if ((!strcmp (array_token[0], "nping")) && strcmp (array_token[1], " ") && (!strcmp (array_token[1], "-all"))) {
         message.cmsgtyp = htonl (C_PING_ALL);
         message.pingnodeid = htonl (ALL);
 
@@ -253,7 +304,7 @@ struct c_msg  command_handler (char command[BUFLEN])
 
 /*------------------------------------------------------------------------------
  *
- *download_img: dowload an image (node or testbed server image) to a specefic backend 
+ *download_img: dowload an image (node or testbed server image) to a specefic backend
  *-------------------------------------------------------------------------------*/
 int download_img (char * filename, char * class, char * connection, char * host)
 {
