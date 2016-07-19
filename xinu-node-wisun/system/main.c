@@ -19,7 +19,7 @@ process	main(void)
 	net_init();
 	
 	
-        sleep(3);
+        sleep(5);
 
 	kprintf("\n...creating a node\n");
 	recvclr();
@@ -30,7 +30,7 @@ process	main(void)
 
 	/* Wait for shell to exit and recreate it */
         wsnode_join();
-	sleep(1);
+	sleep(2);
 	//init_udp_monitor();
         resume(create(wsnodeapp, 8192, 50, "wsnodeapp", 1, CONSOLE));
         

@@ -16,10 +16,11 @@ download n 116 xinu.boot.n
 download n 117 xinu.boot.n
 download n 118 xinu.boot.n
 download n 119 xinu.boot.n
+download n 120 xinu.boot.n
+download n 121 xinu.boot.n
 download t 183 xinu.boot.s
 pcycle t
 delay 20000000
-pcycle 102
 pcycle 103
 pcycle 104
 pcycle 105
@@ -37,26 +38,13 @@ pcycle 116
 pcycle 117
 pcycle 118
 pcycle 119
-delay 30000000
-ts_find
-ts_check
-nping all
+pcycle 120
+pcycle 121
+delay 35000000
+nping -all
 newtop Top15.0
-nping all
 topdump
-nping 0
-nping 1
-nping 2
-nping 3
-nping a
-nping b
-nping 20
-nping a
-nping b
-nping c
-offline
-nping all
-online
-ts_find
-nping all
-nping all
+nping -all
+newtop Top10.0
+topdump
+nping -all

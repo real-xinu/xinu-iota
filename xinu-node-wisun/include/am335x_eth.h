@@ -164,7 +164,7 @@ struct	eth_a_rx_desc {
 #define ETH_AM335X_RDS_OWN	0x2000
 #define ETH_AM335X_RDS_EOQ	0x1000
 
-#define ETH_AM335X_RX_RING_SIZE	32
+#define ETH_AM335X_RX_RING_SIZE	64
 
 struct	eth_a_tx_desc {
 	struct	eth_a_tx_desc *next;

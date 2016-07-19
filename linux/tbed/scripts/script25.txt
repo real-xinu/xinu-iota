@@ -1,0 +1,75 @@
+download n 102 xinu.boot.n
+download n 103 xinu.boot.n
+download n 104 xinu.boot.n
+download n 105 xinu.boot.n
+download n 106 xinu.boot.n
+download n 107 xinu.boot.n
+download n 108 xinu.boot.n
+download n 109 xinu.boot.n
+download n 110 xinu.boot.n
+download n 111 xinu.boot.n
+download n 112 xinu.boot.n
+download n 113 xinu.boot.n
+download n 114 xinu.boot.n
+download n 115 xinu.boot.n
+download n 116 xinu.boot.n
+download n 117 xinu.boot.n
+download n 118 xinu.boot.n
+download n 119 xinu.boot.n
+download n 120 xinu.boot.n
+download n 121 xinu.boot.n
+download n 122 xinu.boot.n
+download n 123 xinu.boot.n
+download n 124 xinu.boot.n
+download n 125 xinu.boot.n
+download n 126 xinu.boot.n
+download n 127 xinu.boot.n
+download n 128 xinu.boot.n
+download n 129 xinu.boot.n
+download t 183 xinu.boot.s
+pcycle t
+delay 20000000
+pcycle 103
+pcycle 104
+pcycle 105
+pcycle 106
+pcycle 107
+pcycle 108
+pcycle 109
+pcycle 110
+pcycle 111
+pcycle 112
+pcycle 113
+pcycle 114
+pcycle 115
+pcycle 116
+pcycle 117
+pcycle 118
+pcycle 119
+pcycle 120
+pcycle 121
+pcycle 122
+pcycle 123
+pcycle 124
+pcycle 125
+pcycle 126
+pcycle 127
+pcycle 128
+pcycle 129
+delay 50000000
+ts_find
+ts_check
+newtop Top25.0
+topdump
+nping -all
+nping 0
+nping 1
+nping 2
+nping 4
+nping 23
+nping a_0
+nping a
+nping a_2
+offline
+online
+nping -all
