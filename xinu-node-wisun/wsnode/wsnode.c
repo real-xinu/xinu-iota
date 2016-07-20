@@ -21,8 +21,8 @@ struct node_info info;
  * ------------------------------------------------------*/
 void process_typb (struct etherPkt *pkt)
 {
-    int i;
-    
+    //int i;
+
     if (xon) {
         /*if (srbit (pkt->dst, info.nodeid, 1 )) {
             for (i = 0; i < 6; i++) {
@@ -36,9 +36,8 @@ void process_typb (struct etherPkt *pkt)
             }
 
             kprintf ("\ndata:%s\n", pkt->radpkt.rad_data);
-	    //udp_send(slot, (char *) pkt, sizeof(struct etherPkt));
+        //udp_send(slot, (char *) pkt, sizeof(struct etherPkt));
         }*/
-
         freebuf ((char *)pkt);
 
     } else if (!xon) {
@@ -54,20 +53,19 @@ process wsnodeapp()
 {
     int32 retval;
     int j;
+    /* DEBUG */   /*
+        for (j = 0; j < 6; j++) {
+            //kprintf("%02x", info.mcastaddr[j]);
+        }
 
-    /*
-     for (j = 0; j < 6; j++) {
-         //kprintf("%02x", info.mcastaddr[j]);
-     }
-
-     //kprintf("\n");
-     for (j = 0; j < 6; j++) {
-         //    kprintf("%02x", NetData.ethucast[j]);
-     }*/
+        //kprintf("\n");
+        for (j = 0; j < 6; j++) {
+            //    kprintf("%02x", NetData.ethucast[j]);
+        }*/
 
     //kprintf("\n");
     while (TRUE) {
-	sleepms(500);
+        sleepms (200);
         int flag = 0;
         //kprintf ("xon:%d\n", xon);
 
@@ -79,9 +77,9 @@ process wsnodeapp()
                     if (info.mcastaddr[j] == 0)
                         flag++;
                 }
-            }
-	    else if(info.mcastaddr[0] == 0)
-		    flag = 6;
+
+            } else if (info.mcastaddr[0] == 0)
+                flag = 6;
 
             if (flag != 6) {
                 struct etherPkt *pkt;
@@ -89,7 +87,7 @@ process wsnodeapp()
                 char *buf;
                 buf = (char *)getmem (50 * sizeof (char));
                 //buf = info.nodeid;
-		sprintf(buf, "%d", info.nodeid);
+                sprintf (buf, "%d", info.nodeid);
                 memcpy (radpkt.rad_data, buf, 50 * sizeof (char) );
                 pkt = ( struct etherPkt * ) getmem ( sizeof ( struct etherPkt) );
                 memcpy (pkt->src, NetData.ethucast, ETH_ADDR_LEN );
@@ -179,14 +177,14 @@ status wsnode_sendack ( struct etherPkt *node_msg )
 void print_info()
 {
     //int i, j;
-    kprintf ( "node id:%d\n", info.nodeid );
-    /*for ( j = 0; j < 6; j++ ) {
-        for ( i = 7; i >= 0; i-- ) {
-            //         kprintf("%d ", (info.mcastaddr[j]>> i) &0x01);
-        }
+    /*DEBUG */ //   kprintf ( "node id:%d\n", info.nodeid );
+    /*DEBUG */    /*for ( j = 0; j < 6; j++ ) {
+            for ( i = 7; i >= 0; i-- ) {
+                //         kprintf("%d ", (info.mcastaddr[j]>> i) &0x01);
+            }
 
-        //  kprintf(" ");
-    }*/
+            //  kprintf(" ");
+        }*/
 }
 
 
@@ -223,16 +221,19 @@ void amsg_handler ( struct etherPkt *node_msg )
 
         case A_RESTART:
             kprintf ( "<==== RESTART message is received\n" );
+            freebuf ((char *) node_msg);
             break;
 
         case A_XOFF:
             xon = 0;
             kprintf ( "<====XOF message is received\n" );
+            freebuf ((char *) node_msg);
             break;
 
         case A_XON:
             xon = 1;
             kprintf ( "<==== XON message is received\n" );
+            freebuf ((char *) node_msg);
             break;
 
         case A_PING:
@@ -253,6 +254,10 @@ void amsg_handler ( struct etherPkt *node_msg )
                 kprintf ( "====> ACK message is sent\n" );
             }
 
+            break;
+
+        default:
+            freebuf ((char *) node_msg);
             break;
     }
 }

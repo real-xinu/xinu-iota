@@ -25,7 +25,7 @@ syscall	wait(
 		restore(mask);
 		return SYSERR;
 	}
-
+        /*DEBUG */ // kprintf("buff:%d\n", semptr->scount);
 	if (--(semptr->scount) < 0) {		/* If caller must block	*/
 		prptr = &proctab[currpid];
 		prptr->prstate = PR_WAIT;	/* Set state to waiting	*/
