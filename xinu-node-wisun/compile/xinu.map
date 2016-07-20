@@ -588,7 +588,7 @@ Linker script and memory map
                 0x81012524                wsnode_join
                 0x810125cc                wsnode_sendack
                 0x81012674                print_info
-                0x81012694                amsg_handler
+                0x81012678                amsg_handler
  .text          0x8101287c       0x2c binaries/ctxsw.o
                 0x8101287c                ctxsw
  .text          0x810128a8      0x100 binaries/intr.o
@@ -798,11 +798,11 @@ Linker script and memory map
                                 0x114 (size before relaxing)
  *fill*         0x81015057        0x1 
  .rodata.str1.4
-                0x81015058       0xf0 binaries/wsnode.o
-                                 0xfc (size before relaxing)
-                0x81015148                etext = ABSOLUTE (.)
+                0x81015058       0xe4 binaries/wsnode.o
+                                 0xf0 (size before relaxing)
+                0x8101513c                etext = ABSOLUTE (.)
                 0x81016000                . = ALIGN (0x1000)
- *fill*         0x81015148      0xeb8 
+ *fill*         0x8101513c      0xec4 
 
 .glue_7         0x81016000        0x0
  .glue_7        0x00000000        0x0 linker stubs

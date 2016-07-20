@@ -275,13 +275,13 @@ status topo_compr()
 
         if ( nodeid < i ) {
             freebuf ( ( char * ) pkt );
-	   kprintf("nodeid<i %d:%d\n",nodeid, i);
+            /*DEBUG */ //kprintf ("nodeid<i %d:%d\n", nodeid, i);
             return SYSERR;
         }
 
         if ( flag == 6 ) {
             topo[i].t_status = 1;
-            //kprintf("mcast addresses are the same\n");
+            /*DEBuG *///kprintf("mcast addresses are the same\n");
             wsserver_xonoff (XON, i);
             nodeid += 1;
 
@@ -299,7 +299,7 @@ status topo_compr()
 
             } else {
                 freebuf ( ( char * ) pkt );
-		kprintf("assign error\n");
+                kprintf ("assign error\n");
                 return SYSERR;
             }
         }
@@ -331,25 +331,27 @@ struct c_msg *newtop ( struct c_msg ctlpkt )
     strcpy ( fname, ( char * ) ctlpkt.fname );
     nnodes_temp = nnodes;
     stat = init_topo ( fname );
-    //kprintf("stat:%d\n", stat);
-    //print_topo();
+
+    /*DEBUG */ //kprintf("stat:%d\n", stat);
+
+    /*DEBUG *///print_topo();
+
     if ( stat == OK ) {
-	nodeid = 0;
+        nodeid = 0;
+
         if ( topo_compr() == OK ) {
             cmsg_reply->cmsgtyp = htonl ( C_OK );
 
         } else {
             memcpy ( &topo, &old_topo, sizeof ( topo ) );
-	    nnodes = nnodes_temp;
+            nnodes = nnodes_temp;
             cmsg_reply->cmsgtyp = htonl ( C_ERR );
-	   
         }
 
     } else {
         memcpy ( &topo, &old_topo, sizeof ( topo ) );
-	nnodes = nnodes_temp;
+        nnodes = nnodes_temp;
         cmsg_reply->cmsgtyp = htonl ( C_ERR );
-	
     }
 
     return cmsg_reply;
@@ -441,7 +443,7 @@ status nping ( int32 pingnodeid )
     /* fill out the Ethernet packet fields */
     memcpy ( ping_msg->src, NetData.ethucast, ETH_ADDR_LEN );
     memcpy ( ping_msg->dst, topo[pingnodeid].t_macaddr, ETH_ADDR_LEN );
-    //kprintf("node ID is: %d ,node mac address: ", pingnodeid);
+    /*DEBUG */ //kprintf("node ID is: %d ,node mac address: ", pingnodeid);
     /*for (i = 0; i<6; i++)
     {
         //  	    kprintf("%02x:", topo[pingnodeid].t_macaddr[i]);
@@ -479,15 +481,17 @@ struct c_msg * nping_all_reply ( struct c_msg ctlpkt )
     status stat = nping_all();
 
     if ( stat == OK ) {
-	    kprintf("nnodes:%d\n", nnodes);
-	    if (nnodes != 0)
-		    sleepms( nnodes + 20);
-	    else
-		    sleepms(MAXNODES + 20);
+        kprintf ("nnodes:%d\n", nnodes);
+
+        if (nnodes != 0)
+            sleepms ( nnodes + 20);
+
+        else
+            sleepms (MAXNODES + 20);
 
         for ( i = 0; i < MAXNODES; i++ ) {
             if ( topo[i].t_status == 1 ) {
-                //kprintf("i:ping ack flag  %d:%d\n", i,  ping_ack_flag[i]);
+                /*DEBUG */  //kprintf("i:ping ack flag  %d:%d\n", i,  ping_ack_flag[i]);
                 if ( ping_ack_flag[i] == 1 ) {
                     cmsg_reply->pingdata[ping_num].pnodeid = htonl ( i );
                     cmsg_reply->pingdata[ping_num].pstatus = htonl ( ALIVE );
@@ -500,7 +504,7 @@ struct c_msg * nping_all_reply ( struct c_msg ctlpkt )
             }
 
             ping_num++;
-            //kprintf("pingnum: %d\n",ping_num);
+            /*DEBUG */  //kprintf("pingnum: %d\n",ping_num);
         }
 
         cmsg_reply->cmsgtyp = htonl ( C_PING_ALL );
@@ -614,7 +618,6 @@ process	wsserver ()
                 kprintf ( "WARNING: UDP send error in testbed server\n" );
 
             } else {
-                //kprintf("here\n");
                 int32 reply_msgtyp = ntohl ( replypkt->cmsgtyp );
                 kprintf ( "* <==== Replied with %d\n", reply_msgtyp );
             }
@@ -657,31 +660,38 @@ status wsserver_senderr ( struct netpacket *pkt )
  * ----------------------------------------------------------*/
 status wsserver_assign ( struct netpacket *pkt )
 {
+    if (nodeid >= 46) {
+        freebuf ((char *)pkt);
+        return SYSERR;
+    }
 
-    /*if (nodeid >= 46)
-    {
-	    freebuf((char *)pkt);
-	    return SYSERR;
-    }*/
     struct etherPkt *assign_msg;
+
     assign_msg = create_etherPkt();
+
     int32 retval;
+
     int i;
+
     /* fill out Ethernet packet fields */
-    //for (i=0;i < 6;i++)
+    /*DEBUG */ //for (i=0;i < 6;i++)
     //{
     //kprintf("%02x:", pkt->net_ethsrc[i]);
     //}
     memcpy ( assign_msg->src, NetData.ethucast, ETH_ADDR_LEN );
+
     memcpy ( assign_msg->dst, pkt->net_ethsrc, ETH_ADDR_LEN );
+
     assign_msg->type = htons ( ETH_TYPE_A );
+
     assign_msg->msg.amsgtyp = htonl ( A_ASSIGN ); /*Assign message */
+
     assign_msg->msg.anodeid = htonl ( nodeid );
 
-    //kprintf("Assign type: %d:%d\n", htonl(A_ASSIGN), htonl(nodeid));
+    /*DEBUG *///kprintf("Assign type: %d:%d\n", htonl(A_ASSIGN), htonl(nodeid));
     for ( i = 0; i < 6; i++ ) {
         assign_msg->msg.amcastaddr[i] = topo[nodeid].t_neighbors[i];
-        //kprintf("%02x:", assign_msg->amcastaddr[i]);
+        /*DEBUG *///kprintf("%02x:", assign_msg->amcastaddr[i]);
     }
 
     kprintf ( "\n*** Assigned Nodeid***: %d\n", nodeid );
@@ -695,7 +705,7 @@ status wsserver_assign ( struct netpacket *pkt )
         return OK;
 
     } else {
-	//kprintf("here\n");
+        //kprintf("here\n");
         return SYSERR;
     }
 }
@@ -726,10 +736,9 @@ void ack_handler ( struct netpacket *pkt )
             kprintf ( "====>Assign ACK message is received\n" );
 
         } else if ( ack_info[3] == A_PING ) {
-            
             ping_ack_flag[i] = 1;
             freebuf ( ( char * ) pkt );
-            kprintf("--->Ping ACK message is received\n");
+            kprintf ("--->Ping ACK message is received\n");
 
         } else if ( ack_info[3] == A_PING_ALL ) {
             ping_ack_flag[i] = 1;
