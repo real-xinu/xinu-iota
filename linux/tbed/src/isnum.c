@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 /*---------------------------------------------------------
  * ISNUMERIC Function: To check a string is number or not
  * -------------------------------------------------------*/

@@ -1,8 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-extern const char * const  cmdtab[];
-extern int ncmd;
+#include "../include/macros.h"
+#include "../include/global.h"
+const char * const  cmdtab[] = {
+   "cleanup",
+   "delay",
+   "download",
+   "inc",
+   "newtop",
+   "nping",
+   "offline",
+   "online",
+   "pcycle",
+   "restart",
+   "tcp",
+   "topdump",
+   "ts_1",
+   "ts_check",
+   "ts_find",
+   "tshutdown",
+   "udp",
+   "xoff",
+   "xon"
+
+};
+
+int ncmd = sizeof(cmdtab)/ sizeof(const char *);
 void help()
 {
     int maxlen = 0;
