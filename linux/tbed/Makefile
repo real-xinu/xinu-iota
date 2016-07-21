@@ -1,5 +1,6 @@
 CFLAGS= -c -Wall -std=gnu99
 CC=gcc
+SOURCE=./src/
 TARGET=./src/tbed
 TARGET2=./src/srbit
 TARGET3=./src/help
@@ -33,6 +34,4 @@ $(TARGET9): $(TARGET9).c $(HEADER) $(MACROS) $(GLOBAL)
 
 
 clean:
-	$(RM) $(TARGET)  $(TARGET).o $(TARGET2).o $(TARGET3).o $(TARGET4).o \
-	$(TARGET5).o $(TARGET6).o $(TARGET7).o $(TARGET8).o $(TARGET9).o $(TARGET10).o $(TARGET11).o \
-	$(TARGET12).o $(TARGET13).o $(TARGET).c.orig $(TARGET2).c.orig $(TARGET3).c.orig  *.o log.txt 
+	$(RM) $(TARGET)  $(SOURCE)*.o  $(SOURCE)*.c.orig log.txt 

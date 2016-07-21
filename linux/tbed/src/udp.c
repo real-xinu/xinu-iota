@@ -25,11 +25,9 @@ void udp_process (const char *SRV_IP, char *file)
     tv.tv_usec = 0;
     FILE *type;
 
-
-
-/*-------------------------------------------------------------------------
-     * Create a UDP socket on port 55000 to comuunicate with the testbed server
-     * -------------------------------------------------------------------*/
+    /*-------------------------------------------------------------------------
+         * Create a UDP socket on port 55000 to comuunicate with the testbed server
+         * -------------------------------------------------------------------*/
     if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         error_handler ("socket");
     }
