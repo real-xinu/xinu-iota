@@ -1,11 +1,7 @@
-#include "include/headers.h"
-#include "include/prototypes.h"
+#include "../include/headers.h"
+#include "../include/prototypes.h"
 
-const char *SRV_IP;
-char map_list[46][100];
-char map_serv[15];
-char ip_serv[15];
-char map_brouter[15];
+
 /*--------------------------------------------------------
 This function is used for handling errors
 ------------------------------------------------------*/
@@ -53,7 +49,7 @@ void mapping_list (char *fname)
         zeros = 0;
     }
 
-    //printf("number of nodes: %d\n",nnodes);
+    /* DEBUG */ //printf("number of nodes: %d\n",nnodes);
     i = 0;
 
     while (i < nnodes) {
@@ -64,21 +60,7 @@ void mapping_list (char *fname)
     }
 }
 
-/*---------------------------------------------------------
- * ISNUMERIC Function: To check a string is number or not
- * -------------------------------------------------------*/
-int isnumeric (char *str)
-{
-    int len = strlen (str);
-    int i;
 
-    for (i = 0; i < len; i++) {
-        if ((int)str[i] < 48 || (int)str[i] > 57)
-            return 0;
-    }
-
-    return 1;
-}
 /*----------------------------------------------------------
  This function is used to handle operator commands.
 *------------------------------------------------------------*/
@@ -112,35 +94,34 @@ struct c_msg  command_handler (char command[BUFLEN])
             message.xonoffid = htonl (ALL);
 
         } else {
-             message.cmsgtyp = htonl (C_XON);
+            message.cmsgtyp = htonl (C_XON);
+
             if (isnumeric (array_token[1]) == 1) {
                 num = atoi (array_token[1]);
 
-            if ((num >= 0) && (num <= 45)) {
-                message.xonoffid = htonl (num);
+                if ((num >= 0) && (num <= 45)) {
+                    message.xonoffid = htonl (num);
+
+                } else {
+                    fprintf (fp, "Incorrect ID\n");
+                    message.cmsgtyp = htonl (C_ERR);
+                }
 
             } else {
-                fprintf (fp, "Incorrect ID\n");
-                message.cmsgtyp = htonl (C_ERR);
-            }
+                for (i = 0; i < 46; i++) {
+                    /* DEBUG *///printf("name:input %s:%s \n",map_list[i] , array_token[1]);
+                    if (! (strcmp (map_list[i], array_token[1]))) {
+                        message.xonoffid = htonl (i);
+                        flag = 1;
+                    }
+                }
 
-        } else {
-            for (i = 0; i < 46; i++) {
-		//printf("name:input %s:%s \n",map_list[i] , array_token[1]);
-                if (! (strcmp (map_list[i], array_token[1]))) {
-                    message.xonoffid = htonl (i);
-                    flag = 1;
-		    //break;
+                if (flag == 0) {
+                    fprintf (fp, "Incorrect Node Name\n");
+                    message.cmsgtyp = htonl (C_ERR);
                 }
             }
-
-            if (flag == 0) {
-                fprintf (fp, "Incorrect Node Name\n");
-                message.cmsgtyp = htonl (C_ERR);
-            }
         }
-  
-            }
 
     } else if (!strcmp (array_token[0], "xoff")) {
         if (!strcmp (array_token[1], "-all")) {
@@ -149,34 +130,32 @@ struct c_msg  command_handler (char command[BUFLEN])
 
         } else {
             message.cmsgtyp = htonl (C_XOFF);
+
             if (isnumeric (array_token[1]) == 1) {
                 num = atoi (array_token[1]);
 
-            if ((num >= 0) && (num <= 45)) {
-                message.xonoffid = htonl (num);
+                if ((num >= 0) && (num <= 45)) {
+                    message.xonoffid = htonl (num);
+
+                } else {
+                    fprintf (fp, "Incorrect ID\n");
+                    message.cmsgtyp = htonl (C_ERR);
+                }
 
             } else {
-                fprintf (fp, "Incorrect ID\n");
-                message.cmsgtyp = htonl (C_ERR);
-            }
+                for (i = 0; i < 46; i++) {
+                    /*DEBUG *///printf("name:input %s:%s \n",map_list[i] , array_token[1]);
+                    if (! (strcmp (map_list[i], array_token[1]))) {
+                        message.xonoffid = htonl (i);
+                        flag = 1;
+                    }
+                }
 
-        } else {
-            for (i = 0; i < 46; i++) {
-		//printf("name:input %s:%s \n",map_list[i] , array_token[1]);
-                if (! (strcmp (map_list[i], array_token[1]))) {
-                    message.xonoffid = htonl (i);
-                    flag = 1;
-		    //break;
+                if (flag == 0) {
+                    fprintf (fp, "Incorrect Node Name\n");
+                    message.cmsgtyp = htonl (C_ERR);
                 }
             }
-
-            if (flag == 0) {
-                fprintf (fp, "Incorrect Node Name\n");
-                message.cmsgtyp = htonl (C_ERR);
-            }
-        }
-
-
         }
 
     } else if ((!strcmp (array_token[0], "nping")) && strcmp (array_token[1], " ") && strcmp (array_token[1], "-all")) {
@@ -196,11 +175,10 @@ struct c_msg  command_handler (char command[BUFLEN])
 
         } else {
             for (i = 0; i < 46; i++) {
-		//printf("name:input %s:%s \n",map_list[i] , array_token[1]);
+                /*DEBUG *///printf("name:input %s:%s \n",map_list[i] , array_token[1]);
                 if (! (strcmp (map_list[i], array_token[1]))) {
                     message.pingnodeid = htonl (i);
                     flag = 1;
-		    //break;
                 }
             }
 
@@ -239,6 +217,8 @@ struct c_msg  command_handler (char command[BUFLEN])
         exit (1);
 
     } else if (!strcmp (array_token[0], "help")) {
+        help();
+
     } else if (!strcmp (array_token[0], "ts_find")) {
         message.cmsgtyp = htonl (C_TS_REQ);
 
@@ -253,7 +233,7 @@ struct c_msg  command_handler (char command[BUFLEN])
             strcpy (map_serv, beagle);
             strcat (ip_serv, NETIP);
             strcat (ip_serv, array_token[2]);
-            //printf("ip: %s", ip_serv);
+            /*DEBUG */ //printf("ip: %s", ip_serv);
             download_img (array_token[3], "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
 
@@ -302,6 +282,7 @@ struct c_msg  command_handler (char command[BUFLEN])
 }
 
 
+
 /*------------------------------------------------------------------------------
  *
  *download_img: dowload an image (node or testbed server image) to a specefic backend
@@ -315,7 +296,8 @@ int download_img (char * filename, char * class, char * connection, char * host)
         /* Child Process */
         char conn[128];
         int fd;
-
+        strcat(imgpath, filename); 
+	printf("filename:%s\n", filename);
         if ( ( fd = open (filename, O_RDONLY ) ) < 0 ) {
             perror ( "open()" );
             exit ( 1 );
@@ -378,6 +360,10 @@ int connect_bgnd (char * class, char * connection, char * host)
 
 
 
+
+
+
+
 /*-----------------------------------------------------
 * Print the network topology based on control message
 which have been recevied from the testbed server.
@@ -390,6 +376,9 @@ void topodump (struct c_msg *buf)
         fprintf (fp, "Please enter newtop command\n");
     }
 
+    /* -------------------------------------------------------------
+     * Print the number of nodes in the active network topolog
+     * -----------------------------------------------------------*/
     if (ntohl (buf->topnum) > 0) {
         fprintf (fp, "Number of Nodes: %d\n", ntohl (buf->topnum));
     }
@@ -445,11 +434,17 @@ int ts_find()
         error_handler ("socket Option for timeout can not be set");
     }
 
+    /* ---------------------------------------------------
+     * Set broadcast IP address
+     * ---------------------------------------------------*/
     if (inet_aton (IP_BRDCAST, &si_other.sin_addr) == 0) {
         fprintf (stderr, "inet_aton() failed\n");
         exit (1);
     }
 
+    /* --------------------------------------
+     * Enable broadcast option on the socket
+     * -------------------------------------*/
     int bcast = 1;
 
     if (setsockopt (s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof (bcast))) {
@@ -657,11 +652,11 @@ void udp_process (const char *SRV_IP, char *file)
              * To receive command from command line
              * ---------------------------------------------------------------*/
             memset (command, 0, sizeof (char) * BUFLEN);
-            printf ("\n(Enter Command)# ");
+            printf ("\nwsh$ ");
             fgets (command, sizeof (command), type);
 
             while (!strcmp (command, "\n")) {
-                printf ("\n(Enter Command)# ");
+                printf ("\nwsh$ ");
                 fgets (command, sizeof (command), type);
             }
 
@@ -756,7 +751,9 @@ void udp_process (const char *SRV_IP, char *file)
     close (s);
 }
 
-/* Main- Call UDP process */
+/* --------------------------
+ * Main- Call UDP process
+ * -------------------------*/
 int main (int argc, char **argv)
 {
     struct timeval  tv1, tv2;

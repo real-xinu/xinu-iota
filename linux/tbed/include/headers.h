@@ -36,9 +36,45 @@
 #include <time.h>
 #include <fcntl.h>
 #include "console_connect.h"
-int s;
+ int s;
 FILE *fp;
 char *path = "/homes/arastega/Wi-sun-repo/xinu-bbb/remote-file-server/";
+char *imgpath = "../images/";
 extern int srbit (byte addr[], int, int);
+extern int isnumeric(char *);
 struct sockaddr_in si_other;
-extern int makeConnection(char *, char *, char *); 
+extern int makeConnection(char *, char *, char *);
+const char *SRV_IP;
+char map_list[46][100];
+char map_serv[15];
+char ip_serv[15];
+char map_brouter[15];
+
+
+
+
+const char * const  cmdtab[] = {
+   "cleanup",
+   "delay",
+   "download",
+   "inc",
+   "newtop",
+   "nping",
+   "offline",
+   "online",
+   "pcycle",
+   "restart",
+   "tcp",
+   "topdump",
+   "ts_1",
+   "ts_check",
+   "ts_find",
+   "tshutdown",
+   "udp",
+   "xoff",
+   "xon"
+
+};
+
+int ncmd = sizeof(cmdtab)/ sizeof(const char *);
+
