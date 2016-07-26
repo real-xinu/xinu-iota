@@ -1,35 +1,26 @@
 CFLAGS= -c -Wall -std=gnu99
 CC=gcc
+ALL= ./src/tbed.c ./src/srbit.c ./src/help.c ./src/isnum.c  ./src/cmdhandler.c \
+     ./src/map.c  ./src/topdump.c ./src/ts_find.c ./src/csconsole.c ./src/ping.c \
+     ./src/resp_handler.c ./src/error_handler.c ./src/udp.c ./src/result.c
+OBJ= ./src/tbed.o ./src/srbit.o ./src/help.o ./src/isnum.o ./src/cmdhandler.o ./src/map.o \
+     ./src/topdump.o ./src/ts_find.o ./src/csconsole.o ./src/ping.o ./src/resp_handler.o \
+     ./src/error_handler.o ./src/udp.o ./src/result.o
+
 SOURCE=./src/
 TARGET=./src/tbed
-TARGET2=./src/srbit
-TARGET3=./src/help
-TARGET4=./src/isnum
-TARGET5=./src/cmdhandler
-TARGET6=./src/map
-TARGET7=./src/topdump
-TARGET8=./src/ts_find
-TARGET9=./src/csconsole
-TARGET10=./src/ping
-TARGET11=./src/resp_handler
-TARGET12=./src/error_handler
-TARGET13=./src/udp
-TARGET14=./src/result
 TOOLS_P=./ConsoleTools/hdr/
 TOOLS_C=./ConsoleTools/lib/*.c
 HEADER=./include/headers.h
 MACROS=./include/macros.h
 GLOBAL=./include/global.h
-all: $(TARGET).o $(TARGET2).o $(TARGET3).o  $(TARGET4).o $(TARGET5).o $(TARGET6).o $(TARGET7).o \
-	$(TARGET8).o  $(TARGET9).o  $(TARGET10).o  $(TARGET11).o  $(TARGET12).o $(TARGET13).o $(TARGET14).o  $(HEADER) $(MACROS) 
-	$(CC) -o   $(TARGET) $(TARGET).o  $(TARGET2).o $(TARGET3).o  $(TARGET4).o  $(TARGET5).o $(TARGET6).o \
-	$(TARGET7).o $(TARGET8).o  $(TARGET9).o $(TARGET10).o $(TARGET11).o $(TARGET12).o $(TARGET13).o $(TARGET14).o -I $(TOOLS_P) $(TOOLS_C)
 
-$(TARGET): $(TARGET).c $(TARGET2).c $(TAEGET3).c $(TARGET4).c $(TARGET5).c $(TARGET6).c \
-	$(TARGET7).c $(TARGET8).c  $(TARGET12).c  $(TARGET13).c $(TARGET14).c $(HEADER) $(MACROS) $(GLOBAL)
-	$(CC) $(CFLAGS) $(TARGET).c $(TARGET2).c $(TARGET3).c $(TARGET4).c $(TARGET5).c \
-	$(TARGET6).c $(TARGET7).c $(TARGET8).c $(TARGET10).c $(TARGET11).c $(TARGET12).c $(TARGET13).c \
-	$(TARGET14).c
+
+all: $(OBJ)   $(HEADER) $(MACROS) 
+	$(CC) -o   $(TARGET) $(OBJ) -I $(TOOLS_P) $(TOOLS_C)
+
+$(TARGET): $(ALL) $(HEADER) $(MACROS) $(GLOBAL)
+	$(CC) $(CFLAGS) $(ALL)
 
 $(TARGET9): $(TARGET9).c $(HEADER) $(MACROS) $(GLOBAL) 
 	$(CC) $(CFLAGS) $(TARGET9).c -I $(TOOLS_P) $(TOOLS_C)

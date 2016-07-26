@@ -4,7 +4,7 @@
 
 char map_list[46][100];
 char *path = "../../../remote-file-server/";
-
+int nnodes = 0;
 /*--------------------------------------------------------------
  * Make a mapping list between nodes' name and nodes' ID
  * ------------------------------------------------------------*/
@@ -12,6 +12,7 @@ void mapping_list (char *fname)
 {
     int i;
     //char name[100];
+    nnodes = 0;
     unsigned char name_size[1];
     char *file_name = (char *) malloc (1 + strlen (path) + strlen (fname));
     strcpy (file_name, path);
@@ -19,7 +20,7 @@ void mapping_list (char *fname)
     FILE *fp;
     unsigned char nmcast[6];
     int zeros = 0;
-    int nnodes = 0;
+    
     fp = fopen (file_name, "rb");
 
     if (fp == NULL) {

@@ -156,7 +156,22 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "topdump")) {
         message.cmsgtyp = htonl (C_TOP_REQ);
 
-    } else if (!strcmp (array_token[0], "newtop") && (strcmp (array_token[1], " "))) {
+	
+
+    } else if(!strcmp(array_token[0], "names"))
+    {
+	  
+          for(i=0; i < nnodes; i++)
+	  {
+              fprintf(fp, "%s ", map_list[i]);
+             
+	  }
+	  fprintf(fp, "%s", "\n");
+	  message.cmsgtyp = htonl(C_ERR);
+
+
+    }
+    else if (!strcmp (array_token[0], "newtop") && (strcmp (array_token[1], " "))) {
         message.cmsgtyp = htonl (C_NEW_TOP);
         message.flen = htonl (strlen (array_token[1]));
         strcpy ((char *)message.fname , array_token[1]);

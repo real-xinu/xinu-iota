@@ -47,9 +47,11 @@ download n 147 xinu.boot.n
 download n 148 xinu.boot.n
 download n 149 xinu.boot.n
 download n 150 xinu.boot.n
+download n 151 xinu.boot.n
+download n 152 xinu.boot.n
 download t 183 xinu.boot.s
 pcycle t
-delay 15000
+delay 16000
 pcycle 102
 pcycle 103
 pcycle 104
@@ -99,11 +101,14 @@ pcycle 147
 pcycle 148
 pcycle 149
 pcycle 150
-delay 60000
+pcycle 151
+pcycle 152
+delay 65000
 ts_find
 ts_check
 nping -all
 newtop Top45.0
+names
 topdump
 nping -all
 nping a_0

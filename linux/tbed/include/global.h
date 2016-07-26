@@ -2,6 +2,7 @@
 #define  GLOBAL_H
 
 extern int s;
+extern int nnodes;
 extern FILE *fp;
 extern char *path;;
 extern char *imgpath;
