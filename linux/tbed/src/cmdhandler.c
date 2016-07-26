@@ -16,6 +16,10 @@ const char *SRV_IP;
 char map_serv[15];
 char ip_serv[15];
 char map_brouter[15];
+char path_incfile[30] = "../scripts/";
+FILE *fp;
+
+
 /*----------------------------------------------------------
  This function is used to handle operator commands.
 *------------------------------------------------------------*/
@@ -34,9 +38,11 @@ struct c_msg  command_handler (char command[BUFLEN])
     token = strtok (command, seps );
 
     /* While there are tokens in "command" */
+
     while ( token != NULL ) {
         strcpy (array_token[i], token);
         token = strtok ( NULL, seps); /* Get next token: */
+        //printf("token:%s\n", token);
         i++;
     }
 
@@ -164,6 +170,7 @@ struct c_msg  command_handler (char command[BUFLEN])
 
     } else if (!strcmp (array_token[0], "delay")) {
         int delay = atoi (array_token[1]);
+        delay = delay * 1000;
         usleep (delay);
         message.cmsgtyp = htonl (C_ERR);
 

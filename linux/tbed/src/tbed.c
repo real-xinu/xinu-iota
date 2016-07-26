@@ -7,6 +7,7 @@ FILE *fp;
 int s;
 struct sockaddr_in si_other;
 char map_list[46][100];
+
 /* --------------------------
  * Main- Call UDP process
  * -------------------------*/
@@ -14,7 +15,7 @@ int main (int argc, char **argv)
 {
     struct timeval  tv1, tv2;
     gettimeofday (&tv1, NULL);
-    char  use[] = "error: use is tbed ( IP | <script> log | <script> stdout )\n";
+    char  use[] = "error: use is tbed ( IP | <script> -f | <script> -s )\n";
 
     if ( (argc != 2)  && (argc != 3) ) {
         fprintf (stderr, "%s", use);
@@ -22,11 +23,11 @@ int main (int argc, char **argv)
     }
 
     if (argv[2] != NULL) {
-        if (!strcmp ("stdout", argv[2])) {
+        if (!strcmp ("-s", argv[2])) {
             fp = stdout;
 
-        } else if (!strcmp ("log", argv[2] )) {
-            fp = fopen ("log.txt", "w");
+        } else if (!strcmp ("-f", argv[2] )) {
+            fp = fopen (make_result_file (argv[1]), "w");
         }
 
         SRV_IP = "0.0.0.0";

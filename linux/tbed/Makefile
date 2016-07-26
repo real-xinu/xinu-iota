@@ -14,20 +14,22 @@ TARGET10=./src/ping
 TARGET11=./src/resp_handler
 TARGET12=./src/error_handler
 TARGET13=./src/udp
+TARGET14=./src/result
 TOOLS_P=./ConsoleTools/hdr/
 TOOLS_C=./ConsoleTools/lib/*.c
 HEADER=./include/headers.h
 MACROS=./include/macros.h
 GLOBAL=./include/global.h
 all: $(TARGET).o $(TARGET2).o $(TARGET3).o  $(TARGET4).o $(TARGET5).o $(TARGET6).o $(TARGET7).o \
-	$(TARGET8).o  $(TARGET9).o  $(TARGET10).o  $(TARGET11).o  $(TARGET12).o $(TARGET13).o  $(HEADER) $(MACROS) 
+	$(TARGET8).o  $(TARGET9).o  $(TARGET10).o  $(TARGET11).o  $(TARGET12).o $(TARGET13).o $(TARGET14).o  $(HEADER) $(MACROS) 
 	$(CC) -o   $(TARGET) $(TARGET).o  $(TARGET2).o $(TARGET3).o  $(TARGET4).o  $(TARGET5).o $(TARGET6).o \
-	$(TARGET7).o $(TARGET8).o  $(TARGET9).o $(TARGET10).o $(TARGET11).o $(TARGET12).o $(TARGET13).o -I $(TOOLS_P) $(TOOLS_C)
+	$(TARGET7).o $(TARGET8).o  $(TARGET9).o $(TARGET10).o $(TARGET11).o $(TARGET12).o $(TARGET13).o $(TARGET14).o -I $(TOOLS_P) $(TOOLS_C)
 
 $(TARGET): $(TARGET).c $(TARGET2).c $(TAEGET3).c $(TARGET4).c $(TARGET5).c $(TARGET6).c \
-	$(TARGET7).c $(TARGET8).c  $(TARGET12).c  $(TARGET13).c $(HEADER) $(MACROS) $(GLOBAL)
+	$(TARGET7).c $(TARGET8).c  $(TARGET12).c  $(TARGET13).c $(TARGET14).c $(HEADER) $(MACROS) $(GLOBAL)
 	$(CC) $(CFLAGS) $(TARGET).c $(TARGET2).c $(TARGET3).c $(TARGET4).c $(TARGET5).c \
-	$(TARGET6).c $(TARGET7).c $(TARGET8).c $(TARGET10).c $(TARGET11).c $(TARGET12).c $(TARGET13).c
+	$(TARGET6).c $(TARGET7).c $(TARGET8).c $(TARGET10).c $(TARGET11).c $(TARGET12).c $(TARGET13).c \
+	$(TARGET14).c
 
 $(TARGET9): $(TARGET9).c $(HEADER) $(MACROS) $(GLOBAL) 
 	$(CC) $(CFLAGS) $(TARGET9).c -I $(TOOLS_P) $(TOOLS_C)

@@ -3,7 +3,7 @@
 #include "../include/global.h"
 
 char map_list[46][100];
-char *path = "/homes/arastega/Wi-sun-repo/xinu-bbb/remote-file-server/";
+char *path = "../../../remote-file-server/";
 
 /*--------------------------------------------------------------
  * Make a mapping list between nodes' name and nodes' ID

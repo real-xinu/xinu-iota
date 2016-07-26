@@ -28,7 +28,7 @@ download n 128 xinu.boot.n
 download n 129 xinu.boot.n
 download t 183 xinu.boot.s
 pcycle t
-delay 20000000
+delay 15000
 pcycle 102
 pcycle 103
 pcycle 104
@@ -57,7 +57,7 @@ pcycle 126
 pcycle 127
 pcycle 128
 pcycle 129
-delay 50000000
+delay 50000
 ts_find
 ts_check
 newtop Top25.0

@@ -7,6 +7,7 @@
 #define BIT_SET 0
 #define TIME_OUT 10
 #define TIME_OUT_TS 1000
+
 #define ALL -1     // This macro is used for ping all
 // toptology status variables
 #define ALIVE 1
@@ -22,5 +23,7 @@
 #define XINUSERVER "xinuserver.cs.purdue.edu"
 #define SERVER "beagle183"
 #define NETIP   "128.10.137."
+#define RES_PATH   "../results/result_" 
+
 
 
