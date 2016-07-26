@@ -1,9 +1,9 @@
 CC = gcc
 CFLAGS = -std=c99
 
-default:	topgen
+default:	topgen createtop
 
-all:	topgen readtop complete
+all:	topgen readtop complete star linear createtop
 
 topgen:
 	$(CC) topgen.c -o topgen $(CFLAGS)
@@ -14,7 +14,19 @@ readtop:
 complete:
 	$(CC) complete.c -o complete $(CFLAGS)
 
+star:
+	$(CC) star.c -o star $(CFLAGS)
+
+linear:
+	$(CC) linear.c -o linear $(CFLAGS)
+
+createtop:
+	$(CC) createtop.c -o createtop $(CFLAGS)
+
 clean:
 	rm -f readtop
 	rm -f topgen
 	rm -f complete
+	rm -f star
+	rm -f linear
+	rm -f createtop
