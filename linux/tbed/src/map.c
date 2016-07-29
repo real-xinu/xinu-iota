@@ -20,7 +20,6 @@ void mapping_list (char *fname)
     FILE *fp;
     unsigned char nmcast[6];
     int zeros = 0;
-    
     fp = fopen (file_name, "rb");
 
     if (fp == NULL) {

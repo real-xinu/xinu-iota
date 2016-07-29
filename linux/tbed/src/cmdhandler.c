@@ -19,6 +19,19 @@ char map_brouter[15];
 char path_incfile[30] = "../scripts/";
 FILE *fp;
 
+/*-----------------------------------------------
+ * Print Command's name in result file
+ * ---------------------------------------------*/
+
+void cmd_print (char command_print[BUFLEN])
+{
+    if (fp != stdout) {
+        fprintf (fp, "\n%s:%s", "***The command is***", command_print);
+        fprintf (fp, "\n\n");
+    }
+}
+
+
 
 /*----------------------------------------------------------
  This function is used to handle operator commands.
@@ -26,6 +39,7 @@ FILE *fp;
 struct c_msg  command_handler (char command[BUFLEN])
 {
     struct c_msg message;
+    char command_print[BUFLEN];
     memset (&message, 0, sizeof (struct c_msg));
     char array_token[2][20];
     char seps[]   = " ";
@@ -35,21 +49,26 @@ struct c_msg  command_handler (char command[BUFLEN])
     int i;
     int flag = 0;
     i = 0;
-    token = strtok (command, seps );
-
+    
+    strcpy(command_print,command);
+    token = strtok (command, seps);
+    
     /* While there are tokens in "command" */
 
     while ( token != NULL ) {
-        strcpy (array_token[i], token);
+        
+	strcpy (array_token[i], token);
         token = strtok ( NULL, seps); /* Get next token: */
-        //printf("token:%s\n", token);
+         
         i++;
     }
-
+   
     if (!strcmp (array_token[0], "restart") && !strcmp (array_token[1], "t")) {
         message.cmsgtyp = htonl (C_RESTART);
+        cmd_print(command_print);
 
     } else if (!strcmp (array_token[0], "xon")) {
+        cmd_print(command_print);
         if (!strcmp (array_token[1], "-all")) {
             message.cmsgtyp = htonl (C_XON);
             message.xonoffid = htonl (ALL);
@@ -85,6 +104,8 @@ struct c_msg  command_handler (char command[BUFLEN])
         }
 
     } else if (!strcmp (array_token[0], "xoff")) {
+        //cmd_print (command_print);
+
         if (!strcmp (array_token[1], "-all")) {
             message.cmsgtyp = htonl (C_XOFF);
             message.xonoffid = htonl (ALL);
@@ -123,6 +144,7 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_PING_REQ);
         message.clength = htonl (sizeof (message));
 
+        cmd_print(command_print);
         if (isnumeric (array_token[1]) == 1) {
             num = atoi (array_token[1]);
 
@@ -152,36 +174,35 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if ((!strcmp (array_token[0], "nping")) && strcmp (array_token[1], " ") && (!strcmp (array_token[1], "-all"))) {
         message.cmsgtyp = htonl (C_PING_ALL);
         message.pingnodeid = htonl (ALL);
+        cmd_print(command_print);
 
     } else if (!strcmp (array_token[0], "topdump")) {
         message.cmsgtyp = htonl (C_TOP_REQ);
+        cmd_print(command_print);
 
-	
+    } else if (!strcmp (array_token[0], "names")) {
+        cmd_print(command_print);
+        for (i = 0; i < nnodes; i++) {
+            fprintf (fp, "%s ", map_list[i]);
+        }
 
-    } else if(!strcmp(array_token[0], "names"))
-    {
-	  
-          for(i=0; i < nnodes; i++)
-	  {
-              fprintf(fp, "%s ", map_list[i]);
-             
-	  }
-	  fprintf(fp, "%s", "\n");
-	  message.cmsgtyp = htonl(C_ERR);
+        fprintf (fp, "%s", "\n");
+        message.cmsgtyp = htonl (C_ERR);
 
-
-    }
-    else if (!strcmp (array_token[0], "newtop") && (strcmp (array_token[1], " "))) {
+    } else if (!strcmp (array_token[0], "newtop") && (strcmp (array_token[1], " "))) {
         message.cmsgtyp = htonl (C_NEW_TOP);
         message.flen = htonl (strlen (array_token[1]));
         strcpy ((char *)message.fname , array_token[1]);
         mapping_list ((char *)message.fname);
+        cmd_print (command_print);
 
     } else if (!strcmp (array_token[0], "online")) {
         message.cmsgtyp = htonl (C_ONLINE);
+        cmd_print(command_print);
 
     } else if (!strcmp (array_token[0], "offline")) {
         message.cmsgtyp = htonl (C_OFFLINE);
+        cmd_print(command_print);
 
     } else if (!strcmp (array_token[0], "delay")) {
         int delay = atoi (array_token[1]);
@@ -198,9 +219,11 @@ struct c_msg  command_handler (char command[BUFLEN])
 
     } else if (!strcmp (array_token[0], "ts_find")) {
         message.cmsgtyp = htonl (C_TS_REQ);
+        cmd_print(command_print);
 
     } else if (!strcmp (array_token[0], "ts_check")) {
         message.cmsgtyp = htonl (C_TS_REQ);
+        cmd_print(command_print);
 
     } else if (!strcmp (array_token[0], "download") && array_token[1] != NULL && array_token[2] != NULL) {
         if (!strcmp (array_token[1], "t")) {
@@ -211,6 +234,7 @@ struct c_msg  command_handler (char command[BUFLEN])
             strcat (ip_serv, NETIP);
             strcat (ip_serv, array_token[2]);
             /*DEBUG */ //printf("ip: %s", ip_serv);
+	    
             download_img (array_token[3], "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
 
@@ -228,6 +252,7 @@ struct c_msg  command_handler (char command[BUFLEN])
             strcat (beagle, array_token[2]);
             download_img (array_token[3], "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
+           
         }
 
     } else if (!strcmp (array_token[0], "pcycle")) {

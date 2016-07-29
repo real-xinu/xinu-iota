@@ -126,14 +126,14 @@ void udp_process (const char *SRV_IP, char *file)
         * To receive command from a script of commands
          * --------------------------------------------------------------*/
         type = fopen (file, "r");
-
+        //printf("command:%s\n", command);
         while ( fgets (command, sizeof (command), type) != NULL) {
             command[strcspn (command, "\r\n")] = 0;
             /*-----------------------------------------------------------------------
              * create an appropiate control message to send to the testbed server
              * ---------------------------------------------------------------------*/
             message = command_handler (command);
-
+	   
             if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
                 ts_find();
             }
@@ -152,7 +152,7 @@ void udp_process (const char *SRV_IP, char *file)
                 if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
                     error_handler ("The message is not sent to Testbed_Server()");
                 }
-
+               
                 recvbuf = malloc (sizeof (struct c_msg));
 
                 if ((recvfrom (s, recvbuf, sizeof (struct c_msg), 0, (struct sockaddr *)&si_other, &slen)) < 0) {

@@ -13,7 +13,7 @@ download n 113 xinu.boot.n
 download n 114 xinu.boot.n
 download t 183 xinu.boot.s
 pcycle t
-delay 20000000
+delay 20000
 pcycle 102
 pcycle 103
 pcycle 104
@@ -27,7 +27,7 @@ pcycle 111
 pcycle 112
 pcycle 113
 pcycle 114
-delay 25000000
+delay 40000
 ts_find 
 ts_check
 nping -all

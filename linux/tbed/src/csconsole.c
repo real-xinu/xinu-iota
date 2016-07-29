@@ -11,18 +11,25 @@ char *imgpath = "../images/";
  *-------------------------------------------------------------------------------*/
 int download_img (char * filename, char * class, char * connection, char * host)
 {
+    char *file_name_path = malloc(1 + strlen(imgpath) + strlen(filename));
     pid_t pid_dwnld;
     pid_dwnld = fork();
-
+    printf("id:%d\n", pid_dwnld); 
+    //fflush(stdout);
     if (pid_dwnld == 0) {
         /* Child Process */
+	printf("filename:%s\n", filename);
         char conn[128];
-        int fd;
-        strcat (imgpath, filename);
-        printf ("filename:%s\n", filename);
-
-        if ( ( fd = open (filename, O_RDONLY ) ) < 0 ) {
+        int fd; 	
+	strcpy (file_name_path, imgpath);
+        strcat (file_name_path, filename);
+	
+        //fprintf (stdout,"filename:%s\n", filename);
+	//printf("hello\n");
+        //fflush(stdout); 
+        if ( ( fd = open (file_name_path, O_RDONLY ) ) < 0 ) {
             perror ( "open()" );
+	    
             exit ( 1 );
         }
 
@@ -39,6 +46,7 @@ int download_img (char * filename, char * class, char * connection, char * host)
 
     } else if (pid_dwnld < 0) {
         fprintf (stdout, "\nfork() Error\n");
+	fflush(stdout);
         return -1;
     }
 

@@ -15,7 +15,7 @@ int download_img(char * filename, char * class, char * connection, char * host)
 	pid_t pid_dwnld;
 
 	pid_dwnld = fork();
-
+        printf("id:%d\n",pid_dwnld);
 	if(pid_dwnld == 0)
 	{
 		/* Child Process */
@@ -28,7 +28,7 @@ int download_img(char * filename, char * class, char * connection, char * host)
 			perror( "open()" );
 			exit( 1 );
 		}
-		
+                printf("hello\n");		
 		if( dup2( fd, 0 ) < 0 ) 
 		{
 			perror( "dup2()" );
@@ -37,7 +37,7 @@ int download_img(char * filename, char * class, char * connection, char * host)
 		close( fd );
 
 		sprintf(conn, "%s%s", connection, "-dl");
-
+                
 		execlp(EXEC, EXEC, "-t", "-f", "-c", DOWNLOAD, "-s", host, conn, NULL);
 		fprintf(stderr, "execlp() failes\n");
 		return -1;
@@ -86,9 +86,9 @@ int main(int argc, char ** argv)
 {
 	/* Connect, download and powercycle */
 	int ret = 0;
-	if( (ret = connect_bgnd("cortex", "beagle102", "xinuserver.cs.purdue.edu")) < 0 )
+	if( (ret = connect_bgnd("cortex", "beagle114", "xinuserver.cs.purdue.edu")) < 0 )
 		exit(-1);
-	fprintf(stderr, "%d\n", ret);
-	download_img("xinu.boot", "cortex", "beagle102", "xinuserver.cs.purdue.edu");
-	powercycle_bgnd("cortex", "beagle103", "xinuserver.cs.purdue.edu");
+	//fprintf(stderr, "%d\n", ret);
+	download_img("xinu.boot.n", "cortex", "beagle114", "xinuserver.cs.purdue.edu");
+	//powercycle_bgnd("cortex", "beagle114", "xinuserver.cs.purdue.edu");
 }
