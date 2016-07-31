@@ -3,13 +3,37 @@
 #include "../include/macros.h"
 #include "../include/global.h"
 
-//char *path = "../../../remote-file-server/";
+
 char *scripts_path = "../scripts/";
+
+/*---------------------------------------------------------------------
+ * This function is used to handle ts_find and ts_check commands
+ * -------------------------------------------------------------------*/
+void ts_find_check (int *s, struct c_msg *message, char command[BUFLEN])
+{
+    if (message->cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
+        ts_find();
+    }
+
+    if (message->cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
+        int ntserver = ts_find();
+
+        if (ntserver > 1) {
+            fprintf (fp, "More than one server is running\n");
+            close (*s);
+            exit (1);
+        }
+    }
+}
+
+
 /*------------------------------------------------------------------------
  * this UDP process is used to communicate with testbed server on port
  * 55000. The communication between managment app and testbed server
  * is based on control protocol.
  *------------------------------------------------------------------------*/
+
+
 
 void udp_process (const char *SRV_IP, char *file)
 {
@@ -80,27 +104,14 @@ void udp_process (const char *SRV_IP, char *file)
                 fgets (command, sizeof (command), type);
             }
 
-            //printf ("here");
+           
             command[strcspn (command, "\r\n")] = 0;
             memset (&message, 0, sizeof (struct c_msg));
             /*--------------------------------------------------------------------
             * create an appropiate control message and send to the testbed server
             * ------------------------------------------------------------------*/
             message = command_handler (command);
-
-            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
-                ts_find();
-            }
-
-            if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
-                int ntserver = ts_find();
-
-                if (ntserver > 1) {
-                    fprintf (fp, "More than one server is running\n");
-                    close (s);
-                    exit (1);
-                }
-            }
+            ts_find_check (&s, &message, command);
 
             /*--------------------------------------------------------------------------------
             * Send the messages to the testbed server
@@ -129,7 +140,7 @@ void udp_process (const char *SRV_IP, char *file)
          * --------------------------------------------------------------*/
         type = fopen (file, "r");
 
-        //printf("command:%s\n", command);
+        /*DEBUG */ //printf("command:%s\n", command);
         while ( fgets (command, sizeof (command), type) != NULL) {
             command[strcspn (command, "\r\n")] = 0;
             /*-----------------------------------------------------------------------
@@ -159,20 +170,7 @@ void udp_process (const char *SRV_IP, char *file)
                         while (fgets (command, sizeof (command), inc2) != NULL) {
                             command[strcspn (command, "\r\n")] = 0;
                             message = command_handler (command);
-
-                            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
-                                ts_find();
-                            }
-
-                            if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
-                                int ntserver = ts_find();
-
-                                if (ntserver > 1) {
-                                    fprintf (fp, "More than one server is running\n");
-                                    close (s);
-                                    exit (1);
-                                }
-                            }
+                            ts_find_check (&s, &message, command);
 
                             if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
                                 if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
@@ -192,19 +190,7 @@ void udp_process (const char *SRV_IP, char *file)
                         }
 
                     } else {
-                        if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
-                            ts_find();
-                        }
-
-                        if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
-                            int ntserver = ts_find();
-
-                            if (ntserver > 1) {
-                                fprintf (fp, "More than one server is running\n");
-                                close (s);
-                                exit (1);
-                            }
-                        }
+                        ts_find_check (&s, &message, command);
 
                         if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
                             if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
@@ -225,19 +211,7 @@ void udp_process (const char *SRV_IP, char *file)
                 }
 
             } else {
-                if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
-                    ts_find();
-                }
-
-                if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
-                    int ntserver = ts_find();
-
-                    if (ntserver > 1) {
-                        fprintf (fp, "More than one server is running\n");
-                        close (s);
-                        exit (1);
-                    }
-                }
+                ts_find_check (&s, &message, command);
 
                 if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
                     if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {

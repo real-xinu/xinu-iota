@@ -54,7 +54,7 @@ download n 154 xinu.boot.n
 download t 183 xinu.boot.s
 pcycle t
 delay 16000
-inc test2.txt
+ts_find
 pcycle 102
 pcycle 103
 pcycle 104
