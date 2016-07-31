@@ -27,4 +27,4 @@ $(TARGET9): $(TARGET9).c $(HEADER) $(MACROS) $(GLOBAL)
 
 
 clean:
-	$(RM) $(TARGET)  $(SOURCE)*.o  $(SOURCE)*.c.orig log.txt 
+	$(RM) $(TARGET)  $(SOURCE)*.o  $(SOURCE)*.c.orig  

@@ -26,9 +26,35 @@ download n 126 xinu.boot.n
 download n 127 xinu.boot.n
 download n 128 xinu.boot.n
 download n 129 xinu.boot.n
+download n 130 xinu.boot.n
+download n 131 xinu.boot.n
+download n 132 xinu.boot.n
+download n 133 xinu.boot.n
+download n 134 xinu.boot.n
+download n 135 xinu.boot.n
+download n 136 xinu.boot.n
+download n 137 xinu.boot.n
+download n 138 xinu.boot.n
+download n 139 xinu.boot.n
+download n 140 xinu.boot.n
+download n 141 xinu.boot.n
+download n 142 xinu.boot.n
+download n 143 xinu.boot.n
+download n 144 xinu.boot.n
+download n 145 xinu.boot.n
+download n 146 xinu.boot.n
+download n 147 xinu.boot.n
+download n 148 xinu.boot.n
+download n 149 xinu.boot.n
+download n 150 xinu.boot.n
+download n 151 xinu.boot.n
+download n 152 xinu.boot.n
+download n 153 xinu.boot.n
+download n 154 xinu.boot.n
 download t 183 xinu.boot.s
 pcycle t
-delay 15000
+delay 16000
+inc test2.txt
 pcycle 102
 pcycle 103
 pcycle 104
@@ -57,21 +83,29 @@ pcycle 126
 pcycle 127
 pcycle 128
 pcycle 129
-delay 50000
-ts_find
-ts_check
-newtop Top25.0
-topdump
-nping -all
-nping 0
-nping 1
-nping 2
-nping 4
-nping 23
-nping a_0
-nping a_22
-nping a_2
-offline
-nping -all
-online
-nping -all
+pcycle 130
+pcycle 131
+pcycle 132
+pcycle 133
+pcycle 134
+pcycle 135
+pcycle 136
+pcycle 137
+pcycle 138
+pcycle 139
+pcycle 140
+pcycle 141
+pcycle 142
+pcycle 143
+pcycle 144
+pcycle 145
+pcycle 146
+pcycle 147
+pcycle 148
+pcycle 149
+pcycle 150
+pcycle 151
+pcycle 152
+pcycle 153
+pcycle 154
+delay 70000

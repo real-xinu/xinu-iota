@@ -3,7 +3,8 @@
 #include "../include/macros.h"
 #include "../include/global.h"
 
-
+//char *path = "../../../remote-file-server/";
+char *scripts_path = "../scripts/";
 /*------------------------------------------------------------------------
  * this UDP process is used to communicate with testbed server on port
  * 55000. The communication between managment app and testbed server
@@ -24,10 +25,11 @@ void udp_process (const char *SRV_IP, char *file)
     tv.tv_sec = TIME_OUT;
     tv.tv_usec = 0;
     FILE *type;
+    FILE *inc, *inc2;
 
     /*-------------------------------------------------------------------------
-         * Create a UDP socket on port 55000 to comuunicate with the testbed server
-         * -------------------------------------------------------------------*/
+    Create a UDP socket on port 55000 to comuunicate with the testbed server
+    ---------------------------------------------------------------------------*/
     if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         error_handler ("socket");
     }
@@ -126,6 +128,7 @@ void udp_process (const char *SRV_IP, char *file)
         * To receive command from a script of commands
          * --------------------------------------------------------------*/
         type = fopen (file, "r");
+
         //printf("command:%s\n", command);
         while ( fgets (command, sizeof (command), type) != NULL) {
             command[strcspn (command, "\r\n")] = 0;
@@ -133,35 +136,124 @@ void udp_process (const char *SRV_IP, char *file)
              * create an appropiate control message to send to the testbed server
              * ---------------------------------------------------------------------*/
             message = command_handler (command);
-	   
-            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
-                ts_find();
-            }
 
-            if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
-                int ntserver = ts_find();
+            if ((!strcmp (array_token[0], "inc")) && message.cmsgtyp == htonl (C_ERR)) {
+                char *temp_path = (char *)malloc (1 + strlen (scripts_path) + strlen (array_token[1]));
+                strcpy (temp_path, scripts_path);
+                strcat (temp_path, array_token[1]);
+                /*DEBUG */ // printf("%s\n", temp_path);
+                inc = fopen (temp_path, "r");
+                free (temp_path);
 
-                if (ntserver > 1) {
-                    fprintf (fp, "More than one server is running\n");
-                    close (s);
-                    exit (1);
+                while (fgets (command, sizeof (command), inc) != NULL) {
+                    /*DEBUG */ //fprintf(fp, "%s\n", command);
+                    command[strcspn (command, "\r\n")] = 0;
+                    message = command_handler (command);
+
+                    if ((!strcmp (array_token[0], "inc")) && message.cmsgtyp == htonl (C_ERR)) {
+                        temp_path = (char *)malloc (1 + strlen (scripts_path) + strlen (array_token[1]));
+                        strcpy (temp_path, scripts_path);
+                        strcat (temp_path, array_token[1]);
+                        inc2 = fopen (temp_path, "r");
+
+                        while (fgets (command, sizeof (command), inc2) != NULL) {
+                            command[strcspn (command, "\r\n")] = 0;
+                            message = command_handler (command);
+
+                            if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
+                                ts_find();
+                            }
+
+                            if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
+                                int ntserver = ts_find();
+
+                                if (ntserver > 1) {
+                                    fprintf (fp, "More than one server is running\n");
+                                    close (s);
+                                    exit (1);
+                                }
+                            }
+
+                            if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
+                                if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
+                                    error_handler ("The message is not sent to Testbed_Server()");
+                                }
+
+                                recvbuf = malloc (sizeof (struct c_msg));
+
+                                if ((recvfrom (s, recvbuf, sizeof (struct c_msg), 0, (struct sockaddr *)&si_other, &slen)) < 0) {
+                                    fprintf (fp, "Timeout, Please try again\n");
+                                }
+
+                                buf = (struct c_msg*)recvbuf;
+                                response_handler (buf);
+                                free (buf);
+                            }
+                        }
+
+                    } else {
+                        if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
+                            ts_find();
+                        }
+
+                        if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
+                            int ntserver = ts_find();
+
+                            if (ntserver > 1) {
+                                fprintf (fp, "More than one server is running\n");
+                                close (s);
+                                exit (1);
+                            }
+                        }
+
+                        if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
+                            if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
+                                error_handler ("The message is not sent to Testbed_Server()");
+                            }
+
+                            recvbuf = malloc (sizeof (struct c_msg));
+
+                            if ((recvfrom (s, recvbuf, sizeof (struct c_msg), 0, (struct sockaddr *)&si_other, &slen)) < 0) {
+                                fprintf (fp, "Timeout, Please try again\n");
+                            }
+
+                            buf = (struct c_msg*)recvbuf;
+                            response_handler (buf);
+                            free (buf);
+                        }
+                    }
                 }
-            }
 
-            if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
-                if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
-                    error_handler ("The message is not sent to Testbed_Server()");
-                }
-               
-                recvbuf = malloc (sizeof (struct c_msg));
-
-                if ((recvfrom (s, recvbuf, sizeof (struct c_msg), 0, (struct sockaddr *)&si_other, &slen)) < 0) {
-                    fprintf (fp, "Timeout, Please try again\n");
+            } else {
+                if (message.cmsgtyp == htonl (C_TS_REQ) && !strcmp (command, "ts_find")) {
+                    ts_find();
                 }
 
-                buf = (struct c_msg*)recvbuf;
-                response_handler (buf);
-                free (buf);
+                if (message.cmsgtyp == htonl (C_TS_REQ) &&  !strcmp (command, "ts_check")) {
+                    int ntserver = ts_find();
+
+                    if (ntserver > 1) {
+                        fprintf (fp, "More than one server is running\n");
+                        close (s);
+                        exit (1);
+                    }
+                }
+
+                if (message.cmsgtyp != htonl (C_ERR) && message.cmsgtyp != htonl (C_TS_REQ)) {
+                    if (sendto (s, &message, sizeof (message), 0 , (struct sockaddr *)&si_other, slen) == -1) {
+                        error_handler ("The message is not sent to Testbed_Server()");
+                    }
+
+                    recvbuf = malloc (sizeof (struct c_msg));
+
+                    if ((recvfrom (s, recvbuf, sizeof (struct c_msg), 0, (struct sockaddr *)&si_other, &slen)) < 0) {
+                        fprintf (fp, "Timeout, Please try again\n");
+                    }
+
+                    buf = (struct c_msg*)recvbuf;
+                    response_handler (buf);
+                    free (buf);
+                }
             }
         }
     }
