@@ -219,7 +219,20 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "help")) {
         help();
 
-    } else if (!strcmp (array_token[0], "ts_find")) {
+    } else if(!strcmp(array_token[0], "tcp"))
+    {
+            
+           
+
+    }
+
+    else if (!strcmp(array_token[0], "udp"))
+    {
+
+
+    }
+    
+    else if (!strcmp (array_token[0], "ts_find")) {
         message.cmsgtyp = htonl (C_TS_REQ);
         cmd_print (command_print);
 
