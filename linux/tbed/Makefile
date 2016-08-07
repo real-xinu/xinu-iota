@@ -2,10 +2,10 @@ CFLAGS= -c -Wall -std=gnu99
 CC=gcc
 ALL= ./src/tbed.c ./src/srbit.c ./src/help.c ./src/isnum.c  ./src/cmdhandler.c \
      ./src/map.c  ./src/topdump.c ./src/ts_find.c ./src/csconsole.c ./src/ping.c \
-     ./src/resp_handler.c ./src/error_handler.c ./src/udp.c ./src/result.c
+     ./src/resp_handler.c ./src/error_handler.c ./src/udp.c ./src/result.c ./src/cleanup.c
 OBJ= ./src/tbed.o ./src/srbit.o ./src/help.o ./src/isnum.o ./src/cmdhandler.o ./src/map.o \
      ./src/topdump.o ./src/ts_find.o ./src/csconsole.o ./src/ping.o ./src/resp_handler.o \
-     ./src/error_handler.o ./src/udp.o ./src/result.o
+     ./src/error_handler.o ./src/udp.o ./src/result.o ./src/cleanup.o
 
 SOURCE=./src/
 TARGET=./src/tbed

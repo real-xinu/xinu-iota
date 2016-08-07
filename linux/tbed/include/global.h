@@ -4,7 +4,9 @@
 extern int s;
 extern int nnodes;
 extern FILE *fp;
+extern FILE *log_f;
 extern char *path;
+char *log_file_path;
 extern char *scripts_path;
 extern char *imgpath;
 extern struct sockaddr_in si_other;

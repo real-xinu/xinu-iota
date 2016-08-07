@@ -172,6 +172,7 @@ void	ip_recv (
 		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
 			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
 			icmp_in(pkt);
+			kprintf("ICMP\n");
 			return;
 
 		 case IP_UDP:

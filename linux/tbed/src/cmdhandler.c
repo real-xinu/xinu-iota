@@ -19,6 +19,7 @@ char map_brouter[15];
 char path_incfile[30] = "../scripts/";
 char array_token[2][20];
 FILE *fp;
+FILE *log_f;
 
 /*-----------------------------------------------
  * Print Command's name in result file
@@ -219,20 +220,14 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "help")) {
         help();
 
-    } else if(!strcmp(array_token[0], "tcp"))
-    {
-            
-           
+    } else if (!strcmp (array_token[0], "tcp")) {
+    } else if (!strcmp (array_token[0], "udp")) {
+    } else if (!strcmp (array_token[0], "tshutdown")) {
+        download_img (array_token[1], "cortex", map_serv, XINUSERVER);
+        powercycle_bgnd ("cortex", map_serv, XINUSERVER);
+        message.cmsgtyp = htonl (C_ERR);
 
-    }
-
-    else if (!strcmp(array_token[0], "udp"))
-    {
-
-
-    }
-    
-    else if (!strcmp (array_token[0], "ts_find")) {
+    } else if (!strcmp (array_token[0], "ts_find")) {
         message.cmsgtyp = htonl (C_TS_REQ);
         cmd_print (command_print);
 
@@ -272,6 +267,8 @@ struct c_msg  command_handler (char command[BUFLEN])
         if (!strcmp (array_token[1], "t")) {
             powercycle_bgnd ("cortex", map_serv, XINUSERVER);
             SRV_IP = ip_serv;
+            fprintf (log_f, "%s", map_serv);
+            fprintf (log_f, " is pcycled as a server.\n");
 
             if (inet_aton (SRV_IP, &si_other.sin_addr) == 0) {
                 fprintf (stderr, "inet_aton() failed\n");
@@ -286,6 +283,8 @@ struct c_msg  command_handler (char command[BUFLEN])
             strcat (beagle, array_token[1]);
             powercycle_bgnd ("cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
+            fprintf (log_f, "%s", beagle);
+            fprintf (log_f, " is pcycled as a node.\n");
         }
 
     } else {

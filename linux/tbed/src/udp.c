@@ -104,7 +104,6 @@ void udp_process (const char *SRV_IP, char *file)
                 fgets (command, sizeof (command), type);
             }
 
-           
             command[strcspn (command, "\r\n")] = 0;
             memset (&message, 0, sizeof (struct c_msg));
             /*--------------------------------------------------------------------
@@ -141,6 +140,7 @@ void udp_process (const char *SRV_IP, char *file)
         type = fopen (file, "r");
 
         /*DEBUG */ //printf("command:%s\n", command);
+
         while ( fgets (command, sizeof (command), type) != NULL) {
             command[strcspn (command, "\r\n")] = 0;
             /*-----------------------------------------------------------------------
