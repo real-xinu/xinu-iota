@@ -1,0 +1,147 @@
+%start program
+%token CREATEGRAPH
+%token LEFT RIGHT BI RING EQ LINEAR COMPLETE LEFTPAREN RIGHTPAREN
+
+%{
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+
+#define NAMLEN 128
+#define MAX 45
+
+void yyerror(const char *s){};
+extern "C" int yylex();
+extern "C" int yyparse();
+
+struct node {
+	char name[NAMLEN+3];
+	char **adj_list;
+	int nadj;
+};
+
+struct node nodes[MAX];
+
+int nnodes = 0;
+
+void add_neighbour(struct node *curr_node, char *neighbour);
+void add_ring(struct node nodes[], int nnodes, char *family_name, int n);
+void print_node(struct node curr_node);
+%}
+
+%union {
+	int ival;
+	char *node_name_value;
+}
+
+%token <ival> INT
+%token <node_name_value> NODE
+
+%%
+
+program : statements CREATEGRAPH {printf ("End\n"); exit(1); }
+;
+
+statement : assign | connect
+;
+
+connect : NODE LEFT NODE | NODE RIGHT NODE | NODE BI NODE
+;
+
+assign : NODE EQ RING LEFTPAREN INT RIGHTPAREN {add_ring(nodes, nnodes, $1, $5);}|
+	 NODE EQ LINEAR LEFTPAREN INT RIGHTPAREN |
+	 NODE EQ COMPLETE LEFTPAREN INT RIGHTPAREN
+;
+
+statements : /* empty */|
+	statement statements
+	;
+%%
+
+int main( int argc, char *argv[] )
+{ //extern FILE *yyin;
+  //++argv; −−argc;
+  //yyin = fopen( argv[0], ”r” );
+  int nnodes = 0;
+  struct node nodes[MAX];
+  int yydebug = 1;
+  int errors = 0;
+  yyparse ();
+}
+
+void yyerror (char *s) /* Called by yyparse on error */
+{
+printf ("%s\n", s);
+}
+
+int node_check(int n) {
+  if (n > MAX)
+    return 0;
+  return 1;
+}
+
+void error_message(const char *msg) {
+  int i, j;
+  fprintf(stderr, "%s", msg);
+  for (i = 0; i < nnodes; i++) {
+    for (j = 0; j < nodes[i].nadj; j++) {
+      free(nodes[i].adj_list[j]);
+    }
+    free(nodes[i].adj_list);
+  }
+  exit(1);
+}
+
+void add_neighbour(struct node *curr_node, char *neighbour) {
+  char **temp_list;
+  if ((*curr_node).nadj == 0) {
+    (*curr_node).nadj++;
+    (*curr_node).adj_list = (char**)malloc((*curr_node).nadj*sizeof(char *));
+    if ((*curr_node).adj_list == NULL) {
+      error_message("Memory could not be allocated");
+    }
+  }
+  else {
+    (*curr_node).nadj++;
+    temp_list = (char**)realloc((*curr_node).adj_list, (*curr_node).nadj*sizeof(char *));
+    if (temp_list == NULL) {
+      error_message("Memory could not be allocated");
+    }
+    (*curr_node).adj_list = temp_list;
+  }
+  (*curr_node).adj_list[(*curr_node).nadj-1] = (char*)malloc(sizeof(strlen(neighbour)));
+  strcpy((*curr_node).adj_list[(*curr_node).nadj-1], neighbour);
+}
+
+void add_ring(struct node nodes[], int nnodes, char *family_name, int n) {
+  int i;
+  char neighbour[NAMLEN+3];
+  printf("family: %s", family_name);
+  for (i = 0; i < n; i++) {
+    if(!node_check(nnodes))
+      error_message("Node limit exceeded");
+
+    sprintf(nodes[nnodes].name, "%s_%d", family_name, i);
+    //printf("Got here");
+    printf("\nName: %s\n", nodes[nnodes].name);
+    sprintf(neighbour, "%s_%d", family_name, (((i-1) % n) + n)%n);
+    add_neighbour(&nodes[nnodes], neighbour);
+    sprintf(neighbour, "%s_%d", family_name, (i+1) % n);
+    add_neighbour(&nodes[nnodes], neighbour);
+    print_node(nodes[nnodes]);
+    nnodes++;
+  }
+}
+
+void print_node(struct node curr_node) {
+  int i;
+  printf("\nNode name: %s", curr_node.name);
+  printf("\nNumber of adjacent nodes: %d", curr_node.nadj);
+  printf("\nAdjacent nodes: ");
+
+  for (i = 0; i < curr_node.nadj; i++)
+    printf("%s ", curr_node.adj_list[i]);
+
+  printf("\n");
+}
