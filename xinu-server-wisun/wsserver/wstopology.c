@@ -2,6 +2,8 @@
 
 #include <xinu.h>
 
+char map_list[MAX_NODES][20];
+
 /***********************************************************************
  * read_topology: Read a topology file from a remote file server
  * EXAMPLE USAGE:
@@ -57,7 +59,7 @@ status read_topology ( char *name, char **buff, uint32 *size )
  ***********************************************************************/
 int32 topo_update ( char *buff, uint32 size, struct t_entry *topo )
 {
-    int i, j;
+    int i, j, k;
     int nnodes = 46;
     int32 num_of_entries;
     int counter = 0;
@@ -65,6 +67,7 @@ int32 topo_update ( char *buff, uint32 size, struct t_entry *topo )
     int len_flag = 0;
     int name_size;
     i = 0;
+    k = 0;
 
     while ( counter <= size ) {
         if ( flag != -1 ) {
@@ -107,10 +110,13 @@ int32 topo_update ( char *buff, uint32 size, struct t_entry *topo )
             } else {
                 //int name[name_size];
                 for ( j = 0; j < name_size; j++ ) {
-                    //name[j] = buff[counter + j];
-                    //kprintf("%s",&name[j]);
+                    /*DEBUG */ //name[j] = buff[counter + j];
+                    /*DEBUG */ //kprintf("%s",&name[j]);
+                    map_list[k][j] =  buff[counter + j];
                 }
 
+                /*DEBUG */  //kprintf("%s", &map_list[k]);
+                k++;
                 //kprintf("\n");
                 counter = counter + name_size;
                 len_flag = 0;

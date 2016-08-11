@@ -138,28 +138,25 @@ process	netin (
 process rawin(void) {
 
 	struct	etherPkt *pkt;
-	//struct netpacket *pkt;
 	int32	count;
-	//int i;
-        //control(ETHER0, ETH_CTRL_PROMISC_ENABLE, 0,0);
+	
 	while(TRUE) {
 
 
 		pkt = (struct etherPkt *)getbuf(netbufpool);
-		//pkt = (struct netpacket *)getbuf(netbufpool);
+                
 		if(pkt == SYSERR) {
 			panic("rawin: cannot allocate memory");
 		}
 
 		count = read(ETHER0, (char *)pkt, PACKLEN);
-		//kprintf("count:%d\n", count);
+	
 		if(count == SYSERR) {
 			panic("rawin: cannot read from ethernet");
 		}
                 
 		switch(ntohs(pkt->type)) {
-                //switch(ntohs(pkt->net_ethtype)){
-
+               
 		case 0x0000:
 			if(semcount(radtab[0].isem) >= radtab[0].rxRingSize) {
 				freebuf((char *)pkt);
@@ -179,9 +176,10 @@ process rawin(void) {
 		case ETH_TYPE_B:
 			process_typb(pkt);
 			break;
+		
 
 		default:
-			//kprintf("rawin: unknown ethernet type: %02x\n", ntohs(pkt->type));
+			/*DEBUG */ //kprintf("rawin: unknown ethernet type: %02x\n", ntohs(pkt->type));
 			freebuf((char *)pkt);
 			break;
 		}

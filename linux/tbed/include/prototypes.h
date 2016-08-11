@@ -13,3 +13,4 @@ extern void error_handler(char *);
 extern void udp_process(const char *, char *);
 extern char * make_result_file(char *);
 extern void cleanup(char *);
+extern void getmap(struct c_msg *);

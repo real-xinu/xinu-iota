@@ -40,6 +40,10 @@ void response_handler (struct c_msg *buf)
         case C_PING_ALL:
             ping_reply_handler (buf);
             break;
+
+        case C_MAP_REPLY:
+            getmap (buf);
+            break;
     }
 }
 

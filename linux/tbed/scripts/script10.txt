@@ -1,0 +1,4 @@
+inc setup10.txt
+ts_find
+newtop Top10.0
+nping -all

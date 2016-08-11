@@ -110,14 +110,27 @@
 /*  testbed server is discovered (see	*/
 /*  the C_FIND message).		*/
 
-#define	C_OK		15	/* A response to an C_RESTART,		*/
+#define C_MAP           15  /* A message sent by the management system to obtain 
+			       the mapping between the nodes and the names 
+			       of the current network topology */
+
+#define C_MAP_REPLY     16  /* As a response of C_MAP message */
+
+#define C_PINGALL  17   /* A message sent by the management system to 
+			       ping all of the backends which are running 
+			       a node image (including the nodes that are not in the current active
+			       topology)*/
+
+#define C_PINGALL_REPLY  18
+
+#define	C_OK		19	/* A response to an C_RESTART,		*/
 /*  C_RESTART_NODES, C_XOFF, C_XON,	*/
 /*  C_OFFLINE, C_ONLINE, C_NEW_TOP, or	*/
 /*  C_SHUTDOWN that indicates the	*/
 /*  request was honored and the		*/
 /*  requested operation was successful.	*/
 
-#define	C_ERR		16	/* A response sent by a node when an	*/
+#define	C_ERR		20	/* A response sent by a node when an	*/
 /*  incoming message is invalid or the	*/
 /*  operation cannot be performed.	*/
 
@@ -174,7 +187,13 @@ struct	c_msg {
             byte	fname[File_Name_Size];/* File name to use		*/
         };
 
+	struct {
+                  int32 nnodes;
+		  char map[MAX_NODES][20];   /* As a response of C_MAP message */
+ 
+        };
         uint32	uptime;		/* TS_RESP (amount of time the	*/
         /* server has been up (in msec).*/
+               
     };
 };

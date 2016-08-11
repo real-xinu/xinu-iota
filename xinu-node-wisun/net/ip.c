@@ -67,7 +67,9 @@ void	ip_in (
 	int32	i;		/* For loop index	*/
 
 	/* Check the incoming interface */
-
+       
+	
+   
 	if((pkt->net_iface < 0) || (pkt->net_iface >= NIFACES)) {
 		freebuf((char *)pkt);
 		return;
@@ -76,7 +78,7 @@ void	ip_in (
 	ifptr = &if_tab[pkt->net_iface];
 
 	/* Check IP version */
-
+        
 	if((pkt->net_ipvtch & 0xf0) != 0x60) {
 		freebuf((char *)pkt);
 		return;
@@ -87,11 +89,13 @@ void	ip_in (
 	ip_ntoh(pkt);
 
 	/* Match destination against own IP addresses */
-
+       
 	for(i = 0; i < ifptr->if_nipucast; i++) {
 		if(memcmp(pkt->net_ipdst, ifptr->if_ipucast[i].ipaddr,
-							16) == 0) {
+					16) == 0) {
+                        
 			ip_recv(pkt);
+			
 			return;
 		}
 	}
@@ -133,6 +137,7 @@ void	ip_recv (
 	byte	*currptr;	/* Current pointer	*/
 
 	nxthdr = pkt->net_ipnh;
+
 	currptr = pkt->net_ipdata;
 
 	if(nxthdr == IP_EXT_HBH) {
@@ -172,7 +177,7 @@ void	ip_recv (
 		 	pkt->net_iplen = pkt->net_iplen - (currptr-pkt->net_ipdata);
 			memcpy(pkt->net_ipdata, currptr, pkt->net_iplen);
 			icmp_in(pkt);
-			kprintf("ICMP\n");
+			
 			return;
 
 		 case IP_UDP:

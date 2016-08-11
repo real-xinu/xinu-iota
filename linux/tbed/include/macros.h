@@ -20,6 +20,7 @@
 #define EXEC "cs-console"
 #define SERVERIMG "xinu.boot.s"
 #define NODEIMG   "xinu.boot.n"
+#define DEFIMG "xinu.boot.m"
 #define XINUSERVER "xinuserver.cs.purdue.edu"
 #define SERVER "beagle183"
 #define NETIP   "128.10.137."

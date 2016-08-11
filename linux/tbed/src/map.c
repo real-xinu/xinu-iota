@@ -2,7 +2,7 @@
 #include "../include/macros.h"
 #include "../include/global.h"
 
-char map_list[46][100];
+char map_list[46][20];
 char *path = "../../../remote-file-server/";
 int nnodes = 0;
 /*--------------------------------------------------------------

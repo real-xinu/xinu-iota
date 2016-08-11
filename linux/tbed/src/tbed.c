@@ -7,9 +7,9 @@ FILE *fp;
 FILE *log_f;
 int s;
 struct sockaddr_in si_other;
-char map_list[46][100];
+char map_list[46][20];
 
-char *log_file_path = "../log/log.txt";
+char *log_file_path = "../log/log.manage";
 
 /* --------------------------
  * Main- Call UDP process

@@ -1,20 +1,19 @@
-/* wsserver.h - Declarations and constants for Wi-SUN testbed server */
-
 /************************************************************************/
-/*                  */
-/*      Control Message Protocol      */
-/*                  */
-/* The following defines the protocol used between the testbed    */
-/*  management system and the testbed server.  Each message is  */
-/*  sent in a UDP packet to port 55000.  All integer values are */
-/*  sent in network byte order.         */
-/*                  */
+/*									*/
+/*			Control Message Protocol			*/
+/*									*/
+/* The following defines the protocol used between the testbed		*/
+/*	management system and the testbed server.  Each message is	*/
+/*	sent in a UDP packet to port 55000.  All integer values	are	*/
+/*	sent in network byte order.					*/
+/*									*/
 /************************************************************************/
 
 /* Definition of message types */
 
-#define MAX_NODES   46
-#define File_Name_Size   50
+
+#define MAX_NODES  46
+#define File_Name_Size  50
 
 #define	C_RESTART	0	/* A message sent to the testbed server	*/
 /*  that requests the server to restart.*/
@@ -111,65 +110,95 @@
 /*  testbed server is discovered (see	*/
 /*  the C_FIND message).		*/
 
-#define	C_OK		15	/* A response to an C_RESTART,		*/
+#define C_MAP           15  /* A message sent by the management system to obtain 
+			       the mapping between the nodes and the names 
+			       of the current network topology */
+
+#define C_MAP_REPLY     16  /* As a response of C_MAP message */
+
+#define C_PINGALL  17   /* A message sent by the management system to 
+			       ping all of the backends which are running 
+			       a node image (including the nodes that are not in the current active
+			       topology)*/
+
+#define C_PINGALL_REPLY  18
+
+#define	C_OK		19	/* A response to an C_RESTART,		*/
 /*  C_RESTART_NODES, C_XOFF, C_XON,	*/
 /*  C_OFFLINE, C_ONLINE, C_NEW_TOP, or	*/
 /*  C_SHUTDOWN that indicates the	*/
 /*  request was honored and the		*/
 /*  requested operation was successful.	*/
 
-#define	C_ERR		16	/* A response sent by a node when an	*/
+#define	C_ERR		20	/* A response sent by a node when an	*/
 /*  incoming message is invalid or the	*/
 /*  operation cannot be performed.	*/
 
-#define MAXNODES  46  /* Maximum number of nodes being tested */
 
+/* The following struct is included here, but should probably go in the	*/
+/*	file that declares items related to the topology database.	*/
 
-struct  t_entry {   /* Entry in a topology file (also used  */
-	/*  in messages.      */
-	int32 t_nodeid; /* ID of a node       */
-	int32 t_status; /* Status of the node     */
-	byte  t_neighbors[6]; /* The multicast address of neighbors */
-	byte  t_macaddr[6]; /* The Mac address of a node    */
+#define	MAXNODES	46	/* Maximum number of nodes being tested	*/
+
+struct	t_entry { 		/* Entry in a topology file (also used	*/
+    /*  in messages.			*/
+    int32	t_nodeid;	/* ID of a node				*/
+    int32	t_status;	/* Status of the node			*/
+    byte	t_neighbors[6];	/* The multicast address of neighbors	*/
+    byte	t_macaddr[6];	/* The Mac address of a node		*/
 };
 
 
-struct  p_entry {   /* Entry in a ping reply    */
-	int32 pnodeid;	/* ID of a node			 */
-	int32 pstatus;	/* Status of the node		 */
+
+struct	p_entry {		/* Entry in a ping reply		*/
+    int32	pnodeid;	/* ID of a node				*/
+    int32	pstatus;	/* Status of the node			*/
 };
 
 
-struct  c_msg {
-	int32 clength;	/* The length of the message measured */
-	/* in octets from the start of c_msg. */
-	int32 cmsgtyp;	/* Message type as specified above	*/
+struct	c_msg {
+    int32	clength;	/* The length of the message measured	*/
+    /* in octets from the start of c_msg.	*/
+    int32	cmsgtyp;	/* Message type as specified above	*/
 
-	union {		 /* Items in the union are only needed */
-	/*	for messages that contain additional*/
-	/*	information beyond the message type */
-	/*	and message length.		 */
+    union {			/* Items in the union are only needed	*/
+        /*  for messages that contain additional*/
+        /*  information beyond the message type	*/
+        /*  and message length.			*/
 
-	int32 xonoffid; /* Node ID for XON/XOFF; value	*/
-	/*	-1 means "all nodes". */
+        int32	xonoffid;	/* Node ID for XON/XOFF; value	*/
+        /*  -1 means "all nodes".	*/
 
-	int32 pingnodeid; /* PING_REQ */
+        int32	pingnodeid;	/* PING_REQ */
 
-	struct	{	 /* PING_REPLY */
-		int32 pingnum; /* Count of entries that follow*/
-		struct	p_entry pingdata[MAX_NODES];
+        struct { 		/* PING_REPLY */
+            int32	pingnum; /* Count of entries that follow*/
+            struct	p_entry	pingdata[MAX_NODES];
+
+        };
+
+        struct { 		/* TOP_REPLY */
+            int32	topnum; /* Count of entries that follow	*/
+            struct	t_entry	topdata[MAX_NODES];
+        };
+
+        struct { 		/* NEW_TOP */
+            int32	flen;	/* Length of the name in bytes	*/
+            byte	fname[File_Name_Size];/* File name to use		*/
+        };
+
+
+	struct {
+                  int32 nnodes;
+		  char map[MAX_NODES][20];   /* As a response of C_MAP message */
+                 
 
 	};
 
-	struct	{	 /* TOP_REPLY */
-		int32 topnum; /* Count of entries that follow */
-		struct	t_entry topdata[MAX_NODES];
-	};
+        uint32	uptime;		/* TS_RESP (amount of time the	*/
+        /* server has been up (in msec).*/
 
-	struct	{	 /* NEW_TOP */
-		int32 flen; /* Length of the name in bytes	*/
-		byte	fname[File_Name_Size];/* File name to use	 */
-	};
-	};
+    };
 };
 
+extern char map_list[MAX_NODES][20];

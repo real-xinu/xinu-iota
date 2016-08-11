@@ -227,6 +227,14 @@ struct c_msg  command_handler (char command[BUFLEN])
         powercycle_bgnd ("cortex", map_serv, XINUSERVER);
         message.cmsgtyp = htonl (C_ERR);
 
+    } else if (!strcmp (array_token[0], "cleanup")) {
+    } else if (!strcmp (array_token[0], "pingall")) {
+        message.cmsgtyp = htonl (C_PINGALL);
+
+    } else if (!strcmp (array_token[0], "getmap")) {
+        message.cmsgtyp = htonl (C_MAP);
+        cmd_print (command_print);
+
     } else if (!strcmp (array_token[0], "ts_find")) {
         message.cmsgtyp = htonl (C_TS_REQ);
         cmd_print (command_print);

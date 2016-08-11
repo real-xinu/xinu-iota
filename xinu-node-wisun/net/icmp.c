@@ -166,6 +166,7 @@ void	icmp_in (
 	int32	i;			/* For loop index		*/
 
 	mask = disable();
+	kprintf("test3\n");
 	/*
 	if((pkt->net_ictype == ICMP_ECHOREQST) && (pkt->net_iccode == 0)) {
 		memcpy(ipdata.ipdst, pkt->net_ipsrc, 16);
@@ -238,9 +239,10 @@ void	icmp_in (
 		}
 
 		restore(mask);
+		
 		return;
 	}
-
+        
 	freebuf((char *)pkt);
 	restore(mask);
 }

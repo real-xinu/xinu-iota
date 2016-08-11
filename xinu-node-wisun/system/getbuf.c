@@ -23,7 +23,9 @@ char    *getbuf(
 		return (char *)SYSERR;
 
 	}
+	
 	bpptr = &buftab[poolid];
+
 
 	/* Wait for pool to have > 0 buffers and allocate a buffer */
 

@@ -164,6 +164,13 @@ struct c_msg * cmsg_handler ( struct c_msg ctlpkt )
             cmsg_reply->cmsgtyp = htonl ( C_TS_RESP );
             break;
 
+        case C_MAP:
+            kprintf (" Message type is %d\n", C_MAP);
+            cmsg_reply->cmsgtyp = htonl (C_MAP_REPLY);
+            cmsg_reply->nnodes = htonl (nnodes);
+            memcpy (cmsg_reply->map, map_list, sizeof (map_list));
+            break;
+
         default:
             kprintf ( "ERROR\n" );
             cmsg_reply->cmsgtyp = htonl ( C_ERR );
