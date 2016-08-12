@@ -1,0 +1,47 @@
+
+***The command is***:ts_find
+
+Looking for the Testbed Servers...
+IP address of Testbed server 1 is :128.10.137.183
+
+***The command is***:newtop Top10.0
+
+<====Reply from testbed server: OK
+
+***The command is***:nping -all
+
+<====Reply from testbed server: Node 0 is alive
+<====Reply from testbed server: Node 1 is alive
+<====Reply from testbed server: Node 2 is alive
+<====Reply from testbed server: Node 3 is alive
+<====Reply from testbed server: Node 4 is alive
+<====Reply from testbed server: Node 5 is alive
+<====Reply from testbed server: Node 6 is alive
+<====Reply from testbed server: Node 7 is alive
+<====Reply from testbed server: Node 8 is alive
+<====Reply from testbed server: Node 9 is alive
+
+***The command is***:topdump
+
+Number of Nodes: 10
+0 ,1 ,00000001 00000000 00000000 00000000 00000011 11111110 
+The neighbors of node 0 are: 1 2 3 4 5 6 7 8 9 
+1 ,1 ,00000001 00000000 00000000 00000000 00000011 11111101 
+The neighbors of node 1 are: 0 2 3 4 5 6 7 8 9 
+2 ,1 ,00000001 00000000 00000000 00000000 00000011 11111011 
+The neighbors of node 2 are: 0 1 3 4 5 6 7 8 9 
+3 ,1 ,00000001 00000000 00000000 00000000 00000011 11110111 
+The neighbors of node 3 are: 0 1 2 4 5 6 7 8 9 
+4 ,1 ,00000001 00000000 00000000 00000000 00000011 11101111 
+The neighbors of node 4 are: 0 1 2 3 5 6 7 8 9 
+5 ,1 ,00000001 00000000 00000000 00000000 00000011 11011111 
+The neighbors of node 5 are: 0 1 2 3 4 6 7 8 9 
+6 ,1 ,00000001 00000000 00000000 00000000 00000011 10111111 
+The neighbors of node 6 are: 0 1 2 3 4 5 7 8 9 
+7 ,1 ,00000001 00000000 00000000 00000000 00000011 01111111 
+The neighbors of node 7 are: 0 1 2 3 4 5 6 8 9 
+8 ,1 ,00000001 00000000 00000000 00000000 00000010 11111111 
+The neighbors of node 8 are: 0 1 2 3 4 5 6 7 9 
+9 ,1 ,00000001 00000000 00000000 00000000 00000001 11111111 
+The neighbors of node 9 are: 0 1 2 3 4 5 6 7 8 
+Emulation time = 51.502357 seconds
