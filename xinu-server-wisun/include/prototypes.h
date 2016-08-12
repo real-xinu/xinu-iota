@@ -63,6 +63,12 @@ extern	uint32	getlocalip(void);
 
 extern	uint32	getlocalip_boot(uint32 *, char *, uint32 *);
 
+/* in file dns.c */
+
+extern uint32 dns_qa(char *);
+extern uint32 dns_bldq(char *, char *);;
+
+
 /* in file dot2ip.c */
 
 extern	uint32	dot2ip(char *, uint32 *);
@@ -73,6 +79,7 @@ extern void exit(void);
 /* in file queue.c */
 
 extern	pid32	enqueue(pid32, qid16);
+extern  pid32   dequeue(qid16);
 
 /* in file intr.S */
 
@@ -120,7 +127,8 @@ extern	syscall	getc(did32);
 
 /* in file getitem.c */
 extern	pid32	getfirst(qid16);
-
+extern  pid32   getlast(qid16);
+extern  pid32   getitem(pid32);
 /* in file getmem.c */
 extern	char	*getmem(uint32);
 
@@ -332,6 +340,10 @@ extern	int32	pci_init(void);
 /* in file pdump.c */
 extern	void	pdump(struct netpacket *);
 extern	void	pdumph(struct netpacket *);
+
+/* in file pklog.c */
+extern void pktlog(void *, int32);
+
 
 /* in file platinit.c */
 extern	void	platinit(void);
@@ -551,6 +563,11 @@ extern	int32	insw(int32, int32 ,int32);
 
 /* in file suspend.c */
 extern	syscall	suspend(pid32);
+
+/* in file ticc1200_regs.c */
+extern int32 ticc1200_read(struct radcblk *, byte, byte *);
+extern int32 ticc1200_write(struct radcblk *, byte, byte);
+
 
 /* in file ttycontrol.c */
 extern	devcall	ttycontrol(struct dentry *, int32, int32, int32);
