@@ -1,0 +1,4 @@
+download t 183 xinu.boot.s
+pcycle t
+delay 16000
+tshutdown tserver xinu.boot.m
