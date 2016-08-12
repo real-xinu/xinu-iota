@@ -11,7 +11,6 @@ GLOBAL=./include/global.h
 BUILDDIR=build
 EXE=tbed
 SOURCES = $(wildcard $(SOURCE)/*.c)
-OBJECTS = $(patsubst $(SOURCE)/%.c, build/%.o,$(SOURCES))
 OBJECTS = $(patsubst $(SOURCE)/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 
 all: dir $(BUILDDIR)/$(EXE)
