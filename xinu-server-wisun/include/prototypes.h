@@ -615,19 +615,24 @@ extern	syscall	write(did32, char *, uint32);
 extern	process	wsserver(void);
 extern status wsserver_assign(struct netpacket *);
 extern status wsserver_xonoff(int, int);
+extern status wsserver_senderr(struct netpacket *);
+extern struct etherPkt *create_etherPkt();
 extern void amsg_handler(struct netpacket *);
+extern void ack_handler(struct netpacket *);
+extern struct c_msg * cmsg_handler(struct c_msg *);
 extern struct c_msg *toporeply();
-extern struct c_msg  *newtop(struct c_msg);
+extern struct c_msg  *newtop(struct c_msg *);
 extern status nping(int32);
-extern struct c_msg * nping_reply(struct c_msg);
+extern struct c_msg * nping_reply(struct c_msg *);
 extern status nping_all();
-extern struct c_msg * nping_all_reply(struct c_msg);
+extern struct c_msg * nping_all_reply(struct c_msg *);
 extern status topo_compr();
+extern void topo_update_mac(struct netpacket *);
 /* in file wstopology.c */
 extern status read_topology(char *, char **, uint32 *);
 extern int32 topo_update(char *, uint32, struct t_entry *);
-extern status init_topo(char *);
-extern void initialize_topo();
+extern status read_topo(char *);
+extern void init_topo();
 /* in file xdone.c */
 extern	void	xdone(void);
 

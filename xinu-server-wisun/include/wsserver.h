@@ -12,7 +12,6 @@
 /* Definition of message types */
 
 
-#define MAX_NODES  46
 #define File_Name_Size  50
 
 #define	C_RESTART	0	/* A message sent to the testbed server	*/
@@ -111,10 +110,10 @@
 /*  the C_FIND message).		*/
 
 #define C_MAP           15  /* A message sent by the management system to obtain 
-			       the mapping between the nodes and the names 
+			       the mapping between the nodes' name and the IDs 
 			       of the current network topology */
 
-#define C_MAP_REPLY     16  /* As a response of C_MAP message */
+#define C_MAP_REPLY     16  /* a response to C_MAP message */
 
 #define C_PINGALL  17   /* A message sent by the management system to 
 			       ping all of the backends which are running 
@@ -123,7 +122,7 @@
 
 #define C_PINGALL_REPLY  18
 
-#define	C_OK		19	/* A response to an C_RESTART,		*/
+#define	C_OK		19	/*  A response to an C_RESTART,		*/
 /*  C_RESTART_NODES, C_XOFF, C_XON,	*/
 /*  C_OFFLINE, C_ONLINE, C_NEW_TOP, or	*/
 /*  C_SHUTDOWN that indicates the	*/
@@ -139,6 +138,7 @@
 /*	file that declares items related to the topology database.	*/
 
 #define	MAXNODES	46	/* Maximum number of nodes being tested	*/
+#define NAMELEN         20      /* Maximum length of the node's name */
 
 struct	t_entry { 		/* Entry in a topology file (also used	*/
     /*  in messages.			*/
@@ -173,13 +173,13 @@ struct	c_msg {
 
         struct { 		/* PING_REPLY */
             int32	pingnum; /* Count of entries that follow*/
-            struct	p_entry	pingdata[MAX_NODES];
+            struct	p_entry	pingdata[MAXNODES];
 
         };
 
         struct { 		/* TOP_REPLY */
             int32	topnum; /* Count of entries that follow	*/
-            struct	t_entry	topdata[MAX_NODES];
+            struct	t_entry	topdata[MAXNODES];
         };
 
         struct { 		/* NEW_TOP */
@@ -190,7 +190,7 @@ struct	c_msg {
 
 	struct {
                   int32 nnodes;
-		  char map[MAX_NODES][20];   /* As a response of C_MAP message */
+		  char map[MAXNODES][NAMELEN];   /* As a response of C_MAP message */
                  
 
 	};
@@ -201,4 +201,28 @@ struct	c_msg {
     };
 };
 
-extern char map_list[MAX_NODES][20];
+/*---------------
+ * UDP port
+ * TIME_OUT value
+ * ping status
+ * ------------*/
+#define PORT 55000
+#define TIME_OUT 600000
+#define NOTACTIV 0
+#define ALIVE    1
+#define NOTRESP  -1
+#define XOFF     0
+#define XON      1
+
+
+
+
+extern int32 nnodes;
+extern int32 nodeid;
+extern int32 online;
+extern int32 *seqnum;
+extern int32 ping_ack_flag[MAXNODES];
+extern byte ack_info[16];
+extern char map_list[MAXNODES][NAMELEN];
+extern struct t_entry topo[MAXNODES];
+extern struct t_entry old_topo[MAXNODES];

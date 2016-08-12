@@ -2,7 +2,7 @@
 
 #include <xinu.h>
 
-char map_list[MAX_NODES][20];
+char map_list[MAXNODES][NAMELEN];
 
 /***********************************************************************
  * read_topology: Read a topology file from a remote file server
@@ -72,13 +72,13 @@ int32 topo_update ( char *buff, uint32 size, struct t_entry *topo )
     while ( counter <= size ) {
         if ( flag != -1 ) {
             for ( j = 0; j < ETH_ADDR_LEN; j++ ) {
-                /*
-                       for (k=7; k>=0; k--)
-                       {
-                       	kprintf("%d ", (buff[i * ETH_ADDR_LEN + j]>>k)&0x01);
-                       }
-                       kprintf(" ");
-                */
+                /*DEBUG*/   /*
+                          for (k=7; k>=0; k--)
+                          {
+                          	kprintf("%d ", (buff[i * ETH_ADDR_LEN + j]>>k)&0x01);
+                          }
+                          kprintf(" ");
+                   */
                 if ( ( int ) buff[i * ETH_ADDR_LEN + j] == 0 )
                     flag++;
             }

@@ -222,10 +222,10 @@ struct c_msg  command_handler (char command[BUFLEN])
 
     } else if (!strcmp (array_token[0], "tcp")) {
     } else if (!strcmp (array_token[0], "udp")) {
-    } else if (!strcmp (array_token[0], "tshutdown")) {
-        download_img (array_token[1], "cortex", map_serv, XINUSERVER);
+    } else if (!strcmp (array_token[0], "tshutdown") && (!strcmp(array_token[1],"tserver"))) {
+        download_img (array_token[2], "cortex", map_serv, XINUSERVER);
         powercycle_bgnd ("cortex", map_serv, XINUSERVER);
-        message.cmsgtyp = htonl (C_ERR);
+        message.cmsgtyp = htonl (C_SHUTDOWN);
 
     } else if (!strcmp (array_token[0], "cleanup")) {
     } else if (!strcmp (array_token[0], "pingall")) {
