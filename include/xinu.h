@@ -25,7 +25,6 @@
 #include <radio.h>
 #include <gpio.h>
 #include <net.h>
-#include <nd.h>
 #include <netiface.h>
 #include <ip.h>
 #include <arp.h>
@@ -36,6 +35,7 @@
 #include <tcb.h>
 #include <dhcp.h>
 #include <icmp.h>
+#include <nd.h>
 #include <tftp.h>
 #include <name.h>
 #include <shell.h>

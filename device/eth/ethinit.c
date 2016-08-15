@@ -177,7 +177,7 @@ int32	ethinit	(
 	struct	ethcblk *ethptr;		/* Ethernet control blk pointer	*/
 	struct	eth_a_tx_desc *tdescptr;/* Tx descriptor pointer	*/
 	struct	eth_a_rx_desc *rdescptr;/* Rx descriptor pointer	*/
-	struct	netpacket *pktptr;	/* Packet pointer		*/
+	struct	netpacket_e *pktptr;	/* Packet pointer		*/
 	struct	eth_a_csreg *csrptr;	/* Ethernet CSR pointer		*/
 	uint32	phyreg;			/* Variable to store PHY reg val*/
 	int32	retval;			/* Return value			*/
@@ -285,25 +285,25 @@ int32	ethinit	(
 		sizeof(struct eth_a_rx_desc)*ethptr->rxRingSize);
 
 	/* Allocate memory for rx buffers */
-	ethptr->rxBufs = (void*)getmem(sizeof(struct netpacket) *
+	ethptr->rxBufs = (void*)getmem(sizeof(struct netpacket_e) *
 					ethptr->rxRingSize);
 	if((int32)ethptr->rxBufs == SYSERR) {
 		return SYSERR;
 	}
 
 	/* Zero out the rx buffers */
-	memset((char *)ethptr->rxBufs, NULLCH, sizeof(struct netpacket) *
+	memset((char *)ethptr->rxBufs, NULLCH, sizeof(struct netpacket_e) *
 						ethptr->rxRingSize);
 
 	/* Initialize the rx ring */
 
 	rdescptr = (struct eth_a_rx_desc *)ethptr->rxRing;
-	pktptr = (struct netpacket *)ethptr->rxBufs;
+	pktptr = (struct netpacket_e *)ethptr->rxBufs;
 
 	for(i = 0; i < ethptr->rxRingSize; i++) {
 		rdescptr->next = rdescptr + 1;
-		rdescptr->buffer = (uint32)pktptr->net_ethdst;
-		rdescptr->buflen = sizeof(struct netpacket) - 2;
+		rdescptr->buffer = (uint32)pktptr;
+		rdescptr->buflen = 1514;
 		rdescptr->bufoff = 0;
 		rdescptr->stat = ETH_AM335X_RDS_OWN;
 		rdescptr++;
@@ -333,25 +333,25 @@ int32	ethinit	(
 		sizeof(struct eth_a_tx_desc)*ethptr->txRingSize);
 
 	/* Allocate memory for tx buffers */
-	ethptr->txBufs = (void*)getmem(sizeof(struct netpacket) *
+	ethptr->txBufs = (void*)getmem(sizeof(struct netpacket_e) *
 					ethptr->txRingSize);
 	if((int32)ethptr->txBufs == SYSERR) {
 		return SYSERR;
 	}
 
 	/* Zero out the tx buffers */
-	memset((char*)ethptr->txBufs, NULLCH, sizeof(struct netpacket) *
+	memset((char*)ethptr->txBufs, NULLCH, sizeof(struct netpacket_e) *
 						ethptr->txRingSize);
 
 	/* Initialize the tx ring */
 
 	tdescptr = (struct eth_a_tx_desc *)ethptr->txRing;
-	pktptr = (struct netpacket *)ethptr->txBufs;
+	pktptr = (struct netpacket_e *)ethptr->txBufs;
 
 	for(i = 0; i < ethptr->txRingSize; i++) {
 		tdescptr->next = NULL;
-		tdescptr->buffer = (uint32)pktptr->net_ethdst;
-		tdescptr->buflen = sizeof(struct netpacket) - 2;
+		tdescptr->buffer = (uint32)pktptr;
+		tdescptr->buflen = sizeof(struct netpacket_e) - 2;
 		tdescptr->bufoff = 0;
 		tdescptr->stat = (ETH_AM335X_TDS_SOP |
 				  ETH_AM335X_TDS_EOP |

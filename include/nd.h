@@ -1,130 +1,99 @@
-/* nd.h - Neighbor Discovery definitions */
+/* nd.h - Neighbor Discovery related definitions */
 
-#define ICMP_TYPE_RTRSOL	133	/* ICMP type for router solicitation	*/
-#define ICMP_TYPE_RTRADV	134	/* ICMP type for router advertisement	*/
-#define ICMP_TYPE_NBRSOL	135	/* ICMP type for neighbor solicitation	*/
-#define ICMP_TYPE_NBRADV	136	/* ICMP type for neighbor advertisement	*/
-
-#define ND_TYPE_SLLAO		1	/* Source Link layer address option	*/
-#define ND_TYPE_TLLAO		2	/* Target link layer address option	*/
-#define ND_TYPE_PIO		3	/* Prefix information option		*/
-#define ND_TYPE_ARO		33	/* Address registration option		*/
-
-#define ND_NC_SLOTS		10	/* Number of Neighbor Cache slots	*/
-
-#define ND_NCE_FREE		0	/* NC Entry free	*/
-#define ND_NCE_INCOM		1	/* NC Entry incomplete	*/
-#define ND_NCE_REACH		2	/* NC entry reachable	*/
-#define ND_NCE_STALE		3	/* NC entry stale	*/
-#define ND_NCE_DELAY		4	/* NC entry delay	*/
-#define ND_NCE_PROBE		5	/* NC entry probe	*/
-
-#define ND_NCE_GRB		1	/* NC entry grabage-collectible	*/
-#define ND_NCE_REG		2	/* NC entry registered		*/
-#define ND_NCE_TEN		3	/* NC entry tentative		*/
-
-#define ND_PROCSSIZE		8192
-#define ND_PROCPRIO		400
-
+/* Structure of a router advertisement message */
 #pragma pack(1)
-
-/* Format of a Router Solicitation message */
-
-struct	nd_rtrsol {
-	uint32	res;	/* Reserved	*/
-	byte	opts[];
-};
-
-/* Format of Router Advertisement message */
-
 struct	nd_rtradv {
-	byte	currhl;	/* Current Hop limit	*/
-	byte	res:6;	/* Reserved		*/
-	byte	o:1;	/* Other flag		*/
-	byte	m:1;	/* Managed flag		*/
-	uint16	rtrlife;/* Router lifetime	*/
-	uint32	reachable;/* Reachable time	*/
-	uint32	retrans;/* Retrans timer	*/
-	byte	opts[];
+	byte	nd_curhl;
+	byte	nd_m:1;
+	byte	nd_o:1;
+	byte	nd_rtrlife;
+	uint32	nd_reachtime;
+	uint32	nd_retranstime;
+	byte	nd_opts[];
 };
+#pragma pack(0)
 
-/* Format of Neighbor Solicitation message */
-
+/* Structure of a neighbor solicitation message */
+#pragma pack(1)
 struct nd_nbrsol {
-	uint32	res;	/* Reserved		*/
-	byte	tgtaddr[16];/* Target address	*/
-	byte	opts[];
+	uint32	nd_resvd;
+	byte	nd_tgtaddr[16];
+	byte	nd_opts[];
 };
+#pragma pack(0)
 
-/* Format of Neighbor Advertisement message */
+#define	ND_NA_R	0x80
+#define	ND_NA_S	0x40
+#define	ND_NA_O	0x20
 
+/* Structure of a neighbor advertisement message */
+#pragma pack(1)
 struct	nd_nbradv {
-	byte	res1:5;	/* Reserved		*/
-	byte	o:1;	/* Override flag	*/
-	byte	s:1;	/* Solicited flag	*/
-	byte	r:1;	/* Router flag		*/
-	byte	res2[3];/* Reserved		*/
-	byte	tgtaddr[16];/* Target address	*/
-	byte	opts[];
+	byte	nd_rso;
+	byte	nd_res[3];
+	byte	nd_tgtaddr[16];
+	byte	nd_opts[];
 };
+#pragma pack(0)
 
-/* Format of Link Layer Address option */
+#define	NDOPT_TYPE_SLLA	1
+#define	NDOPT_TYPE_TLLA	2
 
-struct	nd_llao {
-	byte	type;	/* Option type		*/
-	byte	len;	/* Option length	*/
-	byte	lladdr[14];/* Link Layer Address*/
+/* Structure of a neighbor discovery option */
+#pragma pack(1)
+struct	nd_opt {
+	byte	ndopt_type;
+	byte	ndopt_len;
+	union { /* Source/target link-layer address */
+	  struct {
+	    byte	ndopt_addr[16];
+	  };
+	  struct {
+	    byte	ndopt_preflen;
+	    byte	ndopt_l:1;
+	    byte	ndopt_a:1;
+	    uint32	ndopt_validlife;
+	    uint32	ndopt_preferlife;
+	    uint32	ndopt_resvd;
+	    byte	ndopt_prefix[16];
+	  };
+	};
 };
-
-/* Format of Prefix Information option */
-
-struct	nd_pio {
-	byte	type;	/* Option type		*/
-	byte	len;	/* Option length	*/
-	byte	preflen;/* Prefix length	*/
-	byte	res1:6;	/* Reserved		*/
-	byte	a:1;	/* Autoconfiguration	*/
-	byte	l:1;	/* On-link flag		*/
-	uint32	validlife;/* Valid lifetime	*/
-	uint32	preflife;/* Preferred lifetime	*/
-	uint32	res2;
-	byte	prefix[16];
-};
-
-/* Format of Address Registration option */
-
-struct	nd_aro {
-	byte	type;	/* Option type		*/
-	byte	len;	/* Option length	*/
-	byte	status;	/* Registration status	*/
-	byte	res[3];	/* Reserved		*/
-	uint16	reglife;/* Registration lifetime*/
-	byte	eui64[8];/* EUI 64 Address	*/
-};
-
 #pragma pack()
 
-/* Format of a Neighbor Cache entry */
+#define	NC_STATE_FREE	0
+#define	NC_STATE_USED	1
 
-struct	nd_nce {
-	byte	state;	/* NCE State		*/
-	byte	type;	/* NCE Type		*/
-	pid32	pid;	/* PID of waiting proc	*/
-	sid32	waitsem;/* Semaphore of entry	*/
-	byte	ipaddr[16];/* NCE IP address	*/
-	byte	hwucast[8];
-			/* NCE EUI64 address	*/
-	uint32	reglife;/* NCE lifetime		*/
-	uint32	ttl;	/* NCE time to live	*/
+#define	NC_RSTATE_INC	0
+#define	NC_RSTATE_RCH	1
+#define	NC_RSTATE_STL	2
+#define	NC_RSTATE_DLY	3
+#define	NC_RSTATE_PRB	4
+
+#define	ND_REACHABLE_TIME		30000
+#define	ND_RETRANS_TIMER		1000
+#define	ND_DELAY_FIRST_PROBE_TIME	5000
+#define	ND_MAX_UNICAST_SOLICIT		3
+#define	ND_MAX_MULTICAST_SOLICIT	3
+
+#define	ND_NCACHE_SIZE	10
+
+#define NC_PKTQ_SIZE	2
+
+/* Structure of a neighbr cache entry */
+struct	nd_ncentry {
+	int32	nc_state;
+	int32	nc_iface;
+	int32	nc_rstate;
+	byte	nc_ipaddr[16];
+	byte	nc_hwaddr[IF_MAX_HALEN];
+	int32	nc_isrouter;
+	int32	nc_texpire;
+	int32	nc_retries;
+	void	*nc_pktq[NC_PKTQ_SIZE];
+	int32	nc_pqhead;
+	int32	nc_pqtail;
+	int32	nc_pqcount;
 };
 
-struct	nd_info {
-	bool8	isrouter;
-	bool8	sendadv;
-	bool8	managed;
-	bool8	other;
-	uint32	reachable;
-	uint32	retrans;
-	byte	currhl;
-	uint32	lifetime;
-};
+extern	struct	nd_ncentry nd_ncache[];
