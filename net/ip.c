@@ -364,9 +364,16 @@ int32	ip_send (
 
 		case NC_RSTATE_INC:
 			/* Next hop is being resolved, enqueue packet */
-			ncptr->nc_pktq[ncptr->nc_pqtail++] = pkt;
-			if(ncptr->nc_pqtail >= NC_PKTQ_SIZE) {
-				ncptr->nc_pqtail = 0;
+			if(ncptr->nc_pqcount == NC_PKTQ_SIZE) {
+				freebuf((char *)ncptr->nc_pktq[ncptr->nc_pqtail]);
+				ncptr->nc_pktq[ncptr->nc_pqtail] = pkt;
+			}
+			else {
+				ncptr->nc_pktq[ncptr->nc_pqtail++] = pkt;
+				if(ncptr->nc_pqtail >= NC_PKTQ_SIZE) {
+					ncptr->nc_pqtail = 0;
+				}
+				ncptr->nc_pqcount++;
 			}
 			restore(mask);
 			return OK;

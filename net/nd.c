@@ -231,18 +231,20 @@ void	nd_in_ns (
 		struct	netpacket *pkt	/* Packet buffer pointer	*/
 		)
 {
-	struct	nd_nbrsol *nsmsg;
-	struct	nd_nbradv *namsg;
-	struct	nd_opt *ndopt;
-	struct	netiface *ifptr;
-	byte	*ipdst;
-	int32	nalen;
-	int32	ncindex;
-	intmask	mask;
-	int32	i;
+	struct	nd_nbrsol *nsmsg;	/* Neighbor solicitation msg	*/
+	struct	nd_nbradv *namsg;	/* Neighbor advertisement msg	*/
+	struct	nd_opt *ndopt;		/* ND option			*/
+	struct	netiface *ifptr;	/* Network interface pointer	*/
+	byte	*ipdst;			/* IP destinatino address	*/
+	int32	nalen;			/* Nbr. adv. length		*/
+	int32	ncindex;		/* Neighbor cache index		*/
+	intmask	mask;			/* Interrupt mask		*/
+	int32	i;			/* Index variable		*/
 
+	/* Pointer to neighbor solicitation msg */
 	nsmsg = (struct nd_nbrsol *)pkt->net_icdata;
 
+	/* Sanity checks... */
 	if(pkt->net_iccode != 0) {
 		return;
 	}
@@ -284,6 +286,7 @@ void	nd_in_ns (
 		switch(ndopt->ndopt_type) {
 
 		case NDOPT_TYPE_SLLA:
+			/* Cannot have link address for unspecified IP */
 			if(isipunspec(pkt->net_ipsrc)) {
 				return;
 			}
@@ -294,12 +297,14 @@ void	nd_in_ns (
 
 			mask = disable();
 
+			/* Update the neighbor cache entry */
 			ncindex = nd_ncupdate(pkt->net_ipsrc,
 					      ndopt->ndopt_addr,
 					      0,
 					      FALSE);
 			//kprintf("nd_in_ns: ncindex %d\n", ncindex);
 
+			/* There is no entry in neighbor cache, add it */
 			if(ncindex == SYSERR) {
 				ncindex = nd_ncnew(pkt->net_ipsrc,
 						   ndopt->ndopt_addr,
@@ -310,6 +315,7 @@ void	nd_in_ns (
 
 			restore(mask);
 
+			/* Next ND option */
 			ndopt = (struct nd_opt *)((char *)ndopt + (ndopt->ndopt_len * 8));
 			break;
 
@@ -320,6 +326,8 @@ void	nd_in_ns (
 	}
 
 	//kprintf("nd_in_ns: sending na\n");
+
+	/* Allocate memory for neighbor advertisement */
 	nalen = sizeof(struct nd_nbradv) + 8;
 
 	namsg = (struct nd_nbradv *)getmem(nalen);
@@ -328,6 +336,7 @@ void	nd_in_ns (
 		return;
 	}
 
+	/* Initialize the fields in nbr. adv */
 	memset(namsg, 0, nalen);
 	namsg->nd_rso = ND_NA_S | ND_NA_O;
 	memcpy(namsg->nd_tgtaddr, nsmsg->nd_tgtaddr, 16);
@@ -336,12 +345,14 @@ void	nd_in_ns (
 
 	ifptr = &iftab[pkt->net_iface];
 
+	/* Insert a target link-layer address option */
 	ndopt = (struct nd_opt *)namsg->nd_opts;
 	ndopt->ndopt_type = NDOPT_TYPE_TLLA;
 	ndopt->ndopt_len = 1;
 	memcpy(ndopt->ndopt_addr, ifptr->if_hwucast, ifptr->if_halen);
 
 	//kprintf("nd_in_ns: calling icmp_send\n");
+	/* Select the destination IP address */
 	if(isipunspec(pkt->net_ipsrc)) {
 		ipdst = ip_allnodesmc;
 	}
@@ -349,7 +360,11 @@ void	nd_in_ns (
 		ipdst = pkt->net_ipsrc;
 	}
 
+	/* Send the neighbor advertisement */
 	icmp_send(ICMP_TYPE_NA, 0, ipdst, namsg, nalen, pkt->net_iface);
+
+	/* Free the memory */
+	freemem((char *)namsg, nalen);
 
 	restore(mask);
 
@@ -360,21 +375,23 @@ void	nd_in_ns (
  *------------------------------------------------------------------------
  */
 void	nd_in_na (
-		struct	netpacket *pkt
+		struct	netpacket *pkt	/* Packet buffer pointer	*/
 		)
 {
-	struct	nd_nbradv *namsg;
-	struct	nd_ncentry *ncptr;
-	struct	netiface *ifptr;
-	struct	netpacket_e *epkt;
-	struct	nd_opt *ndopt;
-	struct	nd_opt *tllao;
-	int32	ncindex;
-	bool8	l2updated;
-	intmask	mask;
+	struct	nd_nbradv *namsg;	/* Neighbor advertisement msg	*/
+	struct	nd_ncentry *ncptr;	/* Neighbor cache entry		*/
+	struct	netiface *ifptr;	/* Network interface pointer	*/
+	struct	netpacket_e *epkt;	/* Ethernet packet pointer	*/
+	struct	nd_opt *ndopt;		/* ND option			*/
+	struct	nd_opt *tllao;		/* Target link-layer address opt*/
+	int32	ncindex;		/* Neighbor cache index		*/
+	bool8	l2updated;		/* Flag L2 address updated?	*/
+	intmask	mask;			/* Interrupt mask		*/
 
+	/* Get a pointer to nbr. adv. msg */
 	namsg = (struct nd_nbradv *)pkt->net_icdata;
 
+	/* Sanity checks... */
 	if(pkt->net_iphl < 255) {
 		return;
 	}
@@ -397,6 +414,7 @@ void	nd_in_na (
 
 	mask = disable();
 
+	/* Look for entry in the neighbor cache */
 	ncindex = nd_ncfind(namsg->nd_tgtaddr);
 	if(ncindex == SYSERR) {
 		restore(mask);
@@ -411,6 +429,7 @@ void	nd_in_na (
 
 	tllao = NULL;
 
+	/* Parse the options... */
 	while((char *)ndopt < (char *)pkt->net_ipdata + pkt->net_iplen) {
 
 		switch(ndopt->ndopt_type) {
@@ -431,15 +450,20 @@ void	nd_in_na (
 
 	//kprintf("nd_in_na: done processing options\n");
 
+	/* Take a decision of what to do based on the state of entry */
+
 	if(ncptr->nc_rstate == NC_RSTATE_INC) {
 
+		/* Incomplete entries need L2 address */
 		if(tllao == NULL) {
 			restore(mask);
 			return;
 		}
 
+		/* Copy the link address in the entry */
 		memcpy(ncptr->nc_hwaddr, tllao->ndopt_addr, ifptr->if_halen);
 
+		/* Set the state of entry accorging to "solicited" bit */
 		if(namsg->nd_rso & ND_NA_S) {
 			ncptr->nc_rstate = NC_RSTATE_RCH;
 			ncptr->nc_texpire = ifptr->if_nd_reachtime;
@@ -448,14 +472,15 @@ void	nd_in_na (
 			ncptr->nc_rstate = NC_RSTATE_STL;
 		}
 
+		/* Update "isrouter" field */
 		ncptr->nc_isrouter = (namsg->nd_rso & ND_NA_R);
 
+		/* Send any queued packets */
 		while(ncptr->nc_pqcount > 0) {
 			//kprintf("nd_in_na: sending queued pkt\n");
-			pkt = ncptr->nc_pktq[ncptr->nc_pqtail];
-			ncptr->nc_pqtail++;
-			if(ncptr->nc_pqtail >= NC_PKTQ_SIZE) {
-				ncptr->nc_pqtail = 0;
+			pkt = ncptr->nc_pktq[ncptr->nc_pqhead++];
+			if(ncptr->nc_pqhead >= NC_PKTQ_SIZE) {
+				ncptr->nc_pqhead = 0;
 			}
 			ncptr->nc_pqcount--;
 
@@ -482,6 +507,8 @@ void	nd_in_na (
 		restore(mask);
 		return;
 	}
+
+	/* The state of the entry is not INCOMPLETE... */
 
 	if(tllao && !(namsg->nd_rso & ND_NA_O) &&
 		memcmp(ncptr->nc_hwaddr, tllao->ndopt_addr, ifptr->if_halen)) {
@@ -518,18 +545,27 @@ void	nd_in_na (
  *------------------------------------------------------------------------
  */
 int32	nd_send_ns (
-		int32	ncindex
+		int32	ncindex	/* Index in the neighbor cache	*/
 		)
 {
-	struct	nd_ncentry *ncptr;
-	struct	nd_nbrsol *nsmsg;
-	struct	nd_opt *ndopt;
-	byte	ipdst[16];
-	int32	nslen;
+	struct	nd_ncentry *ncptr;	/* Neighbor cache entry		*/
+	struct	nd_nbrsol *nsmsg;	/* Neighbor solicitation msg	*/
+	struct	nd_opt *ndopt;		/* ND option			*/
+	byte	ipdst[16];		/* IP destination address	*/
+	int32	nslen;			/* Length of nbr. solicitation	*/
 
 	ncptr = &nd_ncache[ncindex];
 
-	nslen = sizeof(struct nd_nbrsol) + 8;
+	/* Allocate memory for the neighbor solicitation message */
+	if(iftab[ncptr->nc_iface].if_type == IF_TYPE_ETH) {
+		nslen = sizeof(struct nd_nbrsol) + 8;
+	}
+	else if(iftab[ncptr->nc_iface].if_type == IF_TYPE_RAD) {
+		nslen = sizeof(struct nd_nbrsol) + 16;
+	}
+	else {
+		return SYSERR;
+	}
 
 	nsmsg = (struct	nd_nbrsol *)getmem(nslen);
 	if((int32)nslen == SYSERR) {
@@ -537,6 +573,7 @@ int32	nd_send_ns (
 	}
 
 	memset(nsmsg, 0, nslen);
+
 	memcpy(nsmsg->nd_tgtaddr, ncptr->nc_ipaddr, 16);
 
 	ndopt = (struct nd_opt *)nsmsg->nd_opts;
@@ -554,6 +591,8 @@ int32	nd_send_ns (
 	}
 
 	icmp_send(ICMP_TYPE_NS, 0, ipdst, nsmsg, nslen, ncptr->nc_iface);
+
+	freemem((char *)nsmsg, nslen);
 
 	return OK;
 }
@@ -588,15 +627,16 @@ int32	nd_resolve (
 
 	ncptr = &nd_ncache[ncindex];
 
-	ncptr->nc_pktq[ncptr->nc_pqhead++] = pkt;
-	if(ncptr->nc_pqhead >= NC_PKTQ_SIZE) {
-		ncptr->nc_pqhead = 0;
-	}
-	if(ncptr->nc_pqcount < NC_PKTQ_SIZE) {
-		ncptr->nc_pqcount++;
+	if(ncptr->nc_pqcount == NC_PKTQ_SIZE) {
+		freebuf((char *)ncptr->nc_pktq[ncptr->nc_pqtail]);
+		ncptr->nc_pktq[ncptr->nc_pqtail] = pkt;
 	}
 	else {
-		ncptr->nc_pqcount = NC_PKTQ_SIZE;
+		ncptr->nc_pktq[ncptr->nc_pqtail++] = pkt;
+		if(ncptr->nc_pqtail >= NC_PKTQ_SIZE) {
+			ncptr->nc_pqtail = 0;
+		}
+		ncptr->nc_pqcount++;
 	}
 
 	nd_send_ns(ncindex);
@@ -653,16 +693,16 @@ process	nd_timer (void) {
 
 			case NC_RSTATE_RCH:
 				if(--ncptr->nc_texpire <= 0) {
-					kprintf("nd_timer: "); ip_printaddr(ncptr->nc_ipaddr);
-					kprintf(" changed state to STALE\n");
+					//kprintf("nd_timer: "); ip_printaddr(ncptr->nc_ipaddr);
+					//kprintf(" changed state to STALE\n");
 					ncptr->nc_rstate = NC_RSTATE_STL;
 				}
 				break;
 
 			case NC_RSTATE_DLY:
 				if(--ncptr->nc_texpire <= 0) {
-					kprintf("nd_timer: "); ip_printaddr(ncptr->nc_ipaddr);
-					kprintf(" changed state to PROBE\n");
+					//kprintf("nd_timer: "); ip_printaddr(ncptr->nc_ipaddr);
+					//kprintf(" changed state to PROBE\n");
 					ncptr->nc_rstate = NC_RSTATE_PRB;
 					ncptr->nc_texpire = iftab[ncptr->nc_iface].if_nd_retranstime;
 					nd_send_ns(i);
