@@ -162,7 +162,7 @@ extern	devcall	ionull(void);
 /* in file ip.c */
 extern	void	ip_in(struct netpacket *);
 extern	void	ip_in_ext(struct netpacket *);
-extern	int32	ip_route(struct netpacket *, byte []);
+extern	int32	ip_route(byte [], byte [], byte [], int32 *);
 extern	int32	ip_send(struct netpacket *);
 extern	void	ip_hton(struct netpacket *);
 extern	void	ip_ntoh(struct netpacket *);
@@ -558,6 +558,20 @@ extern	int32	insw(int32, int32 ,int32);
 
 /* in file suspend.c */
 extern	syscall	suspend(pid32);
+
+/* TCP prototypes */
+extern	void	tcbclear(struct tcb *);
+extern	int32	tcpnull(struct tcb *, struct netpacket *);
+extern	int32	tcplisten(struct tcb *, struct netpacket *);
+extern	int32	tcpsynsent(struct tcb *, struct netpacket *);
+extern	int32	tcpsynrcvd(struct tcb *, struct netpacket *);
+extern	int32	tcpfin1(struct tcb *, struct netpacket *);
+extern	int32	tcpfin2(struct tcb *, struct netpacket *);
+extern	int32	tcpestd(struct tcb *, struct netpacket *);
+extern	int32	tcpcwait(struct tcb *, struct netpacket *);
+extern	int32	tcpclosing(struct tcb *, struct netpacket *);
+extern	int32	tcplastack(struct tcb *, struct netpacket *);
+extern	int32	tcptwait(struct tcb *, struct netpacket *);
 
 /* in file ttycontrol.c */
 extern	devcall	ttycontrol(struct dentry *, int32, int32, int32);

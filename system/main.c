@@ -15,7 +15,24 @@ process	counterproc() {
 process	main(void)
 {
 	/* Start the network */
-	net_init();
+	//net_init();
+	//tcp_init();
+
+	int32	tslot = tcp_register(iftab[0].if_ipucast[0].ipaddr, 50001, 0, 0);
+	kprintf("TCP slot = %d\n", tslot);
+
+	int32	nslot;
+	int32	rv;
+
+	rv = tcp_recv(tslot, &nslot, 4);
+	kprintf("TCP connected: %d\n", nslot);
+
+	if(rv != SYSERR) {
+		while(TRUE) {
+			tcp_send(nslot, "Ping...\r\n", 10);
+			sleep(1);
+		}
+	}
 
 	kprintf("\n...creating a shell\n");
 	recvclr();

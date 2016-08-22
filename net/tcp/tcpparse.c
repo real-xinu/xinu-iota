@@ -20,9 +20,6 @@ int32	tcpparse(
 	char		tmpstr[20];	/* Temporary to hold IP portion	*/
 	uint32		port;		/* Port value during calculation*/
 
-	return OK;
-
-	#if 0
 	/* Must start with "active" or "passive" */
 
 	if (*pstr == 'a') {
@@ -87,5 +84,4 @@ int32	tcpparse(
 		*pport = port;
 	}
 	return OK;
-	#endif
 }

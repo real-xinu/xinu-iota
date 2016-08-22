@@ -73,6 +73,17 @@ struct	netpacket {
 	    uint16	net_iccksum;	/* ICMP checksum		*/
 	    byte	net_icdata[1500-44];/* ICMP payload		*/
 	  };
+	  struct {
+	    uint16	net_tcpsport;	/* TCP source port		*/
+	    uint16	net_tcpdport;	/* TCP destination port		*/
+	    uint32	net_tcpseq;	/* TCP sequence number		*/
+	    uint32	net_tcpack;	/* TCP acknowledgement number	*/
+	    uint16	net_tcpcode;	/* Segment type			*/
+	    uint16	net_tcpwindow;	/* Advertised window size	*/
+	    uint16	net_tcpcksum;	/* TCP checksum			*/
+	    uint16	net_tcpurgptr;	/* Urgent pointer		*/
+	    byte	net_tcpdata[1500-60];/* TCP payload		*/
+	  };
 	};
 	int32	net_iface;	/* Network interface index		*/
 };

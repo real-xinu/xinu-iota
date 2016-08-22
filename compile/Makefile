@@ -36,6 +36,7 @@ REBUILDFLAGS	=	-s $(TOPDIR)/system  debug.c getutime.c gettime.c 	\
 			-s $(TOPDIR)/device/eth			\
 			-s $(TOPDIR)/net udp.c			\
 					pdump.c 'xinu_*'	\
+			-s $(TOPDIR)/net/newtcp			\
 			-s $(TOPDIR)/shell  'xsh_rdstest*' 'xsh_arp*' 'xsh_date*' 'xsh_ipaddr*' 'xsh_ping*' 'xsh_udp*'
 
 INCLUDE		=	-I$(TOPDIR)/include

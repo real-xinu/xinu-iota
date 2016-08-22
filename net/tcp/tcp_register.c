@@ -9,9 +9,9 @@
  *------------------------------------------------------------------------
  */
 static	int32	checktuple (
-		  byte		lip[16],/* Local IP address		*/
+		  byte		lip[],	/* Local IP address		*/
 		  uint16	lport,	/* Local TCP port number	*/
-		  byte		rip[16],/* Remote IP address		*/
+		  byte		rip[],	/* Remote IP address		*/
 		  uint16	rport	/* Remote TCP port number	*/
 		)
 {
@@ -23,8 +23,8 @@ static	int32	checktuple (
 	for (i = 0; i < Ntcp; i++) {
 		tcbptr = &tcbtab[i];
 		if (tcbptr->tcb_state != TCB_FREE
-		    && (!memcmp(tcbptr->tcb_lip, lip, 16))
-		    && (!memcmp(tcbptr->tcb_rip, rip, 16))
+		    && tcbptr->tcb_lip == lip
+		    && tcbptr->tcb_rip == rip
 		    && tcbptr->tcb_lport == lport
 		    && tcbptr->tcb_rport == rport) {
 			return SYSERR;
@@ -39,18 +39,19 @@ static	int32	checktuple (
  *------------------------------------------------------------------------
  */
 int32	tcp_register (
-	int32	iface,
-	byte	ip[16],
+	byte	ip[],
 	uint16	port,
-	int32	active
+	int32	active,
+	int32	iface
 	)
 {
-	char		*spec;		/* IP:port as a string		*/
+	// char		*spec;		/* IP:port as a string		*/
 	struct tcb	*tcbptr;	/* Ptr to TCB			*/
 	byte		lip[16];	/* Local IP address		*/
 	int32		i;		/* Walks through TCBs		*/
 	int32		state;		/* Connection state		*/
 	int32		slot;		/* Slot in TCB table		*/
+	int32		retval;		/* Return value of ip_route	*/
 
 	/* Parse "X:machine:port" string and set variables, where	*/
 	/*	X	- either 'a' or 'p' for "active" or "passive"	*/
@@ -83,20 +84,14 @@ int32	tcp_register (
 
 		/* Obtain local IP address from interface */
 
-		if(isipllu(ip)) {
-			if(iface == -1) {
-				signal(Tcp.tcpmutex);
-				return SYSERR;
-			}
-			else {
-				memcpy(lip, if_tab[iface].if_ipucast[0].ipaddr, 16);
-			}
-		}
-		else {
-			//TODO
-		}
-
 		//lip = NetData.ipucast;
+
+		retval = ip_route(ip, lip, NULL, &iface);
+		if(retval == SYSERR) {
+			signal(Tcp.tcpmutex);
+			return SYSERR;
+		}
+		tcbptr->tcb_iface = iface;
 
 		/* Allocate receive buffer and initialize ptrs */
 
@@ -106,6 +101,8 @@ int32	tcp_register (
 			return SYSERR;
 		}
 		tcbptr->tcb_rbsize = 65535;
+		tcbptr->tcb_rbdata = tcbptr->tcb_rbuf;
+		tcbptr->tcb_rbend = tcbptr->tcb_rbuf + tcbptr->tcb_rbsize;
 		tcbptr->tcb_sbuf = (char *)getmem (65535);
 		if (tcbptr->tcb_sbuf == (char *)SYSERR) {
 			freemem ((char *)tcbptr->tcb_rbuf, 65535);
@@ -129,10 +126,8 @@ int32	tcp_register (
 		}
 
 		memcpy(tcbptr->tcb_lip, lip, 16);
-		tcbptr->tcb_iface = iface;
 
 		/* Assign next local port */
-
 
 		tcbptr->tcb_lport = Tcp.tcpnextport++;
 		if (Tcp.tcpnextport > 63000) {
@@ -149,8 +144,7 @@ int32	tcp_register (
 		tcbref (tcbptr);
 		mqsend (Tcp.tcpcmdq, TCBCMD(tcbptr, TCBC_SEND));
 		while (tcbptr->tcb_state != TCB_CLOSED
-		       && tcbptr->tcb_state != TCB_ESTD
-		       && tcbptr->tcb_state != TCB_CWAIT) {
+		       && tcbptr->tcb_state != TCB_ESTD) {
 			tcbptr->tcb_readers++;
 			signal (tcbptr->tcb_mutex);
 			wait (tcbptr->tcb_rblock);
@@ -160,29 +154,18 @@ int32	tcp_register (
 			tcbunref (tcbptr);
 		}
 		signal (tcbptr->tcb_mutex);
-		return (state == TCB_CLOSED ? SYSERR : slot);
+		return (state == TCB_ESTD ? slot : SYSERR);
 
 	} else {  /* Passive connection */
 		for (i = 0; i < Ntcp; i++) {
 			if (tcbtab[i].tcb_state == TCB_LISTEN
+			    && !memcmp(tcbtab[i].tcb_lip, ip, 16)
 			    && tcbtab[i].tcb_lport == port) {
 
-				if(isipunspec(tcbtab[i].tcb_lip)) {
-					signal(Tcp.tcpmutex);
-					return SYSERR;
-				}
-
-				if(!memcmp(tcbtab[i].tcb_lip, ip, 16)) {
-					signal(Tcp.tcpmutex);
-					return SYSERR;
-				}
-
-				#if 0
 				/* Duplicates prior connection */
- 
+
 				signal (Tcp.tcpmutex);
 				return SYSERR;
-				#endif
 			}
 		}
 
@@ -190,6 +173,7 @@ int32	tcp_register (
 
 		memcpy(tcbptr->tcb_lip, ip, 16);
 		tcbptr->tcb_lport = port;
+		tcbptr->tcb_iface = iface;
 		tcbptr->tcb_state = TCB_LISTEN;
 		tcbref (tcbptr);
 		signal (Tcp.tcpmutex);

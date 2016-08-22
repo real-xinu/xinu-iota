@@ -11,32 +11,29 @@ void	tcp_in(
 	)
 {
 	int32	i;			/* Iterates through TCBs	*/
+	int32	partial;		/* -1 or slot of partial match	*/
+	int32	complete;		/* -1 or slot of full match	*/
 	byte	ebcast[] = {0xff,0xff,0xff,0xff,0xff,0xff};
 	int32	entry;
 	uint16	len;			/* Length of the segment	*/
 	struct	tcb	*tcbptr;	/* Ptr to TCB entry		*/
-	int32	found = -1;
 
 	/* Get pointers to Ethernet header, IP header and TCP header */
 
 	len = pkt->net_iplen;
 
-	/* Reject broadcast or multicast packets out of hand */
-	/*
-	if ((memcmp(pkt->net_ethdst,ebcast,ETH_ADDR_LEN)== 0) ||
-				(pkt->net_ipdst == IP_BCAST)) {
-		freebuf ((char *)pkt);
-		return;
-	}*/
-/*DEBUG*///pdumph(pkt);
+/*DEBUG*/ //kprintf("\nIN: seq %x, ackseq %x\n", pkt->net_tcpseq, pkt->net_tcpack);
+	//pdumph(pkt);
 
 	/* Validate header lengths */
-	/*
-	if (len < (IP_HDR_LEN + TCP_HLEN(pkt)) ) {
-		freebuf ((char *)pkt);
+
+	if (len < TCP_HLEN(pkt)) {
+		//freebuf ((char *)pkt);
 		return;
 	}
-	*/
+
+	partial = complete = -1;
+
 	/* Insure exclusive use */
 
 	wait (Tcp.tcpmutex);
@@ -48,34 +45,27 @@ void	tcp_in(
 			continue;
 		} else if (tcbptr->tcb_state == TCB_LISTEN) {
 
-			if((isipunspec(tcbptr->tcb_lip) || (!memcmp(tcbptr->tcb_lip, pkt->net_ipdst, 16))) &&
-			   (pkt->net_tcpdport == tcbptr->tcb_lport)) {
-			   	found = i;
-				continue;
-			}
-			#if 0
 			/* Check partial match */
 
 			/* Accept only if the current entry	*/
 			/* matches and is more specific		*/
 
-			if (((tcbptr->tcb_lip == 0
+			if (((isipunspec(tcbptr->tcb_lip)
 			      && partial == -1)
-			     || pkt->net_ipdst == tcbptr->tcb_lip)
+			     || !memcmp(pkt->net_ipdst, tcbptr->tcb_lip, 16))
 			    && pkt->net_tcpdport == tcbptr->tcb_lport) {
 				partial = i;
 			}
 			continue;
-			#endif
 		} else {
 
 			/* Check for exact match */
 
-			if ((!memcmp(pkt->net_ipsrc, tcbtab[i].tcb_rip, 16))
-			    && (!memcmp(pkt->net_ipdst, tcbptr->tcb_lip, 16))
-			    && (pkt->net_tcpsport == tcbptr->tcb_rport)
-			    && (pkt->net_tcpdport == tcbptr->tcb_lport)) {
-			    	found = i;
+			if (!memcmp(pkt->net_ipsrc, tcbptr->tcb_rip, 16)
+			    && !memcmp(pkt->net_ipdst, tcbptr->tcb_lip, 16)
+			    && pkt->net_tcpsport == tcbptr->tcb_rport
+			    && pkt->net_tcpdport == tcbptr->tcb_lport) {
+				complete = i;
 				break;
 			}
 			continue;
@@ -84,21 +74,17 @@ void	tcp_in(
 
 	/* See if full match found, partial match found, or none */
 
-	#if 0
 	if (complete != -1) {
 		entry = complete;
 	} else if (partial != -1) {
 		entry = partial;
-	#endif
-	if(found != -1) {
-		entry = found;
 	} else {
 
 		/* No match - send a reset and drop the packet */
 
 		signal (Tcp.tcpmutex);
 		tcpreset (pkt);
-		freebuf ((char *)pkt);
+		//freebuf ((char *)pkt);
 		return;
 	}
 
@@ -111,7 +97,7 @@ void	tcp_in(
 
 	tcpdisp (&tcbtab[entry], pkt);
 	signal (tcbtab[entry].tcb_mutex);
-	freebuf ((char *)pkt);
+	//freebuf ((char *)pkt);
 
 	return;
 }

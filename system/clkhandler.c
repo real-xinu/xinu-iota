@@ -47,6 +47,10 @@ void	clkhandler()
 		}
 	}
 
+	if(tmnext && (--(*tmnext)) == 0) {
+		tmfire();
+	}
+
 	/* Decrement the preemption counter */
 	/* Reschedule if necessary	    */
 

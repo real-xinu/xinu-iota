@@ -197,6 +197,14 @@ void	ip_in_ext (
 		icmp_in(pkt);
 		return;
 
+	case IP_TCP:
+		if(tcpcksum(pkt) != 0) {
+			return;
+		}
+		tcp_ntoh(pkt);
+		tcp_in(pkt);
+		return;
+
 	default:
 		kprintf("Unknown IP next header: %02x. Discarding packet\n", nh);
 	}
@@ -207,47 +215,54 @@ void	ip_in_ext (
  *------------------------------------------------------------------------
  */
 int32	ip_route (
-		struct	netpacket *pkt,	/* Packet buffer pointer	*/
-		byte	nxthop[]	/* Next hop buffer address	*/
+		byte	ipdst[],	/* IP destination address	*/
+		byte	ipsrc[],	/* Ip source to be filled	*/
+		byte	nxthop[],	/* Next hop buffer address	*/
+		int32	*ifaceptr	/* Interface index pointer	*/
 		)
 {
 	struct	ip_fwentry *ipfptr;	/* IP forwarding table entry ptr*/
 	intmask	mask;			/* Interrupt mask		*/
 	int32	found;			/* Flag indicating found entry	*/
 	int32	maxlen;			/*				*/
+	int32	iface;
 	int32	i;			/* Index variable		*/
 
 	mask = disable();
 
+	iface = *ifaceptr;
+
 	/* If destination is multicast... */
-	if(isipmc(pkt->net_ipdst)) {
+	if(isipmc(ipdst)) {
 
 		/* Packet should already have an interface */
-		if(pkt->net_iface < 0 || pkt->net_iface >= NIFACES) {
+		if(iface < 0 || iface >= NIFACES) {
 			restore(mask);
 			return SYSERR;
 		}
 
 		//Must be changed. Right now uses link-local source
-		memcpy(pkt->net_ipsrc, iftab[pkt->net_iface].if_ipucast[0].ipaddr, 16);
+		memcpy(ipsrc, iftab[iface].if_ipucast[0].ipaddr, 16);
 		restore(mask);
 		return OK;
 	}
 
 	/* If destination is link-local... */
-	if(isipllu(pkt->net_ipdst)) {
+	if(isipllu(ipdst)) {
 
 		/* Packet must already have an interface */
-		if(pkt->net_iface < 0 || pkt->net_iface >= NIFACES) {
+		if(iface < 0 || iface >= NIFACES) {
 			restore(mask);
 			return SYSERR;
 		}
 
 		/* IP source is the interface's link-local address */
-		memcpy(pkt->net_ipsrc, iftab[pkt->net_iface].if_ipucast[0].ipaddr, 16);
+		memcpy(ipsrc, iftab[iface].if_ipucast[0].ipaddr, 16);
 
-		/* Next hop is the destination itself */
-		memcpy(nxthop, pkt->net_ipdst, 16);
+		if(nxthop) {
+			/* Next hop is the destination itself */
+			memcpy(nxthop, ipdst, 16);
+		}
 
 		restore(mask);
 		return OK;
@@ -266,7 +281,7 @@ int32	ip_route (
 		}
 
 		ipfptr = &ip_fwtab[i];
-		if(!memcmp(pkt->net_ipdst, ipfptr->ipfw_prefix.ipaddr,
+		if(!memcmp(ipdst, ipfptr->ipfw_prefix.ipaddr,
 					ipfptr->ipfw_prefix.prefixlen)) {
 			if(ipfptr->ipfw_prefix.prefixlen > maxlen) {
 				found = i;
@@ -282,14 +297,16 @@ int32	ip_route (
 
 	ipfptr = &ip_fwtab[found];
 
-	pkt->net_iface = ipfptr->ipfw_iface;
+	*ifaceptr = ipfptr->ipfw_iface;
 
-	/* Check if prefix is on-link */
-	if(ipfptr->ipfw_onlink) { /* Destination is next hop */
-		memcpy(nxthop, pkt->net_ipdst, 16);
-	}
-	else { /* Get the next hop from table entry */
-		memcpy(nxthop, ipfptr->ipfw_nxthop, 16);
+	if(nxthop) {
+		/* Check if prefix is on-link */
+		if(ipfptr->ipfw_onlink) { /* Destination is next hop */
+			memcpy(nxthop, ipdst, 16);
+		}
+		else { /* Get the next hop from table entry */
+			memcpy(nxthop, ipfptr->ipfw_nxthop, 16);
+		}
 	}
 
 	return OK;
@@ -314,7 +331,7 @@ int32	ip_send (
 	intmask	mask;			/* Interrupt mask		*/
 
 	/* Route the packet */
-	retval = ip_route(pkt, nxthop);
+	retval = ip_route(pkt->net_ipdst, pkt->net_ipsrc, nxthop, &pkt->net_iface);
 
 	//kprintf("ip_send: ip_route returns %d\n", retval);
 
@@ -333,6 +350,12 @@ int32	ip_send (
 		pkt->net_iccksum = htons(cksum);
 		break;
 
+	case IP_TCP:
+		tcp_hton(pkt);
+		pkt->net_tcpcksum = 0;
+		cksum = tcpcksum(pkt);
+		pkt->net_tcpcksum = htons(cksum);
+		break;
 	}
 
 	/* Convert IP fields in network-byte order */
@@ -416,11 +439,14 @@ int32	ip_send (
 		/* Copy the IP packet into the ethernet packet */
 		memcpy(epkt->net_ethdata, (char *)pkt, iplen);
 
-		//kprintf("Sending IPv6 packet\n");
-		//for(i = 0; i < 14+iplen; i++) {
-		//	kprintf("%02x ", *((byte *)epkt + i));
-		//}
-		//kprintf("\n");
+		/*
+		int32	i;
+		kprintf("Sending IPv6 packet\n");
+		for(i = 0; i < 14+iplen; i++) {
+			kprintf("%02x ", *((byte *)epkt + i));
+		}
+		kprintf("\n");
+		*/
 
 		/* Send the packet over the device */
 		write(ETHER0, (char *)epkt, 14 + iplen);

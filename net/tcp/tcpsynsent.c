@@ -18,34 +18,35 @@ int32	tcpsynsent(
 		return SYSERR;
 	}
 
-	if(!(pkt->net_tcpcode & TCPF_ACK)) {
-		/* Move to SYN-RECEIVED state */
-
-		tcbptr->tcb_state = TCB_SYNRCVD;
+	if((!(pkt->net_tcpcode & TCPF_ACK)) ||
+	   (pkt->net_tcpack != tcbptr->tcb_snext)) {
+	   	return SYSERR;
 	}
-	else {
-		/* Move to Established state */
 
-		tcbptr->tcb_state = TCB_ESTD;
-		tcbptr->tcb_suna++;
-		//wait(tcbptr->tcb_mutex);
-		if(tcbptr->tcb_readers) {
-			tcbptr->tcb_readers--;
-			signal(tcbptr->tcb_rblock);
-		}
-		//signal(tcbptr->tcb_mutex);
-	}
+	/* Move past the SYN */
+
+	tcbptr->tcb_suna++;
+
+	/* Move to ESTABLISHED state */
+
+	tcbptr->tcb_state = TCB_ESTD;
 
 	/* Set up parameters, such as the window size */
 
 	tcbptr->tcb_rnext = tcbptr->tcb_rbseq = ++pkt->net_tcpseq;
-	tcbptr->tcb_rwnd = tcbptr->tcb_ssthresh = pkt->net_tcpwindow;
+	tcbptr->tcb_rwnd = pkt->net_tcpwindow;
+	tcbptr->tcb_ssthresh = 0x0fffffff;
 	pkt->net_tcpcode &= ~TCPF_SYN;
 
 	/* Send an ACK */
 
 	tcpdata (tcbptr, pkt);
 	tcpack (tcbptr, TRUE);
+
+	if(tcbptr->tcb_readers) {
+		tcbptr->tcb_readers--;
+		signal(tcbptr->tcb_rblock);
+	}
 
 	return OK;
 }

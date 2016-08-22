@@ -10,10 +10,10 @@ int32	tcpreset(
 	  struct netpacket *oldpkt	/* Ptr to old packet		*/
 	)
 {
-	struct 	netpacket *pkt;		/* Pointer to new packet	*/
-	byte	lip[16];		/* Local IP address to use	*/
-	byte	rip[16];		/* Remote IP address (reply)	*/
-	int32	len;			/* Length of the TCP data	*/
+	struct netpacket *pkt;		/* Pointer to new packet	*/
+	byte		*lip;		/* Local IP address to use	*/
+	byte		*rip;		/* Remote IP address (reply)	*/
+	int32		len;		/* Length of the TCP data	*/
 
 	/* Did we already send a RESET? */
 
@@ -30,28 +30,25 @@ int32	tcpreset(
 
 	/* Compute length of TCP data (needed for ACK) */
 
-	len = oldpkt->net_iplen - IP_HDR_LEN - TCP_HLEN(pkt);
+	len = oldpkt->net_iplen - TCP_HLEN(pkt);
 
 	/* Obtain remote IP address */
 
-	memcpy(rip, oldpkt->net_ipsrc, 16);
-	memcpy(lip, oldpkt->net_ipdst, 16);
+	rip = oldpkt->net_ipsrc;
+	lip = oldpkt->net_ipdst;
 
 	/* Create TCP packet in pkt */
-	#if 0
-	memcpy((char *)pkt->net_ethsrc, NetData.ethucast, ETH_ADDR_LEN);
-	pkt->net_ethtype = 0x0800;	/* Type is IP */
-	#endif
+
 	/* Fill in IP header */
 
-	pkt->net_ipvtch = 0x60;		/* IP version and hdr length	*/
-	pkt->net_iptclflh = 0;		/* IP traf class and flow label	*/
-	pkt->net_iplen = TCP_HLEN(pkt);
-					/* total datagram length	*/
-	pkt->net_iphl = 0xff;		/* IP time-to-live		*/
-	pkt->net_ipnh = IP_TCP;		/* datagram carries TCP		*/
-	memcpy(pkt->net_ipsrc, lip, 16);/* IP source address		*/
-	memcpy(pkt->net_ipdst, rip, 16);/* IP destination address	*/
+	pkt->net_ipvtch = 0x60;
+	pkt->net_iptclflh = 0;
+	pkt->net_ipfll = 0;
+	pkt->net_iplen = TCP_HDR_LEN;
+	pkt->net_ipnh = IP_TCP;
+	pkt->net_iphl = 0xff;
+	memcpy(pkt->net_ipsrc, lip, 16);
+	memcpy(pkt->net_ipdst, rip, 16);
 
 	/* Fill in TCP header */
 
@@ -74,6 +71,6 @@ int32	tcpreset(
 
 	/* Call ip_send to send the datagram */
 
-	//ip_enqueue(pkt);
+	ip_send(pkt);
 	return OK;
 }
