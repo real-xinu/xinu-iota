@@ -70,6 +70,7 @@ extern	uint32	dot2ip(char *, uint32 *);
 /* in file queue.c */
 
 extern	pid32	enqueue(pid32, qid16);
+extern  pid32   dequeue(qid16);
 
 /* in file intr.S */
 
@@ -117,7 +118,8 @@ extern	syscall	getc(did32);
 
 /* in file getitem.c */
 extern	pid32	getfirst(qid16);
-
+extern  pid32   getlast(qid16);
+extern  pid32   getitem(pid32);
 /* in file getmem.c */
 extern	char	*getmem(uint32);
 
