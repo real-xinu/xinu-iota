@@ -81,42 +81,28 @@
 				/*  node delays for N msec (where N is	*/
 				/*  the node ID), and then responds	*/
 				/*  with an A_ACK.			*/
+#define A_PINGALL       7       
 
-#define	A_ACK		7	/* A response to an A_ASSIGN or A_PING	*/
+
+#define	A_ACK		8	/* A response to an A_ASSIGN or A_PING	*/
 				/*  to indicate that the message was	*/
 				/*  processed.				*/
 
-#define	A_ERR		8	/* A response sent by a node when one	*/
+#define	A_ERR		9	/* A response sent by a node when one	*/
 				/*  or more fields of an incoming	*/
 				/*  message contains an invalid value.	*/
 
-//struct	a_msg	{
-//	int32	amsgtyp;	/* Message type as specified above	*/
-//	int32	anodeid;	/* Node ID (zero in an A_JOIN, sent by	*/
-				/*  the server in an A_ASSIGN, and sent	*/
-				/*  the node in other messages.		*/
 
-	/* Note: a A_JOIN, A_XOFF, and _XON message has no additional	*/
-	/*  fields.  In such messages, the remainder of the strcuture	*/
-	/*  is set to zero.  Typically, the entire structure will be	*/
-	/*  set to zero first and then specific fields will be assigned.*/
+/*------------------------------------------------------------------
+ a data strucure to keep assigned multicast address and the node ID.
+*------------------------------------------------------------------*/
+struct node_info {
+    int32 nodeid;
+    byte mcastaddr[6];
+};
 
-//	union {
-///		byte	amcastaddr[6];	/* In an A_ASSIGN, the multicast*/
-//					/*  address a node should use	*/
-					/*  when sending radio packets.	*/
+extern struct node_info info;
+extern int32 xon;
 
-//		byte	apingdata[8];	/* 8 octets of data that will be*/
-					/*  returned in the A_ACK, and	*/
-					/*  can be used to associate the*/
-					/*  ack with a specific ping.	*/
-	
-//		byte	aacking[16];	/* In an A_ACK, the first 16	*/
-					/*  octets of the message being	*/
-					/*  acked.			*/
 
-//		byte	aerrmsg[16];	/* In an A_ERR, the first 16	*/
-					/*  octets of the message that	*/
-					/*  caused the error.		*/
-//	};
-//};
+

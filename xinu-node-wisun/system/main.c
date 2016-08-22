@@ -11,37 +11,32 @@ process	counterproc() {
 	}
 	return OK;
 }
-extern	byte ip_llprefix[];
 
 process	main(void)
 {
 	/* Start the network */
 	net_init();
-	
-	
-        sleep(5);
+
+	sleep(7);
 
 	kprintf("\n...creating a node\n");
 	recvclr();
-
-
-       
 	//resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
 
+	wsnode_join();
+        sleep(2);
+
+        //resume(create(udp_app, 8192, 50, "udp", 1, CONSOLE));
+	
 	/* Wait for shell to exit and recreate it */
-        wsnode_join();
-	sleep(2);
-	
-        resume(create(wsnodeapp, 8192, 50, "wsnodeapp", 1, CONSOLE));
-        
-	
 
-
-	/*while (TRUE) {
+	/*
+	while (TRUE) {
 		receive();
 		sleepms(200);
 		kprintf("\n\nMain process recreating shell\n\n");
 		resume(create(shell, 4096, 20, "shell", 1, CONSOLE));
-	}*/
+	}
+	*/
 	return OK;
 }

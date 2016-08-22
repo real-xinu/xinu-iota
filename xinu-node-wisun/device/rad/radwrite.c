@@ -94,7 +94,7 @@ int32	radwrite (
 
 	write(ETHER0, (char *)outpkt->rad_data, cend-outpkt->rad_data);
 
-	freebuf((char *)outpkt);
+	freebuf(outpkt);
 	signal(radptr->osem);
 
 	restore(mask);

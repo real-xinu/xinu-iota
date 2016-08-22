@@ -12,7 +12,7 @@
 /* Definition of message types */
 #include "compatibility.h"
 
-#define MAX_NODES  46
+
 #define File_Name_Size  50
 
 #define	C_RESTART	0	/* A message sent to the testbed server	*/
@@ -139,6 +139,8 @@
 /*	file that declares items related to the topology database.	*/
 
 #define	MAXNODES	46	/* Maximum number of nodes being tested	*/
+#define MAXBBBS    83           /* Maximum number of BBBs */
+
 
 struct	t_entry { 		/* Entry in a topology file (also used	*/
     /*  in messages.			*/
@@ -173,13 +175,13 @@ struct	c_msg {
 
         struct { 		/* PING_REPLY */
             int32	pingnum; /* Count of entries that follow*/
-            struct	p_entry	pingdata[MAX_NODES];
+            struct	p_entry	pingdata[MAXNODES];
 
         };
 
         struct { 		/* TOP_REPLY */
             int32	topnum; /* Count of entries that follow	*/
-            struct	t_entry	topdata[MAX_NODES];
+            struct	t_entry	topdata[MAXNODES];
         };
 
         struct { 		/* NEW_TOP */
@@ -188,10 +190,14 @@ struct	c_msg {
         };
 
 	struct {
-                  int32 nnodes;
-		  char map[MAX_NODES][20];   /* As a response of C_MAP message */
+                  int32 nnodes;              /* Number of nodes in the current acctive network topology */
+		  char map[MAXNODES][20];   /* As a response of C_MAP message */
  
         };
+	struct {
+		int32 nbbb;                 
+		int32 bbb_stat[MAXBBBS];   /* As a response of C_PINGALL message */
+	};
         uint32	uptime;		/* TS_RESP (amount of time the	*/
         /* server has been up (in msec).*/
                

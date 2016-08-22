@@ -11,7 +11,7 @@
 
 /* Definition of message types */
 
-
+#define MAX_BBB         83
 #define File_Name_Size  50
 
 #define	C_RESTART	0	/* A message sent to the testbed server	*/
@@ -195,6 +195,11 @@ struct	c_msg {
 
 	};
 
+	struct {
+		int32 nbbb;
+		int32 bbb_stat[MAX_BBB];
+	};
+
         uint32	uptime;		/* TS_RESP (amount of time the	*/
         /* server has been up (in msec).*/
 
@@ -226,3 +231,4 @@ extern byte ack_info[16];
 extern char map_list[MAXNODES][NAMELEN];
 extern struct t_entry topo[MAXNODES];
 extern struct t_entry old_topo[MAXNODES];
+extern int32  bbb_stat[MAX_BBB];

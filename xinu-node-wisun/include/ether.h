@@ -7,46 +7,16 @@
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-
 #define	ETH_ADDR_LEN	6	/* Length of Ethernet (MAC) address	*/
 typedef	unsigned char	Eaddr[ETH_ADDR_LEN];/* a physical Ethernet address*/
 
 /* Ethernet packet header */
-
-struct a_msg {
-        int32 amsgtyp;
-	int32 anodeid;
-
-	union
-	{
-           byte amcastaddr[6];
-
-	   byte apingdata[8];
-
-	   byte aacking[16];
-
-
-	   byte aerrmsg[16];
-
-
-
-	};
-
-
-};
 
 #pragma pack(1)
 struct	etherPkt {
 	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
 	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
 	uint16	type;			/* Ether type field		*/
-
-	union
-	{
-        struct a_msg msg;
-	struct radpacket radpkt;
-
-	};
 
 };
 #pragma pack()
@@ -68,7 +38,9 @@ struct	etherPkt {
 					/*  	size(cache alignment)	*/
 
 #define ETH_IPV6 0x86dd
-
+#define	ETH_RAD	 0x1234
+#define ETH_TYPE_A 0x88b5
+#define ETH_TYPE_B 0x88b6
 /* State of the Ethernet interface */
 
 #define	ETH_STATE_FREE		0	/* control block is unused 	*/

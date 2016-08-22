@@ -2,6 +2,8 @@
 /*---------------------------------------------------------------
  * Initialize topology database with zeros
  * --------------------------------------------------------------*/
+
+int32 bbb_stat[MAX_BBB];
 void init_topo()
 {
     int i, j;
@@ -21,6 +23,9 @@ void init_topo()
 
     for ( i = 0; i < 46; i++ )
         ping_ack_flag[i] = 0;
+
+    for (i=0; i<MAX_BBB; i++)
+	    bbb_stat[i] = 0;
 }
 
 

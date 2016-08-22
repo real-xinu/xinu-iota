@@ -82,11 +82,13 @@
 				/*  the node ID), and then responds	*/
 				/*  with an A_ACK.			*/
 
-#define	A_ACK		7	/* A response to an A_ASSIGN or A_PING	*/
+#define A_PINGALL       7
+
+#define	A_ACK		8	/* A response to an A_ASSIGN or A_PING	*/
 				/*  to indicate that the message was	*/
 				/*  processed.				*/
 
-#define	A_ERR		8	/* A response sent by a node when one	*/
+#define	A_ERR		9	/* A response sent by a node when one	*/
 				/*  or more fields of an incoming	*/
 				/*  message contains an invalid value.	*/
 

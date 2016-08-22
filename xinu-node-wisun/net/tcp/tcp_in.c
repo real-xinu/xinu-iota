@@ -11,7 +11,7 @@ void	tcp_in(
 	)
 {
 	int32	i;			/* Iterates through TCBs	*/
-	//byte	ebcast[] = {0xff,0xff,0xff,0xff,0xff,0xff};
+	byte	ebcast[] = {0xff,0xff,0xff,0xff,0xff,0xff};
 	int32	entry;
 	uint16	len;			/* Length of the segment	*/
 	struct	tcb	*tcbptr;	/* Ptr to TCB entry		*/

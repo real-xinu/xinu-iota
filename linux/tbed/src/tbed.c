@@ -20,7 +20,7 @@ int main (int argc, char **argv)
     gettimeofday (&tv1, NULL);
     char  use[] = "error: use is tbed ( IP | <script> -f | <script> -s )\n";
     log_f = fopen (log_file_path, "w");
-
+    /*DEBUG */ //printf("%s\n", ip_list[0]);
     if ( (argc != 2)  && (argc != 3) ) {
         fprintf (stderr, "%s", use);
         exit (1);

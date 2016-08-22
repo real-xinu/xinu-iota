@@ -177,7 +177,9 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_PING_ALL);
         message.pingnodeid = htonl (ALL);
         cmd_print (command_print);
-
+    } else if (!strcmp(array_token[0], "pingall")) {
+	    message.cmsgtyp = htonl (C_PINGALL);
+	    cmd_print(command_print);
     } else if (!strcmp (array_token[0], "topdump")) {
         message.cmsgtyp = htonl (C_TOP_REQ);
         cmd_print (command_print);
@@ -222,7 +224,15 @@ struct c_msg  command_handler (char command[BUFLEN])
 
     } else if (!strcmp (array_token[0], "tcp")) {
     } else if (!strcmp (array_token[0], "udp")) {
-    } else if (!strcmp (array_token[0], "tshutdown") && (!strcmp(array_token[1],"tserver"))) {
+    } 
+    else if(!strcmp(array_token[0], "ping"))
+    {
+            
+
+
+    }
+    
+    else if (!strcmp (array_token[0], "tshutdown") && (!strcmp (array_token[1], "tserver"))) {
         download_img (array_token[2], "cortex", map_serv, XINUSERVER);
         powercycle_bgnd ("cortex", map_serv, XINUSERVER);
         message.cmsgtyp = htonl (C_SHUTDOWN);

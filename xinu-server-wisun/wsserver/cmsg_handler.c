@@ -118,6 +118,7 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
 
         case C_PINGALL:
             kprintf ("Message type is %d\n", C_PINGALL);
+            cmsg_reply = pingall_reply ( ctlpkt );
 	    break;
 
         default:

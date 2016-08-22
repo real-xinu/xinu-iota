@@ -95,7 +95,9 @@ process	netin ()
 		eth_ntoh(pkt);
         
 		/* Demultiplex on Ethernet type */
-                //pdump(pkt);
+                /*DEUG */   //pdump(pkt);
+		/*DEBUG */ //kprintf("  %02x: ", pkt->net_ethtype);
+		/*DEBUG */ //kprintf("\n");
 		switch (pkt->net_ethtype) {
 
 		    case ETH_ARP:			/* Handle ARP	*/
@@ -109,7 +111,7 @@ process	netin ()
 			freebuf((char *)pkt);
 			continue;
 		    case ETH_TYPE_A:
-			//pdump(pkt);
+			/*DEBUG */ //pdump(pkt);
 			amsg_handler(pkt);
 			continue;
 		    case ETH_TYPE_B:

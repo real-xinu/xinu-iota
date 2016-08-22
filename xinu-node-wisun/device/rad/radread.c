@@ -68,7 +68,7 @@ int32	radread (
 
 	//memcpy(buf, (char *)pkt, len < count ? len : count);
 
-	freebuf((char *)pkt);
+	freebuf(pkt);
 	//signal(radptr->isem);
 
 	return len < count ? len : count;

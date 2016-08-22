@@ -2,98 +2,105 @@
 
 #include <xinu.h>
 
-struct	ifentry if_tab[NIFACES];
+/* Table of network interfaces */
+struct	netiface iftab[NIFACES];
+
+/* Until we have a radio device */
+struct	radcblk radtab[1];
 
 /*------------------------------------------------------------------------
- * netiface_init  -  Initializes all the network interfaces
+ * netiface_init  -  Initialize all the network interfaces
  *------------------------------------------------------------------------
  */
-void	netiface_init (void)
-{
-	int32	iface;		/* Interface number	*/
-	struct	ifentry *ifptr;	/* Interface pointer	*/
-	intmask	mask;		/* Saved interrupt mask	*/
+void	netiface_init(void) {
 
-	/* Ensure only one process accesses the interface table */
+	struct	netiface *ifptr;	/* Pointer to table entry	*/
+	int	ifindex;		/* Index into the table		*/
+	intmask	mask;			/* Saved interrupt mask		*/
+	int32	retval;
 
 	mask = disable();
 
-	for(iface = 0; iface < NIFACES; iface++) {
-		ifptr = &if_tab[iface];
+	for(ifindex = 0; ifindex < NIFACES; ifindex++) {
 
-		memset((char *)ifptr, NULLCH, sizeof(struct ifentry));
+		/* Get a pointer to the table entry */
+		ifptr = &iftab[ifindex];
+
+		/* Clear out the entry */
+		memset((char *)ifptr, NULLCH, sizeof(struct netiface));
+
+		/* Set the state as DOWN */
 		ifptr->if_state = IF_DOWN;
 
-		if(iface == IF_RADIO) {
+		/* Initialize the input queue for this interface */
+		ifptr->if_iqtail = ifptr->if_iqhead = 0;
+		ifptr->if_iqsem = semcreate(0);
 
-			/* Set the type and device */
+		/* Initialize the ND related fields */
+		ifptr->if_nd_reachtime = ND_REACHABLE_TIME;
+		ifptr->if_nd_retranstime = ND_RETRANS_TIMER;
 
-			ifptr->if_type = IF_TYPE_RADIO;
-			ifptr->if_dev = RADIO0;
+		if(ifindex == 0) { /* First is the ethernet interface */
 
-			/* Set the interface HW addresses */
-
-			control(ifptr->if_dev, RAD_CTRL_GET_EUI64, (uint32)ifptr->if_hwucast, 0);
-			memset(ifptr->if_hwbcast, 0xff, 8);
-			ifptr->if_halen = 8;
-
-			/* Generate the link local IP address */
-
-			memcpy(ifptr->if_ipucast[0].ipaddr, ip_llprefix, 8);
-			memcpy(&ifptr->if_ipucast[0].ipaddr[8], ifptr->if_hwucast, 8);
-			ifptr->if_nipucast = 1;
-
-			/* Initialize ND for this interface */
-
-			nd_init(iface);
-
-			ifptr->if_state = IF_UP;
-		}
-		else if(iface == IF_ETH) {
-
-			/* Set the type and device */
-
+			/* Set the interface type */
 			ifptr->if_type = IF_TYPE_ETH;
-			ifptr->if_dev = ETHER0;
 
-			/* Set the interface HW addresses */
+			/* Set the device in the interface */
+			ifptr->if_dev = &ethertab[0];
 
-			control(ifptr->if_dev, ETH_CTRL_GET_MAC, (uint32)ifptr->if_hwucast, 0);
-			memset(ifptr->if_hwbcast, 0xff, 6);
-			ifptr->if_halen = 6;
+			/* Set the hardware addresses */
+			ifptr->if_halen = IF_HALEN_ETH;
+			memcpy(ifptr->if_hwucast, ethertab[0].devAddress,
+					IF_HALEN_ETH);
+			memset(ifptr->if_hwbcast, 0xff, IF_HALEN_ETH);
 
-			/* Generate the link local IP address */
-
+			/* Generate a Link-local IPv6 address */
+			ifptr->if_nipucast = 1;
 			memcpy(ifptr->if_ipucast[0].ipaddr, ip_llprefix, 16);
-			memcpy(&ifptr->if_ipucast[0].ipaddr[8], ifptr->if_hwucast, 3);
+			memcpy(ifptr->if_ipucast[0].ipaddr+8, ifptr->if_hwucast, 3);
 			ifptr->if_ipucast[0].ipaddr[11] = 0xff;
 			ifptr->if_ipucast[0].ipaddr[12] = 0xfe;
-			memcpy(&ifptr->if_ipucast[0].ipaddr[13], &ifptr->if_hwucast[3], 3);
-			if(ifptr->if_ipucast[0].ipaddr[8]&0x02) {
+			memcpy(ifptr->if_ipucast[0].ipaddr+13, ifptr->if_hwucast+3, 3);
+			if(ifptr->if_hwucast[0] & 0x02) {
 				ifptr->if_ipucast[0].ipaddr[8] &= 0xfd;
 			}
 			else {
 				ifptr->if_ipucast[0].ipaddr[8] |= 0x02;
 			}
+
+			retval = nd_newipucast(ifindex, ifptr->if_ipucast[0].ipaddr);
+			if(retval == SYSERR) {
+				kprintf("Cannot assign Link-local IP address to interface %d\n", ifindex);
+				panic("");
+			}
+		}
+		else if(ifindex == 1) { /* Second is the radio interface */
+
+			/* Set the interface type */
+			ifptr->if_type = IF_TYPE_RAD;
+
+			/* Set the device in the interface */
+			ifptr->if_dev = &radtab[0];
+
+			/* Set the hardware addresses */
+			ifptr->if_halen = IF_HALEN_RAD;
+			memcpy(ifptr->if_hwucast, radtab[0].devAddress,
+					IF_HALEN_RAD);
+			memset(ifptr->if_hwbcast, 0xff, IF_HALEN_RAD);
+
+			/* Genarate a Link-local IPv6 address */
 			ifptr->if_nipucast = 1;
-
-			/* Join the solicited node multicast address */
-
-			memcpy(ifptr->if_ipmcast[0].ipaddr, ip_solmc, 16);
-			memcpy(&ifptr->if_ipmcast[0].ipaddr[13], &ifptr->if_ipucast[0].ipaddr[13], 3);
-			ifptr->if_nipmcast = 1;
-
-			/* Initialize ND for this interface */
-
-			nd_init(iface);
-
-			ifptr->if_state = IF_UP;
+			memcpy(ifptr->if_ipucast[0].ipaddr, ip_llprefix, 16);
+			memcpy(ifptr->if_ipucast[0].ipaddr+8, ifptr->if_hwucast, 8);
+			if(ifptr->if_hwucast[0] & 0x02) {
+				ifptr->if_ipucast[0].ipaddr[8] &= 0xfd;
+			}
+			else {
+				ifptr->if_ipucast[0].ipaddr[8] |= 0x02;
+			}
 		}
 
-		/* For emulation only */
-		ifptr->head = ifptr->tail = ifptr->count = 0;
-		ifptr->isem = semcreate(0);
+		kprintf("Stateless Address Autoconfiguration performed on interface %d.\n", ifindex);
+		kprintf("IP address: "); ip_printaddr(ifptr->if_ipucast[0].ipaddr); kprintf("\n");
 	}
-
-	restore(mask);
 }

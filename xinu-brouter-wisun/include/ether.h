@@ -17,9 +17,6 @@ struct	etherPkt {
 	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
 	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
 	uint16	type;			/* Ether type field		*/
-	byte	dstbe;
-	byte	srcbe;
-	byte	data[];
 };
 #pragma pack()
 
@@ -40,6 +37,7 @@ struct	etherPkt {
 					/*  	size(cache alignment)	*/
 
 #define ETH_IPV6 0x86dd
+#define	ETH_RAD	 0x1234
 
 /* State of the Ethernet interface */
 

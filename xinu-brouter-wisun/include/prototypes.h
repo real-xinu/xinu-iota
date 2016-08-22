@@ -140,18 +140,10 @@ extern	status	getutime(uint32 *);
 extern	void	halt(void);
 
 /* in file icmp.c */
-/*
-extern	void	icmp_init(void);
-extern	void	icmp_in(struct netpacket *);
-extern	int32	icmp_register(uint32);
-extern	int32	icmp_recv(int32, char *, int32, uint32);
-extern	status	icmp_send(uint32, uint16, uint16, uint16, char *, int32);
-extern	struct	netpacket *icmp_mkpkt(uint32, uint16, uint16, uint16, char *, int32);
-extern	status	icmp_release(int32);
-extern	uint16	icmp_cksum(char *, int32);
-extern	void	icmp_hton(struct netpacket *);
-extern	void	icmp_ntoh(struct netpacket *);
-*/
+void	icmp_in(struct netpacket *);
+int32	icmp_send(byte, byte, byte [], void *, int32, int32);
+uint16	icmp_cksum(struct netpacket *);
+
 /* in file init.c */
 extern	syscall	init(did32);
 
@@ -168,17 +160,13 @@ extern	devcall	ioerr(void);
 extern	devcall	ionull(void);
 
 /* in file ip.c */
-
 extern	void	ip_in(struct netpacket *);
-extern	status	ip_send(struct netpacket *);
-extern	void	ip_local(struct netpacket *);
-extern	status	ip_out(struct netpacket *);
-extern	int32	ip_route(uint32);
-/*extern	uint16	ipcksum(struct netpacket *);*/
-extern	void	ip_ntoh(struct netpacket *);
+extern	void	ip_in_ext(struct netpacket *);
+extern	int32	ip_route(struct netpacket *, byte []);
+extern	int32	ip_send(struct netpacket *);
 extern	void	ip_hton(struct netpacket *);
-extern	process	ipout(void);
-extern	status	ip_enqueue(struct netpacket *);
+extern	void	ip_ntoh(struct netpacket *);
+extern	void	ip_printaddr(byte []);
 
 /* in file net.c */
 
@@ -186,8 +174,8 @@ extern	void	net_init(void);
 extern	process	netin();
 extern	process	netout(void);
 extern	process	rawin(void);
-extern	void	eth_hton(struct netpacket *);
-extern	void	eth_ntoh(struct netpacket *);
+extern	void	eth_hton(struct netpacket_e *);
+extern	void	eth_ntoh(struct netpacket_e *);
 
 /* in file netstart.c */
 
@@ -315,8 +303,17 @@ extern	status	namcpy(char *, char *, int32);
 extern	devcall	namopen(struct dentry *, char *, char *);
 
 /* in file nd.c */
-extern	void	nd_init(int32);
-extern	process	nd_in(int32);
+extern	void	nd_init(void);
+extern	int32	nd_newipucast(int32, byte[]);
+extern	int32	nd_ncfind(byte []);
+extern	int32	nd_ncupdate(byte [], byte [], int32, bool8);
+extern	int32	nd_ncnew(byte [], byte [], int32, int32, int32);
+extern	void	nd_in(struct netpacket *);
+extern	void	nd_in_ns(struct netpacket *);
+extern	void	nd_in_na(struct netpacket *);
+extern	int32	nd_send_ns(int32);
+extern	int32	nd_resolve(byte [], int32, void *);
+extern	process	nd_timer(void);
 
 /* in file newqueue.c */
 extern	qid16	newqueue(void);

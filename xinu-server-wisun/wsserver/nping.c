@@ -122,7 +122,7 @@ struct c_msg * nping_all_reply ( struct c_msg *ctlpkt )
 }
 /*------------------------------------------------------------------
  * This function is used to send a broadcast ping message to all the
- * nodes in active topology
+ * nodes in current active topology
  * ----------------------------------------------------------------*/
 status nping_all()
 {
@@ -153,4 +153,68 @@ status nping_all()
         return SYSERR;
 }
 
+/*-----------------------------------------------------------------
+ *  Make the PINGALL REPLY message
+ *  -------------------------------------------------------------*/
+struct c_msg * pingall_reply ( struct c_msg *ctlpkt )
+{
+    int32 i;
+    struct c_msg * cmsg_reply;
+    cmsg_reply = ( struct c_msg * ) getmem ( sizeof ( struct c_msg ) );
+    memset ( cmsg_reply, 0, sizeof ( struct c_msg ) );
+    int ping_num = 0;
+    status stat = pingall();
+
+    if ( stat == OK ) {
+     
+	sleepms (50);
+
+        for ( i = 0; i < MAX_BBB; i++ ) {
+            if (bbb_stat[i] != 0){
+		    cmsg_reply->bbb_stat[i] =  bbb_stat[i];
+                    ping_num++;
+	    }
+        }
+
+        cmsg_reply->cmsgtyp = htonl ( C_PINGALL_REPLY );
+        cmsg_reply->nbbb = htonl ( ping_num );
+    }
+    
+    for (i=0; i<MAX_BBB; i++)
+	    bbb_stat[i] = 0;
+    return cmsg_reply;
+}
+/*------------------------------------------------------------------
+ * This function is used to send a broadcast ping message to all the
+ * nodes (active and non active nodes in the current network topology)
+ * ----------------------------------------------------------------*/
+status pingall()
+{
+    struct etherPkt *ping_msg;
+    byte *seq_buf;
+    seq_buf = ( byte * ) getmem ( sizeof ( byte ) * 4 );
+    ping_msg = create_etherPkt();
+    int32 retval;
+    /* fill out the Ethernet packet fields */
+    memcpy ( ping_msg->src, NetData.ethucast, ETH_ADDR_LEN );
+    memcpy ( ping_msg->dst, NetData.ethbcast, ETH_ADDR_LEN );
+    ping_msg->type = htons ( ETH_TYPE_A );
+    ping_msg->msg.amsgtyp = htonl ( A_PINGALL ); /* Error message */
+    seq_buf = ( byte * ) seqnum;
+    /*DEBUG*/ //kprintf("seq num: %d, seq buf: %d\n", *seqnum , *seq_buf);
+    memcpy ( ping_msg->msg.apingdata , seq_buf , sizeof ( byte ) * 4 );
+    *seqnum = *seqnum + 1;
+    memset ( ack_info, 0, sizeof ( ack_info ) );
+    memcpy ( ack_info, ( char * ) ( ping_msg ) + 14, 16 );
+   
+    /*send packet over Ethernet */
+    retval = write ( ETHER0, ( char * ) ping_msg, sizeof ( struct etherPkt ) );
+    freemem ( ( char * ) ping_msg, sizeof ( struct etherPkt ) );
+
+    if ( retval > 0 )
+        return OK;
+
+    else
+        return SYSERR;
+}
 

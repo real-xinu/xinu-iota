@@ -18,5 +18,6 @@ extern char map_brouter[15];
 extern char array_token[2][20];
 extern const char * const  cmdtab[];
 extern int ncmd; 
+extern char * ip_list[6];
 #endif
 

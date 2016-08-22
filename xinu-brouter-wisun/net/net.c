@@ -1,172 +1,185 @@
-/* net.c - net_init, netin */
+/* net.c - net_init, netin, rawin, freebuf_np */
 
 #include <xinu.h>
 
+/* Buffer pool for network packets */
 bpid32	netbufpool;
-int32	beserver;
-extern	process nd_timer(void);
+
 /*------------------------------------------------------------------------
  * net_init  -  Initialize the network
  *------------------------------------------------------------------------
  */
-void	net_init (void)
-{
-	char	procname[50];	/* Netin process name	*/
-	int32	iface;		/* Interface number	*/
-	char	buf[10] = {0};
+void	net_init(void) {
 
-	/* Initialize the interfaces */
+	char	procname[20];
+	int32	iface;
 
+	/* Initialize all the network interfaces */
 	netiface_init();
 
-	ip_init();
+	/* Initialize ND related data structures */
+	nd_init();
 
-	udp_init();
+	/* Create a buffer pool of network packets */
+	netbufpool = mkbufpool(PACKLEN, 50);
 
-	tcp_init();
-
-	/* Create the network buffer pool */
-
-	netbufpool = mkbufpool(PACKLEN, 40);
-	if((int32)netbufpool == SYSERR) {
-		panic("Cannot create network buffer pool\n");
-	}
-/*
-	while(TRUE) {
-		kprintf("Enter the backend number of the server: ");
-		memset(buf, 0, 10);
-		read(CONSOLE, buf, 10);
-		beserver = atoi(buf);
-		if((beserver < 101) || (beserver > 196)) {
-			kprintf("Invalid backend number, must be in range [101,196]\n");
-			continue;
-		}
-		beserver -= 101;
-		break;
-	}
-*/
-	/* Create the ND timer process */
-
-	resume(create(nd_timer, NETSTK, NETPRIO+10, "nd_timer", 0, NULL));
+	/* Create and start the rawin process */
+	resume(create(rawin, 8192, NETPRIO, "rawin", 0, NULL));
 
 	/* Create a netin process for each interface */
-
 	for(iface = 0; iface < NIFACES; iface++) {
 
-		if(if_tab[iface].if_state == IF_DOWN) {
-			continue;
-		}
-
-		if(if_tab[iface].if_type == IF_TYPE_RADIO) {
-			sprintf(procname, "netin_%d", iface);
-			//resume(create(netin, NETSTK, NETPRIO, procname, 1, iface));
-		}
+		sprintf(procname, "netiface-%d", iface);
+		resume(create(netin, 8192, NETPRIO, procname, 1, iface));
 	}
 
-	resume(create(rawin, NETSTK, NETPRIO+1, "rawin", 0, NULL));
 }
 
 /*------------------------------------------------------------------------
- * netin  -  Network input process
+ * netin  -  Handle packets coming in on the network interface
  *------------------------------------------------------------------------
  */
-process	netin (
-	int32	iface
-	)
+process	netin(
+		int32	iface	/* Index of network interface	*/
+	     )
 {
-	struct	ifentry *ifptr;	/* Pointer to interface	*/
-	struct	netpacket *pkt;	/* Pointer to packet	*/
-	int32	count;
-	int32	i;
+	struct	netiface *ifptr;
+	struct	netpacket_e *epkt;
+	struct	netpacket_r *rpkt;
+	void	*pkt;
+	intmask	mask;
 
-	if((iface < 0) || (iface > NIFACES)) {
-		return SYSERR;
-	}
+	kprintf("netin for iface = %d\n", iface);
 
-	ifptr = &if_tab[iface];
+	ifptr = &iftab[iface];
 
 	while(TRUE) {
-		/*
-		wait(ifptr->isem);
 
-		pkt = ifptr->pktbuf[ifptr->head];
-		ifptr->head++;
-		if(ifptr->head >= 10) {
-			ifptr->head = 0;
-		}
-		*/
+		mask = disable();
 
-		pkt = (struct netpacket *)getbuf(netbufpool);
-		if(pkt == SYSERR) {
-			panic("netin: Cannot allocate memory for packets");
+		wait(ifptr->if_iqsem);
+		pkt = ifptr->if_inputq[ifptr->if_iqhead];
+		ifptr->if_iqhead++;
+		if(ifptr->if_iqhead >= 10) {
+			ifptr->if_iqhead = 0;
 		}
 
-		count = read(ifptr->if_dev, (char *)pkt, PACKLEN);
-		if(count == SYSERR) {
-			panic("netin: Cannot read from device");
+		restore(mask);
+
+		if(ifptr->if_type == IF_TYPE_ETH) {
+			epkt = (struct netpacket_e *)pkt;
+
+			eth_ntoh(epkt);
+
+			switch(epkt->net_ethtype) {
+
+			case ETH_IPV6:
+				//kprintf("Incoming IPv6 packet\n");
+				ip_in((struct netpacket *)epkt->net_ethdata);
+				freebuf((char *)epkt);
+				break;
+
+			default:
+				freebuf((char *)epkt);
+				break;
+			}
 		}
-
-		//kprintf("IN: "); pdump(pkt);
-
-		if((pkt->net_ipvtch&0xf0) == 0x60) {
-			pkt->net_iface = iface;
-			ip_in(pkt);
-			//freebuf((char *)pkt);
+		else if(ifptr->if_type == IF_TYPE_RAD) {
+			kprintf("Incoming radio packet\n");
+			rpkt = (struct netpacket_r *)pkt;
 		}
 		else {
 			freebuf((char *)pkt);
 		}
+
+		freebuf((char *)pkt);
 	}
 
 	return OK;
 }
 
 /*------------------------------------------------------------------------
- * rawin  -  Raw network input process to read from ethernet device
+ * rawin  -  Handle packets from the real ethernet device
  *------------------------------------------------------------------------
  */
-process rawin(void) {
+process	rawin(void) {
 
-	struct	etherPkt *pkt;
-	int32	count;
+	struct	netpacket_e *epkt;
+	struct	netpacket *pkt;
+	struct	netiface *ifptr;
+	int32	retval;
+	intmask	mask;
+	int32	count = 0;
+
+	kprintf("rawin created\n");
 
 	while(TRUE) {
 
-		pkt = (struct etherPkt *)getbuf(netbufpool);
-		if(pkt == SYSERR) {
-			panic("rawin: cannot allocate memory");
+		epkt = (struct netpacket_e *)getbuf(netbufpool);
+
+		retval = read(ETHER0, epkt, sizeof(struct netpacket_e));
+		if(retval == SYSERR) {
+			panic("rawin: cannot read from the ethernet device");
 		}
 
-		count = read(ETHER0, pkt, PACKLEN);
-		if(count == SYSERR) {
-			panic("rawin: cannot read from ethernet");
-		}
+		//kprintf("incoming packet type: %02x\n", ntohs(epkt->net_ethtype));
 
-		switch(ntohs(pkt->type)) {
+		switch(ntohs(epkt->net_ethtype)) {
 
-		case 0x0000:
-			if(semcount(radtab[0].isem) >= radtab[0].rxRingSize) {
-				freebuf((char *)pkt);
-				continue;
-			}
-
-			memcpy(((struct rad_rx_desc *)radtab[0].rxRing)[radtab[0].rxTail].buffer, pkt, count);
-			radtab[0].rxTail = (radtab[0].rxTail + 1) % radtab[0].rxRingSize;
-
-			freebuf((char *)pkt);
-			signal(radtab[0].isem);
-			break;
-
-		case 0x88b5:
-			kprintf("TYPE A\n");
+		case ETH_RAD:
+			kprintf("rawin: radio packet: %d\n", ++count);
+			ifptr = &iftab[1];
+			//pkt->net_iface = 1;
+			freebuf((char *)epkt);
+			continue;
 			break;
 
 		default:
-			kprintf("rawin: unknown ethernet type: %02x\n", ntohs(pkt->type));
-			freebuf((char *)pkt);
+			ifptr = &iftab[0];
+			pkt = (struct netpacket *)epkt->net_ethdata;
+			pkt->net_iface = 0;
 			break;
 		}
+
+		mask = disable();
+
+		if(semcount(ifptr->if_iqsem) >= 10) {
+			kprintf("Interface queue full\n");
+			freebuf((char *)epkt);
+			continue;
+		}
+
+		ifptr->if_inputq[ifptr->if_iqtail] = epkt;
+		ifptr->if_iqtail++;
+		if(ifptr->if_iqtail >= 10) {
+			ifptr->if_iqtail = 0;
+		}
+
+		signal(ifptr->if_iqsem);
+		restore(mask);
 	}
 
 	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * eth_hton  -  Convert Ethernet header fields in network byte order
+ *------------------------------------------------------------------------
+ */
+void	eth_hton (
+		struct	netpacket_e *epkt
+		)
+{
+	epkt->net_ethtype = htons(epkt->net_ethtype);
+}
+
+/*------------------------------------------------------------------------
+ * eth_ntoh  -  Convert Ethernet header fields in host byte order
+ *------------------------------------------------------------------------
+*/
+void	eth_ntoh (
+		struct	netpacket_e *epkt
+		)
+{
+	epkt->net_ethtype = ntohs(epkt->net_ethtype);
 }

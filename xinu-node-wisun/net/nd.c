@@ -1,363 +1,272 @@
-/* nd.c */
+/* nd.c - nd_init, nd_in */
 
 #include <xinu.h>
 
-byte	nd_msgbuf1[500];
-byte	nd_msgbuf2[500];
+/* Neighbor Cache */
+struct	nd_ncentry nd_ncache[ND_NCACHE_SIZE];
 
 /*------------------------------------------------------------------------
- * nd_init  -  Initialize Neighbor Discovery related information
+ * nd_init  -  Initialize ND relate data structures
  *------------------------------------------------------------------------
  */
-void	nd_init (
-	int32	iface	/* Interface index	*/
-	)
-{
-	struct	ifentry *ifptr;	/* Pointer to interface entry	*/
-	struct	nd_info *ndptr;	/* Pointer tp ND information	*/
-	intmask	mask;		/* Saved interrupt mask		*/
-	int32	i;
+void	nd_init(void) {
 
-	if((iface < 0) || (iface >= NIFACES)) {
-		return;
-	}
+	struct	nd_ncentry *ncptr;	/* Neighbor cache entry	*/
+	intmask	mask;			/* Interrupt mask	*/
+	int32	i;			/* Index variable	*/
 
 	mask = disable();
 
-	ifptr = &if_tab[iface];
-
-	memset((char *)&ifptr->if_ndData, 0, sizeof(ifptr->if_ndData));
-
-	ndptr = &ifptr->if_ndData;
-	ndptr->isrouter = TRUE;
-	ndptr->sendadv = FALSE;
-	ndptr->currhl = 255;
-	ndptr->reachable = 30000;
-	ndptr->retrans = 1000;
-
-	for(i = 0; i < ND_NC_SLOTS; i++) {
-		memset((char *)&ifptr->if_ncache[i], 0, sizeof(struct nd_nce));
-		ifptr->if_ncache[i].state = ND_NCE_FREE;
-		ifptr->if_ncache[i].waitsem = semcreate(1);
-		if(ifptr->if_ncache[i].waitsem == SYSERR) {
-			panic("nd_init: cannot create semaphore");
-		}
+	/* Initialize the neighbor cache */
+	for(i = 0; i < ND_NCACHE_SIZE; i++) {
+		ncptr = &nd_ncache[i];
+		memset(ncptr, NULLCH, sizeof(struct nd_ncentry));
+		ncptr->nc_state = NC_STATE_FREE;
+		ncptr->nc_pqhead = ncptr->nc_pqtail = ncptr->nc_pqcount = 0;
 	}
 
 	restore(mask);
 
-	resume(create(nd_in, ND_PROCSSIZE, ND_PROCPRIO, "nd_in", 1, iface));
+	/* Create a neighbor discovery timer process */
+	resume(create(nd_timer, 8192, 500, "nd_timer", 0, NULL));
 }
 
 /*------------------------------------------------------------------------
- * nd_in  -  ND process to handle incoming ND messages
+ * nd_newipucast  -  Handle a new IP address assigned to an interface
  *------------------------------------------------------------------------
  */
-process	nd_in (
-	int32	iface	/* Interface index	*/
-	)
+int32	nd_newipucast (
+		int32	iface,		/* Interface index	*/
+		byte	ipaddr[]	/* IP address		*/
+		)
 {
-	struct	ipinfo ipdata;	/* IP information	*/
-	int32	slots[4];	/* ICMP slots		*/
-	byte	*msgbuf;	/* Message buffer	*/
-	uint32	buflen;		/* Buffer length	*/
-	int32	retval;		/* Return value 	*/
+	struct	netiface *ifptr;	/* Network interface pointer	*/
+	intmask	mask;			/* Interrupt mask		*/
+	int32	i;			/* Index variable		*/
 
-	if((iface < 0) || (iface >= NIFACES)) {
+	/* Verify that the interface index is valid */
+	if(iface < 0 || iface >= NIFACES) {
 		return SYSERR;
 	}
 
-	slots[0] = icmp_register(iface, ip_unspec, ip_unspec, ICMP_TYPE_RTRSOL, 0);
-	slots[1] = icmp_register(iface, ip_unspec, ip_unspec, ICMP_TYPE_RTRADV, 0);
-	slots[2] = icmp_register(iface, ip_unspec, ip_unspec, ICMP_TYPE_NBRSOL, 0);
-	slots[3] = icmp_register(iface, ip_unspec, ip_unspec, ICMP_TYPE_NBRADV, 0);
+	ifptr = &iftab[iface];
 
-	if((slots[0] == SYSERR) ||
-	   (slots[1] == SYSERR) ||
-	   (slots[2] == SYSERR) ||
-	   (slots[3] == SYSERR)) {
-	   	panic("nd_in: Error while registering icmp slots");
+	mask = disable();
+
+	/* If we cannot add any more multicast addresses, return error */
+	i = ifptr->if_nipmcast;
+	if(i >= IF_MAX_NIPMCAST) {
+		restore(mask);
+		return SYSERR;
 	}
 
-	msgbuf = getbuf(netbufpool);
-	while(TRUE) {
-		//msgbuf = nd_msgbuf1;
-		//msgbuf = getbuf(netbufpool);
-		buflen = 500;
-		retval = icmp_recvnaddr(slots,	/* ICMP slots to listen on	*/
-					4,	/* No. of ICMP slots		*/
-					msgbuf, /* Message buffer		*/
-					&buflen,/* Buffer length		*/
-					3000,	/* Timeout in ms		*/
-					&ipdata	/* IP information		*/
-					);
-		if(retval == SYSERR) {
-			panic("nd_in: error in icmp_recvnaddr");
-		}
-		if(retval == TIMEOUT) {
-			continue;
-		}
-		if(retval == slots[0]) {
-			kprintf("Incoming rtrsol\n");
-			nd_in_rtrsol(iface, (struct nd_rtrsol *)msgbuf, buflen, &ipdata);
-		}
-		else if(retval == slots[1]) {
-			kprintf("Incoming rtradv\n");
-			nd_in_rtradv(iface, (struct nd_rtradv *)msgbuf, buflen, &ipdata);
-		}
-		else if(retval == slots[2]) {
-			nd_in_nbrsol(iface, (struct nd_nbrsol *)msgbuf, buflen, &ipdata);
-		}
-		else if(retval == slots[3]) {
-			nd_in_nbradv(iface, (struct nd_nbradv *)msgbuf, buflen, &ipdata);
-		}
-		else {
-			panic("nd_in: Unknown message type");
-		}
-	}
+	/* Generate a solicited-node multicast address */
+	memcpy(ifptr->if_ipmcast[i].ipaddr, ip_nd_snmcprefix, 16);
+	memcpy(ifptr->if_ipmcast[i].ipaddr+13, ipaddr+13, 3);
+	ifptr->if_nipmcast++;
+
+	restore(mask);
 
 	return OK;
 }
 
 /*------------------------------------------------------------------------
- * nd_in_rtrsol  -  Handle incoming Router Solicitation message
+ * nd_ncfind  -  Find an entry in the neighbor cache (assumes intr off)
  *------------------------------------------------------------------------
  */
-void	nd_in_rtrsol (
-	int32	iface,			/* Interface index	*/
-	struct	nd_rtrsol *rtrsol,	/* Router solicitation	*/
-	uint32	len,			/* Length of message	*/
-	struct	ipinfo *ipdata		/* IP information	*/
-	)
+int32	nd_ncfind (
+		byte	*ipaddr		/* IP address	*/
+		)
 {
-	struct	ifentry *ifptr;	/* Pointer to interface		*/
-	struct	nd_info *ndptr;	/* Pointer to ND information	*/
-	struct	nd_rtradv *rtradv;/* Pointer to rtr adv		*/
-	struct	nd_llao *sllao;	/* Pointer to SLLAO		*/
-	struct	nd_pio *pio;	/* Pointer to PIO		*/
-	byte	*optptr;	/* Pointer to current option	*/
-	byte	*optend;	/* Pointer to end of message	*/
-	intmask	mask;		/* Saved interrupt mask		*/
-	int32	i;		/* For loop index		*/
+	struct	nd_ncentry *ncptr;	/* Neighbor cache entry	*/
+	int32	i;			/* Index variable	*/
 
-	ifptr = &if_tab[iface];
-	ndptr = &ifptr->if_ndData;
+	/* Search for the entry matching the IP address */
+	for(i = 0; i < ND_NCACHE_SIZE; i++) {
 
-	if(ndptr->sendadv == FALSE) {
-		return;
-	}
+		ncptr = &nd_ncache[i];
 
-	if((len < 4) ||
-	   (ipdata->iphl != 255)) {
-	   	return;
-	}
+		if(ncptr->nc_state == NC_STATE_FREE) {
+			continue;
+		}
 
-	sllao = (struct nd_llao *)NULL;
-
-	optptr = rtrsol->opts;
-	optend = (byte *)rtrsol + len;
-
-	while(optptr < optend) {
-
-		switch(*optptr) {
-
-		 case ND_TYPE_SLLAO:
-		 	sllao = (struct nd_llao *)optptr;
-			if(sllao->len == 0) {
-				return;
-			}
-			optptr = (byte *)(sllao + 1);
-			break;
-
-		 default:
-		 	if((*(optptr+1)) == 0) {
-				return;
-			}
-		 	optptr += 8 * (*(optptr+1));
+		if(!memcmp(ncptr->nc_ipaddr, ipaddr, 16)) {
+			return i;
 		}
 	}
 
-	if(sllao && isipunspec(ipdata->ipsrc)) {
-		return;
-	}
-
-	rtradv = (struct nd_rtradv *)nd_msgbuf2;
-
-	mask = disable();
-	rtradv->currhl = ndptr->currhl;
-	rtradv->res = 0;
-	rtradv->o = ndptr->other;
-	rtradv->m = ndptr->managed;
-	rtradv->rtrlife = ndptr->lifetime;
-	rtradv->reachable = ndptr->reachable;
-	rtradv->retrans = ndptr->retrans;
-	len = sizeof(struct nd_rtradv);
-
-	sllao = (struct nd_llao *)rtradv->opts;
-	sllao->type = ND_TYPE_SLLAO;
-	sllao->len = 2;
-	memcpy(sllao->lladdr, ifptr->if_hwucast, 8);
-	len += sizeof(struct nd_llao);
-
-	pio = (struct nd_pio *)(sllao + 1);
-	for(i = 1; i < ifptr->if_nipucast; i++) {
-		pio->type = ND_TYPE_PIO;
-		pio->len = 4;
-		pio->preflen = 64;
-		pio->res1 = 0;
-		pio->a = 1;
-		pio->l = 0;
-		pio->validlife = 0;
-		pio->preflife = 0;
-		pio->res2 = 0;
-		memcpy(pio->prefix, ifptr->if_ipucast[i].ipaddr, 8);
-		memset((char *)&pio->prefix[8], 0, 8);
-		len += sizeof(struct nd_pio);
-		pio += 1;
-	}
-
-	memcpy(ipdata->ipdst, ipdata->ipsrc, 16);
-	memcpy(ipdata->ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
-
-	restore(mask);
-
-	icmp_send(iface, ICMP_TYPE_RTRADV, 0, ipdata, (char *)rtradv, len);
+	return SYSERR;
 }
 
 /*------------------------------------------------------------------------
- * nd_in_rtradv  -  Handle incoming Router Advertisement message
+ * nd_ncupdate  -  Update a neighbor cache entry
  *------------------------------------------------------------------------
  */
-void	nd_in_rtradv (
-	int32	iface,			/* Interface index	*/
-	struct	nd_rtradv *rtradv,	/* Router advertisement	*/
-	uint32	len,			/* Message length	*/
-	struct	ipinfo *ipdata		/* IP information	*/
-	)
+int32	nd_ncupdate (
+		byte	ipaddr[],	/* IP address		*/
+		byte	hwaddr[],	/* Hardware address	*/
+		int32	isrouter,	/* Is router?		*/
+		bool8	irvalid		/* isrouter valid?	*/
+		)
 {
-	struct	ifentry *ifptr;	/* Pointer to interface		*/
-	struct	nd_info *ndptr;	/* Pointer to ND information	*/
-	struct	nd_llao *sllao;	/* Pointer to SLLAO		*/
-	struct	nd_pio *pio;	/* Pointer to PIO		*/
-	byte	*optptr;	/* Pointer to current option	*/
-	byte	*optend;	/* Pointer to end of message	*/
-	intmask	mask;		/* Saved interrupt mask		*/
-	int32	i;		/* For loop index		*/
-
-	ifptr = &if_tab[iface];
-	ndptr = &ifptr->if_ndData;
-
-	if((!isipllu(ipdata->ipsrc)) ||
-	   (ipdata->iphl != 255) ||
-	   (len < 12)) {
-	   	return;
-	}
+	struct	nd_ncentry *ncptr;	/* Neighbor cache entry	*/
+	int32	ncindex;		/* Neighbor cache index	*/
+	intmask	mask;			/* Interrupt mask	*/
 
 	mask = disable();
 
-	ndptr->currhl = (rtradv->currhl != 0) ? rtradv->currhl : ndptr->currhl;
-	ndptr->other = rtradv->o;
-	ndptr->managed = rtradv->m;
-	ndptr->reachable = rtradv->reachable;
-	ndptr->retrans = rtradv->retrans;
-	ndptr->sendadv = TRUE;
+	/* If no entry found for this IP, return error */
+	ncindex = nd_ncfind(ipaddr);
+	if(ncindex == SYSERR) {
+		restore(mask);
+		return SYSERR;
+	}
 
-	optptr = rtradv->opts;
-	optend = (byte *)rtradv + len;
+	ncptr = &nd_ncache[ncindex];
 
-	while(optptr < optend) {
+	/* If the hardware address is different, make the entry STALE */
+	if(memcmp(ncptr->nc_hwaddr, hwaddr, iftab[ncptr->nc_iface].if_halen)) {
+		memcpy(ncptr->nc_hwaddr, hwaddr, iftab[ncptr->nc_iface].if_halen);
+		ncptr->nc_rstate = NC_RSTATE_STL;
+	}
 
-		switch(*optptr) {
+	/* Change the isrouter flag if valid */
+	if(irvalid) {
+		ncptr->nc_isrouter = isrouter;
+	}
 
-		 case ND_TYPE_SLLAO:
-		 	sllao = (struct nd_llao *)optptr;
-			if(sllao->len == 0) {
-				restore(mask);
-				return;
-			}
-			optptr += 8 * sllao->len;
+	restore(mask);
+	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * nd_ncnew  -  Add a new entry to the neighbor cache (assumes intr off)
+ *------------------------------------------------------------------------
+ */
+int32	nd_ncnew (
+		byte	ipaddr[],	/* IP address		*/
+		byte	hwaddr[],	/* Hardware address	*/
+		int32	iface,		/* Interface index	*/
+		int32	rstate,		/* Reachable state	*/
+		int32	isrouter	/* isrouter?		*/
+		)
+{
+	struct	nd_ncentry *ncptr;	/* Neighbor cache entry	*/
+	int32	i;			/* Index variable	*/
+
+	/* Search for an empty neighbor cache entry */
+	for(i = 0; i < ND_NCACHE_SIZE; i++) {
+
+		ncptr = &nd_ncache[i];
+
+		if(ncptr->nc_state == NC_STATE_FREE) {
 			break;
-
-		 case ND_TYPE_PIO:
-		 	pio = (struct nd_pio *)optptr;
-			if(pio->len == 0) {
-				restore(mask);
-				return;
-			}
-			optptr += 8 * pio->len;
-			if((pio->preflen != 64) ||
-			   (pio->a != 1) ||
-			   (isipmc(pio->prefix)) ||
-			   (isipllu(pio->prefix))) {
-			   	break;
-			}
-
-			for(i = 1; i < ifptr->if_nipucast; i++) {
-				if(!memcmp(ifptr->if_ipucast[i].ipaddr, pio->prefix, 8)) {
-					break;
-				}
-			}
-			if(i < ifptr->if_nipucast) {
-			}
-			else if(ifptr->if_nipucast < IF_NIPUCAST) {
-				i = ifptr->if_nipucast;
-				memcpy(ifptr->if_ipucast[i].ipaddr, pio->prefix, 8);
-				memcpy(&ifptr->if_ipucast[i].ipaddr[8], ifptr->if_hwucast, 8);
-				ifptr->if_nipucast++;
-			}
-			break;
-
-		 default:
-		 	optptr += 8 * (*(optptr+1));
 		}
 	}
 
-	restore(mask);
+	if(i >= ND_NCACHE_SIZE) {
+		kprintf("Neighbor cache full\n");
+		return SYSERR;
+	}
+
+	memset(ncptr, NULLCH, sizeof(struct nd_ncentry));
+
+	/* Initialize the interface, reachable state and IP address */
+	ncptr->nc_iface = iface;
+	ncptr->nc_rstate = rstate;
+	memcpy(ncptr->nc_ipaddr, ipaddr, 16);
+
+	/* If hardware address is provided, add it */
+	if(hwaddr) {
+		memcpy(ncptr->nc_hwaddr, hwaddr, iftab[iface].if_halen);
+	}
+
+	ncptr->nc_isrouter = isrouter;
+
+	if(ncptr->nc_rstate == NC_RSTATE_INC) {
+		ncptr->nc_texpire = iftab[ncptr->nc_iface].if_nd_retranstime;
+	}
+	else {
+		ncptr->nc_texpire = iftab[iface].if_nd_reachtime;
+	}
+
+	ncptr->nc_state = NC_STATE_USED;
+
+	//kprintf("Added a new NC entry for "); ip_printaddr(ipaddr);
+	//kprintf("\n");
+
+	return i;
 }
 
 /*------------------------------------------------------------------------
- * nd_in_nbrsol  -  Handle incoming Neighbor Solicitation message
+ * nd_in  -  Handle incoming ND packets
  *------------------------------------------------------------------------
  */
-void	nd_in_nbrsol (
-	int32	iface,			/* Interface index		*/
-	struct	nd_nbrsol *nbrsol,	/* Neighbor solicitation	*/
-	uint32	len,			/* Length of message		*/
-	struct	ipinfo *ipdata		/* IP information		*/
-	)
+void	nd_in (
+		struct	netpacket *pkt	/* Packet buffer pointer	*/
+	      )
 {
-	struct	ifentry *ifptr;	/* Pointer to interface		*/
-	struct	nd_nce *ncptr;	/* Pointer to nbr cache entry	*/
-	struct	nd_nbradv *nbradv;/* Pointer to nbr adv		*/
-	struct	nd_llao *sllao;	/* Pointer to SLLAO		*/
-	struct	nd_llao *tllao;	/* Pointer to TLLAO		*/
-	struct	nd_aro *aro;	/* Pointer to ARO		*/
-	struct	nd_aro *newaro;	/* Pointer to ARO		*/
-	byte	*optptr;	/* Pointer to current option	*/
-	byte	*optend;	/* Pointer to end of message	*/
-	int32	found;		/* Empty NC index		*/
-	byte	aro_status;	/* ARO return status		*/
-	int32	ncslot;		/* Empty nbr cache slot		*/
-	intmask	mask;		/* Saved interrupt mask		*/
-	int32	i;		/* For loop index		*/
+	//kprintf("Incoming nd packet.\n");
 
-	if((len < 20) ||
-	   (ipdata->iphl != 255) ||
-	   (isipmc(nbrsol->tgtaddr))) {
-	   	return;
+	switch(pkt->net_ictype) {
+
+	case ICMP_TYPE_NS:
+		nd_in_ns(pkt);
+		break;
+
+	case ICMP_TYPE_NA:
+		nd_in_na(pkt);
+		break;
+
+	default:
+		break;
+	}
+}
+
+/*------------------------------------------------------------------------
+ * nd_in_ns  -  Handle neighbor solicitation message
+ *------------------------------------------------------------------------
+ */
+void	nd_in_ns (
+		struct	netpacket *pkt	/* Packet buffer pointer	*/
+		)
+{
+	struct	nd_nbrsol *nsmsg;	/* Neighbor solicitation msg	*/
+	struct	nd_nbradv *namsg;	/* Neighbor advertisement msg	*/
+	struct	nd_opt *ndopt;		/* ND option			*/
+	struct	netiface *ifptr;	/* Network interface pointer	*/
+	byte	*ipdst;			/* IP destinatino address	*/
+	int32	nalen;			/* Nbr. adv. length		*/
+	int32	ncindex;		/* Neighbor cache index		*/
+	intmask	mask;			/* Interrupt mask		*/
+	int32	i;			/* Index variable		*/
+
+	/* Pointer to neighbor solicitation msg */
+	nsmsg = (struct nd_nbrsol *)pkt->net_icdata;
+
+	/* Sanity checks... */
+	if(pkt->net_iccode != 0) {
+		return;
 	}
 
-	if(isipunspec(ipdata->ipsrc)) {
-		if(memcmp(ipdata->ipdst, ip_solmc, 13)) {
+	if(pkt->net_iplen < 24) {
+		return;
+	}
+
+	if(isipmc(nsmsg->nd_tgtaddr)) {
+		return;
+	}
+
+	if(isipunspec(pkt->net_ipsrc)) {
+		if(memcmp(pkt->net_ipdst, ip_nd_snmcprefix, 13)) {
 			return;
 		}
 	}
 
-	ifptr = &if_tab[iface];
-
 	mask = disable();
+	ifptr = &iftab[pkt->net_iface];
 	for(i = 0; i < ifptr->if_nipucast; i++) {
-		if(!memcmp(ifptr->if_ipucast[i].ipaddr, nbrsol->tgtaddr, 16)) {
+		if(!memcmp(ifptr->if_ipucast[i].ipaddr, nsmsg->nd_tgtaddr, 16)) {
 			break;
 		}
 	}
@@ -367,769 +276,464 @@ void	nd_in_nbrsol (
 	}
 	restore(mask);
 
-	sllao = (struct nd_llao *)NULL;
-	aro = (struct nd_aro *)NULL;
+	//kprintf("incoming ns msg for"); ip_printaddr(nsmsg->nd_tgtaddr);
+	//kprintf("\n");
 
-	optptr = nbrsol->opts;
-	optend = (byte *)nbrsol + len;
+	ndopt = (struct nd_opt *)nsmsg->nd_opts;
 
-	while(optptr < optend) {
+	while((char *)ndopt < ((char *)pkt->net_ipdata + pkt->net_iplen)) {
 
-		switch(*optptr) {
+		switch(ndopt->ndopt_type) {
 
-		 case ND_TYPE_SLLAO:
-		 	sllao = (struct nd_llao *)optptr;
-			if(sllao->len == 0) {
+		case NDOPT_TYPE_SLLA:
+			/* Cannot have link address for unspecified IP */
+			if(isipunspec(pkt->net_ipsrc)) {
 				return;
 			}
-			optptr += 8 * sllao->len;
+
+			//kprintf("sllao: ");
+			//ip_printaddr(ndopt->ndopt_addr);
+			//kprintf("\n");
+
+			mask = disable();
+
+			/* Update the neighbor cache entry */
+			ncindex = nd_ncupdate(pkt->net_ipsrc,
+					      ndopt->ndopt_addr,
+					      0,
+					      FALSE);
+			//kprintf("nd_in_ns: ncindex %d\n", ncindex);
+
+			/* There is no entry in neighbor cache, add it */
+			if(ncindex == SYSERR) {
+				ncindex = nd_ncnew(pkt->net_ipsrc,
+						   ndopt->ndopt_addr,
+						   pkt->net_iface,
+						   NC_RSTATE_STL,
+						   0);
+			}
+
+			restore(mask);
+
+			/* Next ND option */
+			ndopt = (struct nd_opt *)((char *)ndopt + (ndopt->ndopt_len * 8));
 			break;
 
-		 case ND_TYPE_ARO:
-		 	aro = (struct nd_aro *)optptr;
-			if(aro->len == 0) {
-				return;
-			}
-			optptr += 8 * aro->len;
-			if(isipllu(ipdata->ipsrc)) {
-				aro = NULL;
-			}
+		default:
+			ndopt = (struct nd_opt *)((char *)ndopt + (ndopt->ndopt_len * 8));
 			break;
-
-		 default:
-		 	optptr += 8 * (*(optptr+1));
 		}
 	}
+
+	//kprintf("nd_in_ns: sending na\n");
+
+	/* Allocate memory for neighbor advertisement */
+	nalen = sizeof(struct nd_nbradv) + 8;
+
+	namsg = (struct nd_nbradv *)getmem(nalen);
+
+	if((int32)namsg == SYSERR) {
+		return;
+	}
+
+	/* Initialize the fields in nbr. adv */
+	memset(namsg, 0, nalen);
+	namsg->nd_rso = ND_NA_S | ND_NA_O;
+	memcpy(namsg->nd_tgtaddr, nsmsg->nd_tgtaddr, 16);
 
 	mask = disable();
 
-	if(aro && (!sllao)) {
-		kprintf("nd_in_nbrsol: ARO without SLLAO\n");
-		aro = NULL;
-	}
+	ifptr = &iftab[pkt->net_iface];
 
-	if(aro) {
-		kprintf("nd_in_nbrsol: ARO included\n");
-		found = -1;
-		for(i = 0; i < ND_NC_SLOTS; i++) {
-			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
-				if(found == -1) {
-					found = i;
-				}
-				continue;
-			}
-			if(!memcmp(ifptr->if_ncache[i].hwucast, sllao->lladdr, 8)) {
-				break;
-			}
-		}
-		if(i < ND_NC_SLOTS) {
-			if(memcmp(ifptr->if_ncache[i].ipaddr, ipdata->ipsrc, 16)) {
-				kprintf("nd_in_nbrsol: Duplicate address\n");
-				aro_status = 1;
-			}
-			else if(aro->reglife == 0) {
-				kprintf("nd_in_nbrsol: removing entry\n");
-				memset((char *)&ifptr->if_ncache[i], 0, sizeof(struct nd_nce));
-				ifptr->if_ncache[i].state = ND_NCE_FREE;
-				aro_status = 0;
-			}
-			else {
-				kprintf("nd_in_nbrsol: updating entry\n");
-				ifptr->if_ncache[i].type = ND_NCE_REG;
-				ifptr->if_ncache[i].reglife = aro->reglife;
-				//ifptr->if_ncache[i].timestamp = clktime;
-				aro_status = 0;
-			}
-		}
-		else {
-			if(found == -1) {
-				for(i = 0; i < ND_NC_SLOTS; i++) {
-					if(ifptr->if_ncache[i].type == ND_NCE_GRB) {
-						found = i;
-						break;
-					}
-				}
-			}
-			if(found == -1) {
-				kprintf("nd_in_nbrsol: nbr cache full\n");
-				aro_status = 2;
-			}
-			else if(aro->reglife != 0) {
-				kprintf("nd_in_nbrsol: adding a new entry\n");
-				i = found;
-				ifptr->if_ncache[i].state = ND_NCE_STALE;
-				ifptr->if_ncache[i].type = ND_NCE_REG;
-				memcpy(ifptr->if_ncache[i].ipaddr, ipdata->ipsrc, 16);
-				memcpy(ifptr->if_ncache[i].hwucast, sllao->lladdr, 8);
-				ifptr->if_ncache[i].reglife = aro->reglife;
-				//ifptr->if_ncache[i].timestamp = clktime;
-				aro_status = 0;
-			}
-			else {
-				aro_status = 0;
-			}
-		}
-	}
-	else if((!isipunspec(ipdata->ipsrc)) && (sllao)) { /* No ARO, normal ND */
-		ncslot = -1;
-		for(i = 0; i < ND_NC_SLOTS; i++) {
-			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
-				ncslot = (ncslot == -1) ? i : ncslot;
-				continue;
-			}
-			if(!memcmp(ifptr->if_ncache[i].ipaddr, ipdata->ipsrc, 16)) {
-				break;
-			}
-		}
-		if(i >= ND_NC_SLOTS) {
-			if(ncslot != -1) {
-				ncptr = &ifptr->if_ncache[ncslot];
-				memcpy(ncptr->ipaddr, ipdata->ipsrc, 16);
-				memcpy(ncptr->hwucast, sllao->lladdr, ifptr->if_halen);
-				ncptr->state = ND_NCE_STALE;
-				ncptr->type = ND_NCE_GRB;
-				kprintf("nd_in_nbrsol: added "); ip_print(ncptr->ipaddr);
-				kprintf(" to the nbr cache\n");
-			}
-		}
-		else {
-			ncptr = &ifptr->if_ncache[i];
-			if(memcmp(ncptr->hwucast, sllao->lladdr, ifptr->if_halen)) {
-				memcpy(ncptr->hwucast, sllao->lladdr, ifptr->if_halen);
-				ncptr->state = ND_NCE_STALE;
-			}
-		}
-	}
+	/* Insert a target link-layer address option */
+	ndopt = (struct nd_opt *)namsg->nd_opts;
+	ndopt->ndopt_type = NDOPT_TYPE_TLLA;
+	ndopt->ndopt_len = 1;
+	memcpy(ndopt->ndopt_addr, ifptr->if_hwucast, ifptr->if_halen);
 
-	nbradv = (struct nd_nbradv *)getbuf(netbufpool);
-	nbradv->res1 = 0;
-	nbradv->r = 1;
-	nbradv->s = 1;
-	memcpy(nbradv->tgtaddr, nbrsol->tgtaddr, 16);
-	len = sizeof(struct nd_nbradv);
-
-	tllao = (struct nd_llao *)nbradv->opts;
-	tllao->type = ND_TYPE_TLLAO;
-	tllao->len = (ifptr->if_halen == 6) ? 1 : 2;
-	memcpy(tllao->lladdr, ifptr->if_hwucast, ifptr->if_halen);
-	len += (tllao->len)*8;
-
-	if(aro) {
-		newaro = (struct nd_aro *)(tllao + 1);
-		newaro->type = ND_TYPE_ARO;
-		newaro->len = 2;
-		newaro->status = aro_status;
-		memcpy(newaro->eui64, aro->eui64, 8);
-		len += sizeof(struct nd_aro);
-	}
-
-	if((aro) && (aro_status == 1)) {
-		if(!sllao) {
-			freebuf((char *)nbradv);
-			restore(mask);
-			return;
-		}
-		memcpy(ipdata->ipdst, ip_llprefix, 8);
-		memcpy(&ipdata->ipdst[8], sllao->lladdr, 8);
+	//kprintf("nd_in_ns: calling icmp_send\n");
+	/* Select the destination IP address */
+	if(isipunspec(pkt->net_ipsrc)) {
+		ipdst = ip_allnodesmc;
 	}
 	else {
-		memcpy(ipdata->ipdst, ipdata->ipsrc, 16);
+		ipdst = pkt->net_ipsrc;
 	}
-	memcpy(ipdata->ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
-	ipdata->iphl = 255;
+
+	/* Send the neighbor advertisement */
+	icmp_send(ICMP_TYPE_NA, 0, ipdst, namsg, nalen, pkt->net_iface);
+
+	/* Free the memory */
+	freemem((char *)namsg, nalen);
 
 	restore(mask);
 
-	icmp_send(iface, ICMP_TYPE_NBRADV, 0, ipdata, (char *)nbradv, len);
-	freebuf((char *)nbradv);
 }
 
 /*------------------------------------------------------------------------
- * nd_in_nbradv  -  Handle incoming Neighbor Advertisements
+ * nd_in_na  -  Handle an incoming neighbor advertisement message
  *------------------------------------------------------------------------
  */
-void	nd_in_nbradv (
-	int32	iface,
-	struct	nd_nbradv *nbradv,
-	int32	len,
-	struct	ipinfo *ipdata
-	)
+void	nd_in_na (
+		struct	netpacket *pkt	/* Packet buffer pointer	*/
+		)
 {
-	struct	ifentry *ifptr;
-	struct	nd_nce *ncptr;
-	struct	nd_llao *tllao;
-	byte	*optptr, *optend;
-	int32	optlen;
-	intmask	mask;
-	int32	i;
+	struct	nd_nbradv *namsg;	/* Neighbor advertisement msg	*/
+	struct	nd_ncentry *ncptr;	/* Neighbor cache entry		*/
+	struct	netiface *ifptr;	/* Network interface pointer	*/
+	struct	netpacket_e *epkt;	/* Ethernet packet pointer	*/
+	struct	nd_opt *ndopt;		/* ND option			*/
+	struct	nd_opt *tllao;		/* Target link-layer address opt*/
+	int32	ncindex;		/* Neighbor cache index		*/
+	bool8	l2updated;		/* Flag L2 address updated?	*/
+	intmask	mask;			/* Interrupt mask		*/
 
-	if(nbradv == NULL) {
+	/* Get a pointer to nbr. adv. msg */
+	namsg = (struct nd_nbradv *)pkt->net_icdata;
+
+	/* Sanity checks... */
+	if(pkt->net_iphl < 255) {
 		return;
 	}
 
-	if((iface < 0) || (iface >= NIFACES)) {
+	if(pkt->net_iccode != 0) {
 		return;
 	}
-	ifptr = &if_tab[iface];
 
-	if((ipdata->iphl != 255) ||
-	   (len < 20) ||
-	   (isipmc(nbradv->tgtaddr)) ||
-	   ((isipmc(ipdata->ipdst)) && (nbradv->s))) {
+	if(pkt->net_iplen < 24) {
+		return;
+	}
+
+	if(isipmc(namsg->nd_tgtaddr)) {
+		return;
+	}
+
+	if(isipmc(pkt->net_ipdst) && (namsg->nd_rso & ND_NA_S)) {
 		return;
 	}
 
 	mask = disable();
-	for(i = 0; i < ND_NC_SLOTS; i++) {
-		ncptr = &ifptr->if_ncache[i];
-		if(ncptr->state == ND_NCE_FREE) {
-			continue;
-		}
-		if(!memcmp(ncptr->ipaddr, nbradv->tgtaddr, 16)) {
-			break;
-		}
-	}
-	if(i >= ND_NC_SLOTS) {
+
+	/* Look for entry in the neighbor cache */
+	ncindex = nd_ncfind(namsg->nd_tgtaddr);
+	if(ncindex == SYSERR) {
 		restore(mask);
 		return;
 	}
 
-	optptr = nbradv->opts;
-	optend = (byte *)(optptr + len - sizeof(struct nd_nbradv));
+	ncptr = &nd_ncache[ncindex];
+
+	ifptr = &iftab[ncptr->nc_iface];
+
+	ndopt = (struct nd_opt *)namsg->nd_opts;
+
 	tllao = NULL;
-	while(optptr < optend) {
 
-		optlen = (*(optptr+1))*8;
-		if(optlen == 0) {
-			restore(mask);
-			return;
-		}
+	/* Parse the options... */
+	while((char *)ndopt < (char *)pkt->net_ipdata + pkt->net_iplen) {
 
-		switch(*optptr) {
+		switch(ndopt->ndopt_type) {
 
-		 case ND_TYPE_TLLAO:
-			 tllao = (struct nd_llao *)optptr;
-			 optptr += optlen;
-			 break;
+		case NDOPT_TYPE_TLLA:
+			tllao = ndopt;
 
-		 default:
-			 optptr += optlen;
-			 break;
+			//kprintf("tllao: "); ip_printaddr(ndopt->ndopt_addr);
+			//kprintf("\n");
+
+			ndopt = (struct nd_opt *)((char *)ndopt + ndopt->ndopt_len * 8);
+			break;
+
+		default:
+			ndopt = (struct nd_opt *)((char *)ndopt + ndopt->ndopt_len * 8);
 		}
 	}
 
-	if(ncptr->state == ND_NCE_INCOM) {
-		if(!tllao) {
+	//kprintf("nd_in_na: done processing options\n");
+
+	/* Take a decision of what to do based on the state of entry */
+
+	if(ncptr->nc_rstate == NC_RSTATE_INC) {
+
+		/* Incomplete entries need L2 address */
+		if(tllao == NULL) {
 			restore(mask);
 			return;
 		}
-		memcpy(ncptr->hwucast, tllao->lladdr, ifptr->if_halen);
-		if(nbradv->s) {
-			ncptr->state = ND_NCE_REACH;
-			ncptr->ttl = ifptr->if_ndData.reachable;
+
+		/* Copy the link address in the entry */
+		memcpy(ncptr->nc_hwaddr, tllao->ndopt_addr, ifptr->if_halen);
+
+		/* Set the state of entry accorging to "solicited" bit */
+		if(namsg->nd_rso & ND_NA_S) {
+			ncptr->nc_rstate = NC_RSTATE_RCH;
+			ncptr->nc_texpire = ifptr->if_nd_reachtime;
 		}
 		else {
-			ncptr->state = ND_NCE_STALE;
+			ncptr->nc_rstate = NC_RSTATE_STL;
 		}
-		send(ncptr->pid, OK);
+
+		/* Update "isrouter" field */
+		ncptr->nc_isrouter = (namsg->nd_rso & ND_NA_R);
+
+		/* Send any queued packets */
+		while(ncptr->nc_pqcount > 0) {
+			//kprintf("nd_in_na: sending queued pkt\n");
+			pkt = ncptr->nc_pktq[ncptr->nc_pqhead++];
+			if(ncptr->nc_pqhead >= NC_PKTQ_SIZE) {
+				ncptr->nc_pqhead = 0;
+			}
+			ncptr->nc_pqcount--;
+
+			if(ifptr->if_type == IF_TYPE_ETH) {
+
+				epkt = (struct netpacket_e *)getbuf(netbufpool);
+				if((int32)epkt == SYSERR) {
+					continue;
+				}
+
+				memcpy(epkt->net_ethsrc, ifptr->if_hwucast, ifptr->if_halen);
+				memcpy(epkt->net_ethdst, ncptr->nc_hwaddr, ifptr->if_halen);
+				epkt->net_ethtype = htons(ETH_IPV6);
+
+				memcpy(epkt->net_ethdata, (char *)pkt, 40 + ntohs(pkt->net_iplen));
+
+				write(ETHER0, (char *)epkt, 14 + 40 + ntohs(pkt->net_iplen));
+
+				freebuf((char *)pkt);
+				freebuf((char *)epkt);
+			}
+		}
+
 		restore(mask);
 		return;
 	}
 
-	if((nbradv->o == 0) && (tllao) && (memcmp(ncptr->hwucast, tllao->lladdr, ifptr->if_halen))) {
-		if(ncptr->state == ND_NCE_REACH) {
-			ncptr->state = ND_NCE_STALE;
-		}
-		else {
-			restore(mask);
-			return;
-		}
+	/* The state of the entry is not INCOMPLETE... */
+
+	if(tllao && !(namsg->nd_rso & ND_NA_O) &&
+		memcmp(ncptr->nc_hwaddr, tllao->ndopt_addr, ifptr->if_halen)) {
+			if(ncptr->nc_rstate == NC_RSTATE_RCH) {
+				ncptr->nc_rstate = NC_RSTATE_STL;
+			}
+
+		restore(mask);
+		return;
 	}
 
-	if((nbradv->o == 1) ||
-	   ((tllao) && (!memcmp(ncptr->hwucast, tllao->lladdr, ifptr->if_halen))) ||
-	   (tllao == NULL)) {
-		if(tllao) {
-			if(memcmp(ncptr->hwucast, tllao->lladdr, ifptr->if_halen)) {
-				memcpy(ncptr->hwucast, tllao->lladdr, ifptr->if_halen);
-				if(!nbradv->s) {
-					ncptr->state = ND_NCE_STALE;
-				}
-			}
-		}
-		if(nbradv->s) {
-			kprintf("neighbor "); ip_print(ncptr->ipaddr);
-			kprintf(" moved to REACHABLE\n");
-			ncptr->state = ND_NCE_REACH;
-			ncptr->ttl = ifptr->if_ndData.reachable;
+	l2updated = FALSE;
+	if(tllao && memcmp(ncptr->nc_hwaddr, tllao->ndopt_addr, ifptr->if_halen)) {
+		memcpy(ncptr->nc_hwaddr, tllao->ndopt_addr, ifptr->if_halen);
+		l2updated = TRUE;
+	}
+
+	if(namsg->nd_rso & ND_NA_S) {
+		ncptr->nc_rstate = NC_RSTATE_RCH;
+		ncptr->nc_texpire = ifptr->if_nd_reachtime;
+	}
+	else {
+		if(l2updated) {
+			ncptr->nc_rstate = NC_RSTATE_STL;
 		}
 	}
 
 	restore(mask);
+	return;
 }
 
 /*------------------------------------------------------------------------
- * nd_reg_address  -  Register an IP address with a neighbor
+ * nd_send_ns  -  Send a neighbor solicitation message (assumes intr. off)
  *------------------------------------------------------------------------
  */
-int32	nd_reg_address (
-	int32	iface,	/* Interface index	*/
-	int32	index,	/* IP address index	*/
-	byte	nbrip[]	/* Neighbor IP address	*/
-	)
+int32	nd_send_ns (
+		int32	ncindex	/* Index in the neighbor cache	*/
+		)
 {
-	struct	ifentry *ifptr;		/* Pointer to interface		*/
-	struct	nd_nbrsol *nbrsol;	/* Pointer to Nbr Solicitation	*/
-	struct	nd_nbradv *nbradv;	/* Pointer to Nbr advertisement	*/
-	struct	nd_llao *sllao;		/* Pointer to SLLAO		*/
-	struct	nd_llao *tllao;		/* Pointer to TLLAO		*/
-	struct	nd_aro *aro;		/* Pointer to ARO		*/
-	struct	ipinfo ipdata;		/* IP information		*/
-	int32	slot;			/* ICMP slot			*/
-	uint32	nslen;			/* Length of NS message		*/
-	uint32	nalen;			/* Length of NA message		*/
-	intmask mask;			/* Saved interrupt mask		*/
-	byte	*optptr;		/* Pointer to current option	*/
-	byte	*optend;		/* Pointer to end of message	*/
-	int32	found;			/* Empty index in NC		*/
-	int32	tries;			/* No. of tries			*/
-	int32	retval;			/* Return value of functions	*/
-	int32	i;			/* For loop index		*/
+	struct	nd_ncentry *ncptr;	/* Neighbor cache entry		*/
+	struct	nd_nbrsol *nsmsg;	/* Neighbor solicitation msg	*/
+	struct	nd_opt *ndopt;		/* ND option			*/
+	byte	ipdst[16];		/* IP destination address	*/
+	int32	nslen;			/* Length of nbr. solicitation	*/
 
-	if((iface < 0) || (iface >= NIFACES)) {
-		return SYSERR;
+	ncptr = &nd_ncache[ncindex];
+
+	/* Allocate memory for the neighbor solicitation message */
+	if(iftab[ncptr->nc_iface].if_type == IF_TYPE_ETH) {
+		nslen = sizeof(struct nd_nbrsol) + 8;
 	}
-
-	slot = icmp_register(iface, nbrip, ip_unspec, ICMP_TYPE_NBRADV, 0);
-	if(slot == SYSERR) {
-		kprintf("nd_reg_address: ICMP reg failed\n");
-		return SYSERR;
-	}
-
-	mask = disable();
-	ifptr = &if_tab[iface];
-
-	if(index >= ifptr->if_nipucast) {
-		kprintf("nd_reg_address: index out of bounds\n");
-		restore(mask);
-		return SYSERR;
-	}
-	restore(mask);
-
-	nslen = sizeof(struct nd_nbrsol) + sizeof(struct nd_llao) + sizeof(struct nd_aro);
-	nbrsol = (struct nd_nbrsol *)getmem(nslen);
-	if((int32)nbrsol == SYSERR) {
-		return SYSERR;
-	}
-
-	nalen = sizeof(struct nd_nbradv) + sizeof(struct nd_llao) + sizeof(struct nd_aro);
-	nbradv = (struct nd_nbradv *)getmem(nalen);
-	if((int32)nbradv == SYSERR) {
-		freemem((char *)nbrsol, nslen);
-		return SYSERR;
-	}
-
-	memset((char *)nbrsol, 0, nslen);
-	nbrsol->res = 0;
-	memcpy(nbrsol->tgtaddr, nbrip, 16);
-
-	sllao = (struct nd_llao *)nbrsol->opts;
-	sllao->type = ND_TYPE_SLLAO;
-	sllao->len = 2;
-	memcpy(sllao->lladdr, ifptr->if_hwucast, 8);
-
-	aro = (struct nd_aro *)(sllao + 1);
-	aro->type = ND_TYPE_ARO;
-	aro->len = 2;
-	aro->reglife = 1;
-	memcpy(aro->eui64, ifptr->if_hwucast, 8);
-
-	tries = 0;
-	while(tries < 3) {
-
-		memcpy(ipdata.ipsrc, ifptr->if_ipucast[index].ipaddr, 16);
-		memcpy(ipdata.ipdst, nbrip, 16);
-		ipdata.iphl = 255;
-
-		retval = icmp_send(iface, ICMP_TYPE_NBRSOL, 0, &ipdata, (char *)nbrsol, nslen);
-		if(retval == SYSERR) {
-			freemem((char *)nbrsol, nslen);
-			freemem((char *)nbradv, nalen);
-			return SYSERR;
-		}
-
-		retval = icmp_recv(slot, (char *)nbradv, nalen, 1000);
-		if(retval == SYSERR) {
-			freemem((char *)nbrsol, nslen);
-			freemem((char *)nbradv, nalen);
-			return SYSERR;
-		}
-		if(retval == TIMEOUT) {
-			tries++;
-			continue;
-		}
-
-		if((retval < 20) ||
-		   (ipdata.iphl != 255) ||
-		   (memcmp(nbradv->tgtaddr, nbrip, 16)) ||
-		   (nbradv->s == 0)) {
-		   	tries++;
-			continue;
-		}
-
-		break;
-	}
-
-	mask = disable();
-
-	if(!isipllu(nbrip)) {
-		found = -1;
-		for(i = 0; i < ND_NC_SLOTS; i++) {
-			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
-				if(found == -1) {
-					found = i;
-				}
-				continue;
-			}
-			if(!memcmp(ifptr->if_ncache[i].ipaddr, nbrip, 16)) {
-				break;
-			}
-		}
-		if(i < ND_NC_SLOTS) {
-			found = i;
-		}
-	}
-
-	tllao = (struct nd_llao *)NULL;
-	aro = (struct nd_aro *)NULL;
-
-	optptr = nbradv->opts;
-	optend = (byte *)nbradv + retval;
-
-	while(optptr < optend) {
-
-		switch(*optptr) {
-
-		 case ND_TYPE_TLLAO:
-		 	tllao = (struct nd_llao *)optptr;
-			if(tllao->len == 0) {
-				restore(mask);
-				freemem((char *)nbrsol, nslen);
-				freemem((char *)nbradv, nalen);
-				return SYSERR;
-			}
-			optptr += 8 * tllao->len;
-			break;
-
-		 case ND_TYPE_ARO:
-		 	aro = (struct nd_aro *)optptr;
-			if(aro->len == 0) {
-				restore(mask);
-				freemem((char *)nbrsol, nslen);
-				freemem((char *)nbradv, nalen);
-				return SYSERR;
-			}
-			optptr += 8 * aro->len;
-			break;
-
-		 default:
-		 	optptr += 8 * (*(optptr+1));
-		}
-	}
-
-	if(tllao) {
-		if(found != -1) {
-			i = found;
-			if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
-				ifptr->if_ncache[i].state = ND_NCE_REACH;
-				ifptr->if_ncache[i].type = ND_NCE_GRB;
-				memcpy(ifptr->if_ncache[i].ipaddr, nbrip, 16);
-				memcpy(ifptr->if_ncache[i].hwucast, tllao->lladdr, 8);
-				ifptr->if_ncache[i].reglife = 1;
-				//ifptr->if_ncache[i].timestamp = clktime;
-			}
-			else {
-				ifptr->if_ncache[i].state = ND_NCE_REACH;
-				ifptr->if_ncache[i].reglife = 1;
-				//ifptr->if_ncache[i].timestamp = clktime;
-			}
-		}
-	}
-
-	restore(mask);
-	freemem((char *)nbrsol, nslen);
-	freemem((char *)nbradv, nalen);
-
-	if(aro) {
-		return aro->status;
+	else if(iftab[ncptr->nc_iface].if_type == IF_TYPE_RAD) {
+		nslen = sizeof(struct nd_nbrsol) + 16;
 	}
 	else {
 		return SYSERR;
 	}
+
+	nsmsg = (struct	nd_nbrsol *)getmem(nslen);
+	if((int32)nslen == SYSERR) {
+		return SYSERR;
+	}
+
+	memset(nsmsg, 0, nslen);
+
+	memcpy(nsmsg->nd_tgtaddr, ncptr->nc_ipaddr, 16);
+
+	ndopt = (struct nd_opt *)nsmsg->nd_opts;
+	ndopt->ndopt_type = NDOPT_TYPE_SLLA;
+	ndopt->ndopt_len = 1;
+	memcpy(ndopt->ndopt_addr, iftab[ncptr->nc_iface].if_hwucast,
+			iftab[ncptr->nc_iface].if_halen);
+
+	if(ncptr->nc_rstate == NC_RSTATE_INC) {
+		memcpy(ipdst, ip_nd_snmcprefix, 16);
+		memcpy(ipdst+13, ncptr->nc_ipaddr+13, 3);
+	}
+	else {
+		memcpy(ipdst, ncptr->nc_ipaddr, 16);
+	}
+
+	icmp_send(ICMP_TYPE_NS, 0, ipdst, nsmsg, nslen, ncptr->nc_iface);
+
+	freemem((char *)nsmsg, nslen);
+
+	return OK;
 }
 
 /*------------------------------------------------------------------------
- * nd_resolve_eth  -  Resolve IPv6 address into Ethernet address
+ * nd_resolve  -  Resolve an IP address to an L2 address
  *------------------------------------------------------------------------
  */
-int32	nd_resolve_eth (
-	int32	iface,
-	byte	*ip,
-	byte	*hwucast
-	)
+int32	nd_resolve (
+		byte	ipaddr[],
+		int32	iface,
+		void	*pkt
+		)
 {
-	struct	ifentry *ifptr;	/* Pointer to interface	*/
-	struct	nd_nce *ncptr;
-	struct	ipinfo ipdata1, ipdata2;
-	struct	nd_nbrsol *nbrsol;
-	struct	nd_nbradv *nbradv;
-	struct	nd_llao *sllao, *tllao;
-	intmask	mask;		/* Saved interrupt mask	*/
-	//int32	slot;		/* Slot in ICMP table	*/
-	int32	ncslot;		/* Slot in Nbr cache	*/
-	byte	*optptr, *optend, optlen;
-	bool8	opterr = FALSE;
-	int32	retval, tries, msglen;
-	int32	i;		/* For loop index	*/
-
-	if(ip == NULL || hwucast == NULL) {
-		return SYSERR;
-	}
-
-	if((iface < 0) || (iface >= NIFACES)) {
-		return SYSERR;
-	}
-
-	mask = disable();
-	ifptr = &if_tab[iface];
-
-	if(ifptr->if_state == IF_DOWN || ifptr->if_type != IF_TYPE_ETH) {
-		restore(mask);
-		return SYSERR;
-	}
-
-	ncslot = -1;
-	for(i = 0; i < ND_NC_SLOTS;) {
-		if(ifptr->if_ncache[i].state == ND_NCE_FREE) {
-			ncslot = ncslot == -1 ? i : ncslot;
-			i++;
-			continue;
-		}
-		if(!memcmp(ip, ifptr->if_ncache[i].ipaddr, 16)) {
-			if(ifptr->if_ncache[i].state == ND_NCE_INCOM) {
-				wait(ifptr->if_ncache[i].waitsem);
-				i = 0;
-				continue;
-			}
-			else {
-				break;
-			}
-		}
-		i++;
-	}
-	if(i < ND_NC_SLOTS) {
-		ncptr = &ifptr->if_ncache[i];
-		memcpy(hwucast, ifptr->if_ncache[i].hwucast, 6);
-		if(ifptr->if_ncache[i].state == ND_NCE_STALE) {
-			ncptr->state = ND_NCE_DELAY;
-			ncptr->ttl = 5000;
-		}
-		restore(mask);
-		return OK;
-	}
-
-	if(ncslot == -1) {
-		restore(mask);
-		return SYSERR;
-	}
-
-	ifptr->if_ncache[ncslot].state = ND_NCE_INCOM;
-	memcpy(ifptr->if_ncache[ncslot].ipaddr, ip, 16);
-	ifptr->if_ncache[ncslot].pid = getpid();
-	semreset(ifptr->if_ncache[ncslot].waitsem, 1);
-	wait(ifptr->if_ncache[ncslot].waitsem);
-
-	memcpy(ipdata1.ipdst, ip_solmc, 13);
-	memcpy(&ipdata1.ipdst[13], &ip[13], 3);
-	memcpy(ipdata1.ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
-	ipdata1.iphl = 255;
-
-	nbrsol = (struct nd_nbrsol *)getbuf(netbufpool);
-	nbrsol->res = 0;
-	memcpy(nbrsol->tgtaddr, ip, 16);
-	msglen = sizeof(struct nd_nbrsol);
-
-	sllao = (struct nd_llao *)nbrsol->opts;
-	sllao->type = ND_TYPE_SLLAO;
-	sllao->len = 1;
-	memcpy(sllao->lladdr, ifptr->if_hwucast, 6);
-	msglen += 8;
-
-	tries = 0;
-	while(tries < 3) {
-
-		tries++;
-
-		retval = icmp_send(iface, ICMP_TYPE_NBRSOL, 0, &ipdata1, (char *)nbrsol, msglen);
-		if(retval == SYSERR) {
-			signal(ifptr->if_ncache[ncslot].waitsem);
-			freebuf((char *)nbrsol);
-			restore(mask);
-			return SYSERR;
-		}
-
-		retval = recvtime(ifptr->if_ndData.retrans);
-		if(retval == TIMEOUT) {
-			continue;
-		}
-		else {
-			break;
-		}
-	}
-
-	if(ifptr->if_ncache[ncslot].state == ND_NCE_REACH) {
-		kprintf("nd_resolve_eth: "); ip_print(ifptr->if_ncache[ncslot].ipaddr);
-		kprintf(" moved to REACHABLE\n");
-		memcpy(hwucast, ifptr->if_ncache[ncslot].hwucast, 6);
-		signal(ifptr->if_ncache[ncslot].waitsem);
-		freebuf((char *)nbrsol);
-		restore(mask);
-		return OK;
-	}
-
-	ifptr->if_ncache[ncslot].state = ND_NCE_FREE;
-	signal(ifptr->if_ncache[ncslot].waitsem);
-	freebuf((char *)nbrsol);
-	restore(mask);
-	return SYSERR;
-}
-
-/*------------------------------------------------------------------------
- * nd_nud  -  Perform Neighbor Unreachability Detection
- *------------------------------------------------------------------------
- */
-process	nd_nud (
-	int32	iface,	/* Interface index	*/
-	int32	slot	/* Slot in nbr cache	*/
-	)
-{
-	struct	ifentry *ifptr;
-	struct	nd_nce *ncptr;
-	struct	nd_nbrsol *nbrsol;
-	struct	ipinfo ipdata;
-	int32	tries;
+	struct	nd_ncentry *ncptr;
+	int32	ncindex;
 	intmask	mask;
 
-	if((iface < 0) || (iface >= NIFACES)) {
-		return SYSERR;
-	}
-
-	if((slot < 0) || (slot >= ND_NC_SLOTS)) {
-		return SYSERR;
-	}
-
 	mask = disable();
-	ifptr = &if_tab[iface];
-	ncptr = &ifptr->if_ncache[slot];
 
-	if(ncptr->state != ND_NCE_PROBE) {
+	ncindex = nd_ncfind(ipaddr);
+	if(ncindex != SYSERR) {
 		restore(mask);
 		return SYSERR;
 	}
 
-	nbrsol = (struct nd_nbrsol *)getbuf(netbufpool);
-	tries = 0;
-	while(tries < 3) {
+	ncindex = nd_ncnew(ipaddr, NULL, iface, NC_RSTATE_INC, 0);
+	if(ncindex == SYSERR) {
+		restore(mask);
+		return SYSERR;
+	}
 
-		tries++;
+	ncptr = &nd_ncache[ncindex];
 
-		nbrsol->res = 0;
-		memcpy(nbrsol->tgtaddr, ncptr->ipaddr, 16);
-
-		memcpy(ipdata.ipdst, ncptr->ipaddr, 16);
-		memcpy(ipdata.ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
-		ipdata.iphl = 255;
-
-		icmp_send(iface, ICMP_TYPE_NBRSOL, 0, &ipdata, (char *)nbrsol, sizeof(struct nd_nbrsol));
-
-		sleepms(ifptr->if_ndData.retrans);
-
-		if(ncptr->state == ND_NCE_REACH) {
-			break;
+	if(ncptr->nc_pqcount == NC_PKTQ_SIZE) {
+		freebuf((char *)ncptr->nc_pktq[ncptr->nc_pqtail]);
+		ncptr->nc_pktq[ncptr->nc_pqtail] = pkt;
+	}
+	else {
+		ncptr->nc_pktq[ncptr->nc_pqtail++] = pkt;
+		if(ncptr->nc_pqtail >= NC_PKTQ_SIZE) {
+			ncptr->nc_pqtail = 0;
 		}
+		ncptr->nc_pqcount++;
 	}
 
-	if(ncptr->state != ND_NCE_REACH) {
-		memset((char *)ncptr, 0, sizeof(struct nd_nce));
-		ncptr->state = ND_NCE_FREE;
-	}
+	nd_send_ns(ncindex);
 
-	freebuf((char *)nbrsol);
+	ncptr->nc_retries++;
+
 	restore(mask);
 	return OK;
 }
 
 /*------------------------------------------------------------------------
- * nd_timer  -  Periodic ND process to cleanup neighbor cache
+ * nd_timer  -  Timer process to manage neighbor cache entries
  *------------------------------------------------------------------------
  */
 process	nd_timer (void) {
 
-	struct	ifentry *ifptr;
-	struct	nd_nce *ncptr;
-	int32	iface;
+	struct	nd_ncentry *ncptr;
 	intmask	mask;
 	int32	i;
 
 	while(TRUE) {
 
 		mask = disable();
-		for(iface = 0; iface < NIFACES; iface++) {
 
-			ifptr = &if_tab[iface];
-			if(ifptr->if_state == IF_DOWN) {
+		for(i = 0; i < ND_NCACHE_SIZE; i++) {
+
+			ncptr = &nd_ncache[i];
+
+			if(ncptr->nc_state == NC_STATE_FREE) {
 				continue;
 			}
 
-			for(i = 0; i < ND_NC_SLOTS; i++) {
-				ncptr = &ifptr->if_ncache[i];
-				if(ncptr->state == ND_NCE_FREE) {
-					continue;
-				}
+			switch(ncptr->nc_rstate) {
 
-				if(ncptr->ttl > 0) {
-					if(--ncptr->ttl > 0) {
-						continue;
+			case NC_RSTATE_INC:
+				if(--ncptr->nc_texpire <= 0) {
+					if(ncptr->nc_retries >= ND_MAX_MULTICAST_SOLICIT) {
+						while(ncptr->nc_pqcount > 0) {
+							freebuf(ncptr->nc_pktq[ncptr->nc_pqtail++]);
+							if(ncptr->nc_pqtail >= NC_PKTQ_SIZE) {
+								ncptr->nc_pqtail = 0;
+							}
+							ncptr->nc_pqcount--;
+						}
+						ncptr->nc_state = NC_STATE_FREE;
+					}
+					else {
+						ncptr->nc_retries++;
+						ncptr->nc_texpire = iftab[ncptr->nc_iface].if_nd_retranstime;
+						nd_send_ns(i);
 					}
 				}
+				break;
 
-				if(ncptr->state == ND_NCE_REACH) {
-					kprintf("neighbor "); ip_print(ncptr->ipaddr);
-					kprintf(" moved to STALE\n");
-					//ncptr->ttl = 100;
-					ncptr->state = ND_NCE_STALE;
-					continue;
+			case NC_RSTATE_RCH:
+				if(--ncptr->nc_texpire <= 0) {
+					//kprintf("nd_timer: "); ip_printaddr(ncptr->nc_ipaddr);
+					//kprintf(" changed state to STALE\n");
+					ncptr->nc_rstate = NC_RSTATE_STL;
 				}
-				if(ncptr->state == ND_NCE_DELAY) {
-					kprintf("neighbor "); ip_print(ncptr->ipaddr);
-					kprintf(" moved to PROBE\n");
-					ncptr->state = ND_NCE_PROBE;
-					resume(create(nd_nud, NETSTK, NETPRIO, "nd_nud", 2, iface, i));
-					/*
-					resume(create(nd_resolve_eth,
-							NETSTK,
-							NETPRIO,
-							"nd_resolve_eth",
-							3,
-							iface,
-							ncptr->ipaddr,
-							ncptr->hwucast));
-					*/
-					continue;
+				break;
+
+			case NC_RSTATE_DLY:
+				if(--ncptr->nc_texpire <= 0) {
+					//kprintf("nd_timer: "); ip_printaddr(ncptr->nc_ipaddr);
+					//kprintf(" changed state to PROBE\n");
+					ncptr->nc_rstate = NC_RSTATE_PRB;
+					ncptr->nc_texpire = iftab[ncptr->nc_iface].if_nd_retranstime;
+					nd_send_ns(i);
 				}
+				break;
+
+			case NC_RSTATE_PRB:
+				if(--ncptr->nc_texpire <= 0) {
+					if(ncptr->nc_retries >= ND_MAX_UNICAST_SOLICIT) {
+						while(ncptr->nc_pqcount > 0) {
+							freebuf(ncptr->nc_pktq[ncptr->nc_pqtail++]);
+							if(ncptr->nc_pqtail >= NC_PKTQ_SIZE) {
+								ncptr->nc_pqtail = 0;
+							}
+							ncptr->nc_pqcount--;
+						}
+						ncptr->nc_state = NC_STATE_FREE;
+					}
+					else {
+						ncptr->nc_retries++;
+						ncptr->nc_texpire = iftab[ncptr->nc_iface].if_nd_retranstime;
+						nd_send_ns(i);
+					}
+				}
+				break;
+
 			}
 		}
+
 		restore(mask);
+
 		sleepms(1);
 	}
 

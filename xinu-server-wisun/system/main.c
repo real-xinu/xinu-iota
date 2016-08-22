@@ -65,10 +65,10 @@ process	main(void)
 	resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
   */
 
-  kprintf("\n...creating testbed server process\n");
-  recvclr();
-  resume(create(wsserver, 8192, 50, "wsserver", 1, CONSOLE));
-  init_topo();
+        kprintf("\n...creating testbed server process\n");
+        recvclr();
+        resume(create(wsserver, 8192, 50, "wsserver", 1, CONSOLE));
+        init_topo();
 
 	/* Wait for shell to exit and recreate it */
 

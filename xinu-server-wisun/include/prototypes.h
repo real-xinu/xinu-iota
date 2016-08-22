@@ -645,6 +645,8 @@ extern status nping_all();
 extern struct c_msg * nping_all_reply(struct c_msg *);
 extern status topo_compr();
 extern void topo_update_mac(struct netpacket *);
+extern struct c_msg *pingall_reply(struct c_msg *);
+extern status pingall();
 /* in file wstopology.c */
 extern status read_topology(char *, char **, uint32 *);
 extern int32 topo_update(char *, uint32, struct t_entry *);

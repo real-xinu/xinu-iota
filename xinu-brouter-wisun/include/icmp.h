@@ -1,42 +1,28 @@
-/* icmp.h - definintions for the Internet Control Message Protocol */
+/* icmp.h - ICMP related definitions */
 
-#define	ICMP_SLOTS	10		/* num. of open ICMP endpoints	*/
-#define	ICMP_QSIZ	8		/* incoming packets per slot	*/
+#define	ICMP_TYPE_ERQ	128
+#define	ICMP_TYPE_ERP	129
+#define	ICMP_TYPE_NS	135
+#define	ICMP_TYPE_NA	136
 
-/* Constants for the state of an entry */
-
-#define	ICMP_FREE	0		/* entry is unused		*/
-#define	ICMP_USED	1		/* entry is being used		*/
-#define	ICMP_RECV	2		/* entry has a process waiting	*/
-
-#define ICMP_HDR_LEN	4		/* bytes in an ICMP header	*/
-
-/* ICMP message types for ping */
-
-#define	ICMP_ECHOREPLY	129		/* ICMP Echo Reply message	*/
-#define ICMP_ECHOREQST	128		/* ICMP Echo Request message	*/
-
-/* Format of ICMPv6 echo packets */
-
-struct	icmp_echo {
-	uint16	id;	/* Identifier	*/
-	uint16	seq;	/* Sequence no.	*/
+#pragma pack(1)
+struct	icmp_hdr {
+	byte	icmp_type;
+	byte	icmp_code;
+	byte	icmp_data[];
 };
+#pragma pack()
 
-/* table of processes that are waiting for ping replies */
+#define	ICENTRY_FREE	0
+#define	ICENTRY_USED	1
 
-struct	icmpentry {			/* entry in the ICMP table	*/
-	int32	icstate;		/* state of entry: free/used	*/
-	int32	iciface;		/* interface index		*/
-	byte	iclocip[16];		/* local IP address		*/
-	byte	icremip[16];		/* remote IP address		*/
-	byte	ictype;			/* ICMP type			*/
-	byte	iccode;			/* ICMP code			*/
-	int32	ichead;			/* index of next packet to read	*/
-	int32	ictail;			/* index of next slot to insert	*/
-	int32	iccount;		/* count of packets enqueued	*/
-	pid32	icpid;			/* ID of waiting process	*/
-	struct	netpacket *icqueue[ICMP_QSIZ];/* circular packet queue	*/
+/* Structure of ICMP registration table entry */
+struct	icentry {
+	int32	icstate;/* State of the entry		*/
+	byte	ictype;	/* ICMP type			*/
+	byte	iccode;	/* ICMP code			*/
+	byte	icremip[16];/* Remote IP address	*/
+	byte	iclocip[16];/* Local IP address		*/
+	int32	iciface;/* Interface index		*/
+	pid32	icpid;	/* PID of process waiting	*/
 };
-
-extern	struct	icmpentry icmptab[];	/* table of UDP endpoints	*/
