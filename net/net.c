@@ -87,6 +87,7 @@ process	netin(
 		else if(ifptr->if_type == IF_TYPE_RAD) {
 			kprintf("Incoming radio packet\n");
 			rpkt = (struct netpacket_r *)pkt;
+			freebuf((char *)rpkt);
 		}
 		else {
 			freebuf((char *)pkt);
@@ -117,7 +118,7 @@ process	rawin(void) {
 
 		epkt = (struct netpacket_e *)getbuf(netbufpool);
 
-		retval = read(ETHER0, epkt, sizeof(struct netpacket_e));
+		retval = read(ETHER0, (char *)epkt, sizeof(struct netpacket_e));
 		if(retval == SYSERR) {
 			panic("rawin: cannot read from the ethernet device");
 		}

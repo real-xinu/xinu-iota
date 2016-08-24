@@ -52,7 +52,7 @@ struct	netiface {
 	int32	if_nd_retranstime;
 
 	/* Device entry in the device table */
-	struct	dentry *if_dev;
+	did32	if_dev;
 
 	/* Input queue for this interface */
 	void	*if_inputq[10];

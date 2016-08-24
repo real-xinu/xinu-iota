@@ -13,7 +13,6 @@ void	tcp_in(
 	int32	i;			/* Iterates through TCBs	*/
 	int32	partial;		/* -1 or slot of partial match	*/
 	int32	complete;		/* -1 or slot of full match	*/
-	byte	ebcast[] = {0xff,0xff,0xff,0xff,0xff,0xff};
 	int32	entry;
 	uint16	len;			/* Length of the segment	*/
 	struct	tcb	*tcbptr;	/* Ptr to TCB entry		*/

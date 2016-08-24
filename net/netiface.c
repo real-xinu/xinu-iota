@@ -46,7 +46,7 @@ void	netiface_init(void) {
 			ifptr->if_type = IF_TYPE_ETH;
 
 			/* Set the device in the interface */
-			ifptr->if_dev = &ethertab[0];
+			ifptr->if_dev = ETHER0;
 
 			/* Set the hardware addresses */
 			ifptr->if_halen = IF_HALEN_ETH;
@@ -80,7 +80,7 @@ void	netiface_init(void) {
 			ifptr->if_type = IF_TYPE_RAD;
 
 			/* Set the device in the interface */
-			ifptr->if_dev = &radtab[0];
+			//ifptr->if_dev = &radtab[0];
 
 			/* Set the hardware addresses */
 			ifptr->if_halen = IF_HALEN_RAD;
@@ -103,4 +103,6 @@ void	netiface_init(void) {
 		kprintf("Stateless Address Autoconfiguration performed on interface %d.\n", ifindex);
 		kprintf("IP address: "); ip_printaddr(ifptr->if_ipucast[0].ipaddr); kprintf("\n");
 	}
+
+	restore(mask);
 }

@@ -24,7 +24,7 @@ process	main(void)
 	int32	nslot;
 	int32	rv;
 
-	rv = tcp_recv(tslot, &nslot, 4);
+	rv = tcp_recv(tslot, (char *)&nslot, 4);
 	kprintf("TCP connected: %d\n", nslot);
 
 	if(rv != SYSERR) {
