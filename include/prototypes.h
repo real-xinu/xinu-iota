@@ -293,6 +293,18 @@ extern	bpid32	mkbufpool(int32, int32);
 extern	syscall	mount(char *, char *, did32);
 extern	int32	namlen(char *, int32);
 
+/* in file mq.c */
+
+extern  void    mqinit(void);
+extern  int32   mqcreate(int32);
+extern  int32   mqdelete(int32);
+extern  int32   mqsend(int32, int32);
+extern  int32   mqrecv(int32);
+extern  int32   mqpoll(int32);
+extern  int32   mqdisable(int32);
+extern  int32   mqenable(int32);
+
+
 /* in file naminit.c */
 extern	status	naminit(void);
 
@@ -316,6 +328,9 @@ extern	void	nd_in_na(struct netpacket *);
 extern	int32	nd_send_ns(int32);
 extern	int32	nd_resolve(byte [], int32, void *);
 extern	process	nd_timer(void);
+
+/* in file netiface.c */
+extern  void netiface_init(void);
 
 /* in file newqueue.c */
 extern	qid16	newqueue(void);
@@ -562,18 +577,139 @@ extern	int32	insw(int32, int32 ,int32);
 extern	syscall	suspend(pid32);
 
 /* TCP prototypes */
+
+/* in file tcbclear.c */
 extern	void	tcbclear(struct tcb *);
+
+/* in file tcbref.c */
+extern void tcbref(struct tcb *);
+extern void tcbunref(struct tcb *);
+
+
+/* in file tcpabort.c */
+extern void tcpabort(struct tcb *);
+
+/* in file tcpack.c */
+extern void tcpack(struct tcb *, int32);
+
+
+/* in file tcpalloc.c */
+extern struct netpacket *tcpalloc(struct tcb *, int32);
+
+
+/* in file tcpcksum.c */
+//extern static uint32 localcksum(char *, int32);
+extern uint16 tcpcksum(struct netpacket *);
+
+
+/* in file tcpclose.c */
+extern int32 tcp_close(int32);
+
+/* in file tcpclosing.c */
+extern int32 tcpclosing(struct tcb *, struct netpacket *);
+
+/* in file tcpcwait.c */
+extern int32 tcpcwait(struct tcb *, struct netpacket *);
+
+/* in file tcpdata.c */
+extern int32 tcpdata(struct tcb *, struct netpacket *);
+
+
+/* in file tcpdisp.c */
 extern	int32	tcpnull(struct tcb *, struct netpacket *);
-extern	int32	tcplisten(struct tcb *, struct netpacket *);
-extern	int32	tcpsynsent(struct tcb *, struct netpacket *);
-extern	int32	tcpsynrcvd(struct tcb *, struct netpacket *);
+extern  void    tcpdisp(struct tcb *, struct netpacket *);
+
+/* in file tcpestd.c */
+extern  int32   tcpestd(struct tcb *, struct netpacket *);
+
+/* in file tcpfin1.c */
 extern	int32	tcpfin1(struct tcb *, struct netpacket *);
+
+
+/* in file tcpfin2.c */
 extern	int32	tcpfin2(struct tcb *, struct netpacket *);
-extern	int32	tcpestd(struct tcb *, struct netpacket *);
-extern	int32	tcpcwait(struct tcb *, struct netpacket *);
-extern	int32	tcpclosing(struct tcb *, struct netpacket *);
-extern	int32	tcplastack(struct tcb *, struct netpacket *);
+
+/* in file tcplastack.c */
+extern int32    tcplastack(struct tcb *, struct netpacket *);
+
+/* in file tcplisten.c */
+extern	int32	tcplisten(struct tcb *, struct netpacket *);
+
+/* in file tcpnextseg.c */
+extern  int32   tcpnextseg(struct tcb *, int32 *);
+
+/* in file tcpparse.c  */
+extern  int32   tcpparse(char *, uint32 *, uint16 *, int32 *);
+
+/* in file tcpreset.c */
+extern  int32   tcpreset(struct netpacket *);
+
+/* in file tcprto.c */
+extern  int32   tcprto(struct tcb *);
+
+
+/* in file tcpsendseg.c */
+extern  void    tcpsendseg(struct tcb *, int32, int32, int32);
+
+/* in file tcpsynrcvd.c */
+extern  int32   tcpsynrcvd(struct tcb *, struct netpacket *);
+
+/* in file tcpsynsent.c */
+extern  int32   tcpsynsent(struct tcb *, struct netpacket *);
+
+/* in file tcptimer.c */
+extern  void    tcptmset(int32, struct tcb *, int32);
+extern  void    tcptmdel(struct tcb *, int32);
+
+
+/*in file tcptwait.c */
 extern	int32	tcptwait(struct tcb *, struct netpacket *);
+
+/* in file tcpupdate.c */
+extern  int32   tcpupdate(struct tcb *, struct netpacket *);
+
+/* in file tcpwake.c */
+extern  int32   tcpwake(struct tcb *, int32);
+
+/* in file tcpxmit.c */
+extern  int32   tcpxmit(struct tcb *, tcpseq);
+
+
+extern  int32   tcp_init(void);
+/* in file tcp_hton.c */
+extern  void    tcp_hton(struct netpacket *);
+extern  void    tcp_ntoh(struct netpacket *);
+
+/* in file tcp_in.c */
+extern void tcp_in(struct netpacket *);
+
+
+/* in file tcp_init.c */
+extern int32 tcp_init(void);
+
+
+/* in file tcp_out.c */
+extern process tcp_out(void);
+
+
+/* in file tcp_register.c */
+extern  int32   tcp_register(byte[], uint16, int32, int32);
+
+
+/* in file tcp_recv.c */
+extern  int32   tcp_recv(int32, char *, int32);
+
+/* in file tcp_send.c */
+extern  int32  tcp_send(int32,char *, int32);
+
+
+/* in file timer.c */
+extern  void   tminit(void);
+extern  process timer(void);
+extern  int32   tmfire();
+extern  int32   tmset(int32, int32, int32);
+extern  int32   tmdel(int32, int32);
+
 
 /* in file ttycontrol.c */
 extern	devcall	ttycontrol(struct dentry *, int32, int32, int32);

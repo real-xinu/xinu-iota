@@ -74,7 +74,7 @@ process	netin(
 			switch(epkt->net_ethtype) {
 
 			case ETH_IPV6:
-				//kprintf("Incoming IPv6 packet\n");
+				kprintf("Incoming IPv6 packet\n");
 				ip_in((struct netpacket *)epkt->net_ethdata);
 				freebuf((char *)epkt);
 				break;
