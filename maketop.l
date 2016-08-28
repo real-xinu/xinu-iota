@@ -12,10 +12,11 @@
 "="		{ printf("Found equals %s\n", yytext); return(EQ);}
 "("		{ printf("Found left paren %s\n", yytext); return(LEFTPAREN);}
 ")"		{ printf("Found right paren %s\n", yytext); return(RIGHTPAREN);}
-"creategraph"	{ printf("Found creategraph\n"); return(CREATEGRAPH);}
+"maketop"	{ printf("Found maketop\n"); return(MAKETOP);}
 "ring"		{ printf("Found ring"); return(RING);}
 "linear"	{ printf("Found linear"); return(LINEAR);}
 "complete"	{ printf("Found complete"); return(COMPLETE);}
+"star"		{ printf("Found star"); return(STAR);}
 
 [a-zA-Z][a-zA-Z0-9]*	{ printf("Node %s\n", yytext);
 			  yylval.node_name_value = strdup(yytext);
