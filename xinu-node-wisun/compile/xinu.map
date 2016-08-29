@@ -377,7 +377,6 @@ Linker script and memory map
                 0x81008a98                netin
  .text          0x81008b98      0x2a4 binaries/netiface.o
                 0x81008b98                netiface_init
- .text          0x81008e3c        0x0 binaries/xinube_macs.o
  .text          0x81008e3c      0x120 binaries/addargs.o
                 0x81008e3c                addargs
  .text          0x81008f5c      0x2b4 binaries/lexan.o
@@ -770,45 +769,43 @@ Linker script and memory map
  .data          0x8100e27c        0x0 binaries/nd.o
  .data          0x8100e27c        0x0 binaries/net.o
  .data          0x8100e27c        0x0 binaries/netiface.o
- .data          0x8100e27c      0x240 binaries/xinube_macs.o
-                0x8100e27c                xinube_macs
- .data          0x8100e4bc        0x0 binaries/addargs.o
- .data          0x8100e4bc        0x0 binaries/lexan.o
- .data          0x8100e4bc        0x4 binaries/shell.o
-                0x8100e4bc                ncmd
- .data          0x8100e4c0        0x0 binaries/xsh_argecho.o
- .data          0x8100e4c0        0x0 binaries/xsh_cat.o
- .data          0x8100e4c0        0x0 binaries/xsh_clear.o
- .data          0x8100e4c0        0x0 binaries/xsh_devdump.o
- .data          0x8100e4c0        0x0 binaries/xsh_echo.o
- .data          0x8100e4c0        0x0 binaries/xsh_exit.o
- .data          0x8100e4c0        0x0 binaries/xsh_help.o
- .data          0x8100e4c0        0x0 binaries/xsh_kill.o
- .data          0x8100e4c0        0x0 binaries/xsh_led.o
- .data          0x8100e4c0        0x0 binaries/xsh_memdump.o
- .data          0x8100e4c0        0x0 binaries/xsh_memstat.o
- .data          0x8100e4c0        0x0 binaries/xsh_ps.o
- .data          0x8100e4c0        0x0 binaries/xsh_sleep.o
- .data          0x8100e4c0        0x0 binaries/xsh_uptime.o
- .data          0x8100e4c0        0x0 binaries/amsg_handler.o
- .data          0x8100e4c0        0x0 binaries/print_info.o
- .data          0x8100e4c0        0x0 binaries/srbit.o
- .data          0x8100e4c0        0x0 binaries/wsjoin.o
- .data          0x8100e4c0        0x4 binaries/wsnode.o
-                0x8100e4c0                xon
- .data          0x8100e4c4        0x0 binaries/wssend_ack.o
- .data          0x8100e4c4        0x0 binaries/ctxsw.o
- .data          0x8100e4c4        0x0 binaries/intr.o
- .data          0x8100e4c4        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_udivsi3.o)
- .data          0x8100e4c4        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_divsi3.o)
- .data          0x8100e4c4        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_dvmd_tls.o)
- .data          0x8100e4c4        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_addsubdf3.o)
- .data          0x8100e4c4        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_muldivdf3.o)
- .data          0x8100e4c4        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_truncdfsf2.o)
- .data          0x8100e4c4        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_fixsfsi.o)
-                0x8100e4c4                edata = ABSOLUTE (.)
+ .data          0x8100e27c        0x0 binaries/addargs.o
+ .data          0x8100e27c        0x0 binaries/lexan.o
+ .data          0x8100e27c        0x4 binaries/shell.o
+                0x8100e27c                ncmd
+ .data          0x8100e280        0x0 binaries/xsh_argecho.o
+ .data          0x8100e280        0x0 binaries/xsh_cat.o
+ .data          0x8100e280        0x0 binaries/xsh_clear.o
+ .data          0x8100e280        0x0 binaries/xsh_devdump.o
+ .data          0x8100e280        0x0 binaries/xsh_echo.o
+ .data          0x8100e280        0x0 binaries/xsh_exit.o
+ .data          0x8100e280        0x0 binaries/xsh_help.o
+ .data          0x8100e280        0x0 binaries/xsh_kill.o
+ .data          0x8100e280        0x0 binaries/xsh_led.o
+ .data          0x8100e280        0x0 binaries/xsh_memdump.o
+ .data          0x8100e280        0x0 binaries/xsh_memstat.o
+ .data          0x8100e280        0x0 binaries/xsh_ps.o
+ .data          0x8100e280        0x0 binaries/xsh_sleep.o
+ .data          0x8100e280        0x0 binaries/xsh_uptime.o
+ .data          0x8100e280        0x0 binaries/amsg_handler.o
+ .data          0x8100e280        0x0 binaries/print_info.o
+ .data          0x8100e280        0x0 binaries/srbit.o
+ .data          0x8100e280        0x0 binaries/wsjoin.o
+ .data          0x8100e280        0x4 binaries/wsnode.o
+                0x8100e280                xon
+ .data          0x8100e284        0x0 binaries/wssend_ack.o
+ .data          0x8100e284        0x0 binaries/ctxsw.o
+ .data          0x8100e284        0x0 binaries/intr.o
+ .data          0x8100e284        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_udivsi3.o)
+ .data          0x8100e284        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_divsi3.o)
+ .data          0x8100e284        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_dvmd_tls.o)
+ .data          0x8100e284        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_addsubdf3.o)
+ .data          0x8100e284        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_muldivdf3.o)
+ .data          0x8100e284        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_truncdfsf2.o)
+ .data          0x8100e284        0x0 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_fixsfsi.o)
+                0x8100e284                edata = ABSOLUTE (.)
                 0x8100f000                . = ALIGN (0x1000)
- *fill*         0x8100e4c4      0xb3c 
+ *fill*         0x8100e284      0xd7c 
 
 .igot.plt       0x8100f000        0x0
  .igot.plt      0x00000000        0x0 binaries/start.o
@@ -952,7 +949,6 @@ Linker script and memory map
  .bss           0x8100f020        0x0 binaries/nd.o
  .bss           0x8100f020        0x0 binaries/net.o
  .bss           0x8100f020        0x0 binaries/netiface.o
- .bss           0x8100f020        0x0 binaries/xinube_macs.o
  .bss           0x8100f020        0x0 binaries/addargs.o
  .bss           0x8100f020        0x0 binaries/lexan.o
  .bss           0x8100f020        0x0 binaries/shell.o
@@ -1183,7 +1179,6 @@ LOAD binaries/ip.o
 LOAD binaries/nd.o
 LOAD binaries/net.o
 LOAD binaries/netiface.o
-LOAD binaries/xinube_macs.o
 LOAD binaries/addargs.o
 LOAD binaries/lexan.o
 LOAD binaries/shell.o
@@ -1483,71 +1478,69 @@ OUTPUT(../compile/xinu elf32-littlearm)
  .ARM.attributes
                 0x00001b79       0x35 binaries/netiface.o
  .ARM.attributes
-                0x00001bae       0x35 binaries/xinube_macs.o
+                0x00001bae       0x35 binaries/addargs.o
  .ARM.attributes
-                0x00001be3       0x35 binaries/addargs.o
+                0x00001be3       0x35 binaries/lexan.o
  .ARM.attributes
-                0x00001c18       0x35 binaries/lexan.o
+                0x00001c18       0x35 binaries/shell.o
  .ARM.attributes
-                0x00001c4d       0x35 binaries/shell.o
+                0x00001c4d       0x35 binaries/xsh_argecho.o
  .ARM.attributes
-                0x00001c82       0x35 binaries/xsh_argecho.o
+                0x00001c82       0x35 binaries/xsh_cat.o
  .ARM.attributes
-                0x00001cb7       0x35 binaries/xsh_cat.o
+                0x00001cb7       0x35 binaries/xsh_clear.o
  .ARM.attributes
-                0x00001cec       0x35 binaries/xsh_clear.o
+                0x00001cec       0x35 binaries/xsh_devdump.o
  .ARM.attributes
-                0x00001d21       0x35 binaries/xsh_devdump.o
+                0x00001d21       0x35 binaries/xsh_echo.o
  .ARM.attributes
-                0x00001d56       0x35 binaries/xsh_echo.o
+                0x00001d56       0x35 binaries/xsh_exit.o
  .ARM.attributes
-                0x00001d8b       0x35 binaries/xsh_exit.o
+                0x00001d8b       0x35 binaries/xsh_help.o
  .ARM.attributes
-                0x00001dc0       0x35 binaries/xsh_help.o
+                0x00001dc0       0x35 binaries/xsh_kill.o
  .ARM.attributes
-                0x00001df5       0x35 binaries/xsh_kill.o
+                0x00001df5       0x35 binaries/xsh_led.o
  .ARM.attributes
-                0x00001e2a       0x35 binaries/xsh_led.o
+                0x00001e2a       0x35 binaries/xsh_memdump.o
  .ARM.attributes
-                0x00001e5f       0x35 binaries/xsh_memdump.o
+                0x00001e5f       0x35 binaries/xsh_memstat.o
  .ARM.attributes
-                0x00001e94       0x35 binaries/xsh_memstat.o
+                0x00001e94       0x35 binaries/xsh_ps.o
  .ARM.attributes
-                0x00001ec9       0x35 binaries/xsh_ps.o
+                0x00001ec9       0x35 binaries/xsh_sleep.o
  .ARM.attributes
-                0x00001efe       0x35 binaries/xsh_sleep.o
+                0x00001efe       0x35 binaries/xsh_uptime.o
  .ARM.attributes
-                0x00001f33       0x35 binaries/xsh_uptime.o
+                0x00001f33       0x35 binaries/amsg_handler.o
  .ARM.attributes
-                0x00001f68       0x35 binaries/amsg_handler.o
+                0x00001f68       0x35 binaries/print_info.o
  .ARM.attributes
-                0x00001f9d       0x35 binaries/print_info.o
+                0x00001f9d       0x35 binaries/srbit.o
  .ARM.attributes
-                0x00001fd2       0x35 binaries/srbit.o
+                0x00001fd2       0x35 binaries/wsjoin.o
  .ARM.attributes
-                0x00002007       0x35 binaries/wsjoin.o
+                0x00002007       0x35 binaries/wsnode.o
  .ARM.attributes
-                0x0000203c       0x35 binaries/wsnode.o
+                0x0000203c       0x35 binaries/wssend_ack.o
  .ARM.attributes
-                0x00002071       0x35 binaries/wssend_ack.o
+                0x00002071       0x25 binaries/ctxsw.o
  .ARM.attributes
-                0x000020a6       0x25 binaries/ctxsw.o
+                0x00002096       0x25 binaries/intr.o
  .ARM.attributes
-                0x000020cb       0x25 binaries/intr.o
+                0x000020bb       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_udivsi3.o)
  .ARM.attributes
-                0x000020f0       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_udivsi3.o)
+                0x000020d3       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_divsi3.o)
  .ARM.attributes
-                0x00002108       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_divsi3.o)
+                0x000020eb       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_dvmd_tls.o)
  .ARM.attributes
-                0x00002120       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_dvmd_tls.o)
+                0x00002103       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_addsubdf3.o)
  .ARM.attributes
-                0x00002138       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_addsubdf3.o)
+                0x0000211b       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_muldivdf3.o)
  .ARM.attributes
-                0x00002150       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_muldivdf3.o)
+                0x00002133       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_truncdfsf2.o)
  .ARM.attributes
-                0x00002168       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_truncdfsf2.o)
- .ARM.attributes
-                0x00002180       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_fixsfsi.o)
+                0x0000214b       0x18 ../cross_compiler/lib/gcc/arm-none-eabi/4.8.1//libgcc.a(_arm_fixsfsi.o)
 
 .comment        0x00000000       0x30
  .comment       0x00000000       0x30 binaries/ascdate.o
@@ -1684,7 +1677,6 @@ OUTPUT(../compile/xinu elf32-littlearm)
  .comment       0x00000000       0x31 binaries/nd.o
  .comment       0x00000000       0x31 binaries/net.o
  .comment       0x00000000       0x31 binaries/netiface.o
- .comment       0x00000000       0x31 binaries/xinube_macs.o
  .comment       0x00000000       0x31 binaries/addargs.o
  .comment       0x00000000       0x31 binaries/lexan.o
  .comment       0x00000000       0x31 binaries/shell.o
