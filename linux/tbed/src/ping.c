@@ -31,6 +31,7 @@ void ping_reply_handler (struct c_msg *buf)
     }
 }
 
+/* pingall response handler */
 void pingall_handler (struct c_msg *buf)
 {
     int i, counter;
@@ -38,8 +39,9 @@ void pingall_handler (struct c_msg *buf)
 
     fprintf(fp, "number of beagles: %d\n", counter);
 
-    for (i = 0; i < counter; i++) {
-       fprintf(fp , "beagle%d is on.\n", buf->bbb_stat[i]);
+    for (i = 0; i < MAX_BBB; i++) {
+	    if (buf->bbb_stat[i] == 1)
+                 fprintf(fp , "beagle%d is on.\n", i + 101);
     }
 }
 

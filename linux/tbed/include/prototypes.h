@@ -17,3 +17,4 @@ extern void cleanup(char *);
 extern void getmap(struct c_msg *);
 extern void ping6();
 extern void init_maclist();
+extern void get_bbb_id(char *, char *);

@@ -12,12 +12,7 @@ status wsnode_sendack ( struct netpacket_e *node_msg )
     ack_msg->msg.amsgtyp = htonl ( A_ACK );
     //ack_msg->msg.anodeid = htonl ( info.nodeid );
     memcpy ( ack_msg->msg.aacking, ( char * ) ( node_msg ) + 14, 16 );
-
-    if (ack_msg->msg.aacking[3] == A_PINGALL)
-        ack_msg->msg.abbbid = htonl (rand() % 200);
-
-    else
-        ack_msg->msg.anodeid = htonl (info.nodeid);
+    ack_msg->msg.anodeid = htonl (info.nodeid);
 
     /*DEBUG */
     //int i;

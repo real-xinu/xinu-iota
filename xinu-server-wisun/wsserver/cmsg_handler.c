@@ -113,12 +113,19 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
 
         case C_SHUTDOWN:
             kprintf ("Message type is %d\n", C_SHUTDOWN);
-            cmsg_reply->cmsgtyp = htonl (C_SHUTDOWN);
+	    cmsg_reply->cmsgtyp = htonl (C_SHUTDOWN);
             break;
 
         case C_PINGALL:
             kprintf ("Message type is %d\n", C_PINGALL);
             cmsg_reply = pingall_reply ( ctlpkt );
+	    break;
+        case C_CLEANUP:
+            kprintf ("Message type is %d\n", C_CLEANUP);
+	    if (cleanup() == OK)
+		    cmsg_reply->cmsgtyp = htonl ( C_OK );
+	    else
+                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
 	    break;
 
         default:

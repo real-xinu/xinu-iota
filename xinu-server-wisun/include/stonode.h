@@ -92,3 +92,5 @@
 				/*  or more fields of an incoming	*/
 				/*  message contains an invalid value.	*/
 
+#define A_CLEANUP       10      /* A broadcast message sent by testbed server
+				   to nodes, to shut down them */

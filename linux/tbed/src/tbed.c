@@ -8,14 +8,19 @@ FILE *log_f;
 int s;
 struct sockaddr_in si_other;
 char map_list[46][20];
+char map_serv[15];
+
 
 char *log_file_path = "../log/log.manage";
+
 
 /* --------------------------
  * Main- Call UDP process
  * -------------------------*/
 int main (int argc, char **argv)
 {
+    char beagle[10];
+    char bbb_id[3];
     struct timeval  tv1, tv2;
     gettimeofday (&tv1, NULL);
     char  use[] = "error: use is tbed ( IP | <script> -f | <script> -s )\n";
@@ -38,6 +43,11 @@ int main (int argc, char **argv)
         udp_process (SRV_IP, argv[1]);
 
     } else {
+        get_bbb_id(argv[1], bbb_id);
+	memset(beagle, 0, sizeof(beagle));
+        strcpy (beagle, "beagle");
+        strcat (beagle, bbb_id);
+        strcpy (map_serv, beagle);
         fp = stdout;
         SRV_IP = argv[1];
         udp_process (SRV_IP, argv[2]);

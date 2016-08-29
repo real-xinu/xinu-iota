@@ -37,6 +37,7 @@ struct etherPkt *create_etherPkt()
  */
 process	wsserver ()
 {
+    int i;
     uint16 serverport = PORT;
     int32 slot;
     int32 retval;
@@ -85,6 +86,10 @@ process	wsserver ()
 
                 freemem ( ( char * ) replypkt, sizeof ( struct c_msg ) );
             }
+            for (i =0; i< MAXNODES; i++)
+	         ping_ack_flag[i] = 0;
+            for (i =0; i< MAX_BBB; i++)
+	         bbb_stat[i] = 0;
         }
     }
 }

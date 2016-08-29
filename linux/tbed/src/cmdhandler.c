@@ -184,6 +184,10 @@ struct c_msg  command_handler (char command[BUFLEN])
         message.cmsgtyp = htonl (C_TOP_REQ);
         cmd_print (command_print);
 
+    } else if (!strcmp (array_token[0], "cleanup")){
+	    cmd_print(command_print);
+	    message.cmsgtyp = htonl(C_CLEANUP);
+
     } else if (!strcmp (array_token[0], "names")) {
         cmd_print (command_print);
 

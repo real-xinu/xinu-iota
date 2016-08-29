@@ -15,12 +15,7 @@ typedef	unsigned char	Eaddr[ETH_ADDR_LEN];/* a physical Ethernet address*/
 struct a_msg
 {
 	int32 amsgtyp;                 /* message type */
-	union
-	{
 	int32 anodeid;                /*node id */
-        int32 abbbid;
-
-	};
 
 	union
 	{

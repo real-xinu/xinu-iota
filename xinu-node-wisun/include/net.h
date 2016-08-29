@@ -5,11 +5,7 @@
 /* Structure of TYPE A frames */
 struct a_msg {
 	        int32 amsgtyp;
-		union
-		{
 	        int32 anodeid;
-		int32 abbbid;
-		};
 
 		union
 		{

@@ -92,6 +92,9 @@
 				/*  or more fields of an incoming	*/
 				/*  message contains an invalid value.	*/
 
+#define A_CLEANUP       10    /* A broadcast message sent by testbed server
+				 to the nodes and each of the nodes call panic
+				 function*/
 
 /*------------------------------------------------------------------
  a data strucure to keep assigned multicast address and the node ID.

@@ -11,7 +11,7 @@
 
 /* Definition of message types */
 
-#define MAX_BBB         83
+#define MAX_BBB         84
 #define File_Name_Size  50
 
 #define	C_RESTART	0	/* A message sent to the testbed server	*/
@@ -133,6 +133,8 @@
 /*  incoming message is invalid or the	*/
 /*  operation cannot be performed.	*/
 
+#define C_CLEANUP       21      /* A message sent by management app to testbed
+				   server to shut down all of the nodes */
 
 /* The following struct is included here, but should probably go in the	*/
 /*	file that declares items related to the topology database.	*/
@@ -232,3 +234,4 @@ extern char map_list[MAXNODES][NAMELEN];
 extern struct t_entry topo[MAXNODES];
 extern struct t_entry old_topo[MAXNODES];
 extern int32  bbb_stat[MAX_BBB];
+extern byte   bbb_macs[MAX_BBB][6];

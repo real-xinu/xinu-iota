@@ -170,8 +170,8 @@ struct c_msg * pingall_reply ( struct c_msg *ctlpkt )
 	sleepms (50);
 
         for ( i = 0; i < MAX_BBB; i++ ) {
-            if (bbb_stat[i] != 0){
-		    cmsg_reply->bbb_stat[i] =  bbb_stat[i];
+	    cmsg_reply->bbb_stat[i] =  bbb_stat[i];
+            if (bbb_stat[i] == 1){	
                     ping_num++;
 	    }
         }

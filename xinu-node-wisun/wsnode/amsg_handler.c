@@ -78,7 +78,9 @@ void amsg_handler ( struct netpacket_e *node_msg )
             }
 
             break;
-
+        case A_CLEANUP:
+            panic("The node is down\n");
+	    break;
         default:
             freebuf ((char *) node_msg);
             break;

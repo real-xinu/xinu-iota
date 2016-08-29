@@ -134,12 +134,14 @@
 /*  incoming message is invalid or the	*/
 /*  operation cannot be performed.	*/
 
+#define C_CLEANUP       21     /* A message sent by management app to 
+			      testbed server to shut down all of the nodes */
 
 /* The following struct is included here, but should probably go in the	*/
 /*	file that declares items related to the topology database.	*/
 
 #define	MAXNODES	46	/* Maximum number of nodes being tested	*/
-#define MAXBBBS    83           /* Maximum number of BBBs */
+#define MAX_BBB    84           /* Maximum number of BBBs */
 
 
 struct	t_entry { 		/* Entry in a topology file (also used	*/
@@ -196,7 +198,7 @@ struct	c_msg {
         };
 	struct {
 		int32 nbbb;                 
-		int32 bbb_stat[MAXBBBS];   /* As a response of C_PINGALL message */
+		int32 bbb_stat[MAX_BBB];   /* As a response of C_PINGALL message */
 	};
         uint32	uptime;		/* TS_RESP (amount of time the	*/
         /* server has been up (in msec).*/
