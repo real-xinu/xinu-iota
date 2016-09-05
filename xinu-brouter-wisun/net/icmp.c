@@ -80,10 +80,10 @@ int32	icmp_send (
 	pkt->net_iccode = iccode;
 	memcpy(pkt->net_icdata, icdata, datalen);
 
-	//kprintf("icmp_send: calling ip_send\n");
-	ip_send(pkt);
+	kprintf("icmp_send: calling ip_send\n");
+	int32 ret = ip_send(pkt);
 
-	return OK;
+	return ret;
 }
 
 /*------------------------------------------------------------------------

@@ -37,11 +37,26 @@ process	main(void)
 			if(ncptr->nc_state == NC_STATE_FREE)
 				kprintf("%d: FREE\n", i);
 		}
+		
+		char buff_msg[15];
+		memcpy(buff_msg, "HELLO NODE\n", strlen("HELLO NODE\n"));
+
+		test_nd_rad(buff_msg);
 	}
 
 	/* Wait for shell to exit and recreate it */
 
 	return OK;
+}
+
+process test_nd_rad(char * msg)
+{
+	byte ipaddr_src[16]
+	int32 ret = icmp_send(ICMP_TYPE_NS, IF_TYPE_RAD, );
+	if(ret == SYSERR)
+		kprintf("SYSERR\n");
+	else
+		kprintf("OK\n");
 }
 
 /* process test_nd_rad()
