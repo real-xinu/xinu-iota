@@ -51,12 +51,31 @@ process	main(void)
 
 process test_nd_rad(char * msg)
 {
-	byte ipaddr_src[16]
-	int32 ret = icmp_send(ICMP_TYPE_NS, IF_TYPE_RAD, );
+    byte ipaddr_src[16], ipaddr_dst[16];
+    
+    /* Source addr */
+    memcpy(ipaddr_src, iftab[IF_TYPE_RAD].if_ipucast[0].ipaddr, 16);
+    print_ip(ipaddr_src);
+    
+    /* Dest addr */
+    memcpy(ipaddr_dst, iftab[IF_TYPE_RAD].if_ipucast[0].ipaddr, 16);
+    print_ip(ipaddr_dst);
+    
+    /* Sending ICMP packet */
+    int32 ret = icmp_send(ICMP_TYPE_NS, IF_TYPE_RAD, ipaddr_dst, msg, strlen(msg), IF_TYPE_RAD);
 	if(ret == SYSERR)
 		kprintf("SYSERR\n");
 	else
 		kprintf("OK\n");
+}
+
+process print_ip(byte * ip)
+{
+    int32 i = 0;
+    for(i = 0; i < 15; i++)
+        kprintf("%02x:", ip[i]);
+    
+    kprintf("%02x\n", ip[15]);
 }
 
 /* process test_nd_rad()
