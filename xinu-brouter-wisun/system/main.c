@@ -23,28 +23,23 @@ process	main(void)
 	sleep(5);
 	kprintf("\n...creating a shell\n");
 	recvclr();
-	//resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
+	resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
 
-	struct	netpacket_e pkt;
-
-	// if(if_tab[IF_ETH].if_ipucast[0].ipaddr[15] == 0xf2)
-	// 	test_nd_eth();
-	// else if(if_tab[IF_ETH].if_ipucast[0].ipaddr[15] = 0x27)
-	// {
-	// 	print_ip(if_tab[IF_ETH].if_hwucast);
-	// }
-
-	if(if_tab[IF_ETH].if_ipucast[0].ipaddr[15] == 0xf2)
-		test_nd_rad();
-
-	/* ip_print(if_tab[IF_RADIO].if_hwucast);
-	kprintf("\n");
-	ip_print(if_tab[IF_RADIO].if_ipucast[0].ipaddr);
-
-	// test_nd();
+	if(iftab[IF_TYPE_ETH].if_ipucast[0].ipaddr[15] == 0xf2)
+	{
+		kprintf("Sending ND NS for ncindex : %d\n", 1);
+		int i = 0;
+		kprintf("CACHE SIZE: %d\n", ND_NCACHE_SIZE);
+		struct nd_ncentry * ncptr;
+		for(i = 0; i < ND_NCACHE_SIZE; i++)
+		{
+			ncptr = &nd_ncache[i];
+			if(ncptr->nc_state == NC_STATE_FREE)
+				kprintf("%d: FREE\n", i);
+		}
+	}
 
 	/* Wait for shell to exit and recreate it */
-
 
 	return OK;
 }

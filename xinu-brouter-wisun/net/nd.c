@@ -211,6 +211,7 @@ void	nd_in (
 	switch(pkt->net_ictype) {
 
 	case ICMP_TYPE_NS:
+            kprintf("HERE_NS\n");
 		nd_in_ns(pkt);
 		break;
 
@@ -508,6 +509,8 @@ void	nd_in_na (
 			ncptr->nc_rstate = NC_RSTATE_STL;
 		}
 	}
+
+	kprintf("HERE\n");
 
 	restore(mask);
 	return;

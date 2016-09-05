@@ -320,10 +320,12 @@ int32	ip_send (
 
 	/* If we cannot route the packet, discard it and return */
 	if(retval == SYSERR) {
+        kprintf("SYSERR\n");
 		freebuf((char *)pkt);
 		return SYSERR;
 	}
 
+    kprintf("ip_send\n");
 	/* Process the packet according to its type */
 	switch(pkt->net_ipnh) {
 
@@ -381,7 +383,7 @@ int32	ip_send (
 
 	/* Check the type of the interface */
 	if(ifptr->if_type == IF_TYPE_ETH) { /* Ethernet interface */
-
+        kprintf("HERE\n");
 		/* Allocate an ethernet packet buffer */
 		epkt = (struct netpacket_e *)getbuf(netbufpool);
 		if((int32)epkt == SYSERR) {
