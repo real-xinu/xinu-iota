@@ -92,6 +92,7 @@ int32	radwrite (
 	memcpy(hptr, inpkt->net_radsrcaddr, 8);
 	hptr += 8;
 
+    kprintf("Writing to ETHER0\n");
 	write(ETHER0, (char *)outpkt->rad_data, cend-outpkt->rad_data);
 
 	freebuf(outpkt);

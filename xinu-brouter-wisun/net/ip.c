@@ -383,7 +383,6 @@ int32	ip_send (
 
 	/* Check the type of the interface */
 	if(ifptr->if_type == IF_TYPE_ETH) { /* Ethernet interface */
-        kprintf("HERE\n");
 		/* Allocate an ethernet packet buffer */
 		epkt = (struct netpacket_e *)getbuf(netbufpool);
 		if((int32)epkt == SYSERR) {
@@ -426,6 +425,8 @@ int32	ip_send (
 		return OK;
 	}
 	else {
+        kprintf("HERE_RAD\n");
+        write(RADIO0, (char *)netpacket, sizeof(struct netpacket));
 		restore(mask);
 		return OK;
 	}
