@@ -82,6 +82,12 @@
 #define NAMLEN 128
 #define MAX 45
 
+#ifdef DEBUG
+#  define debug(x) x
+#else
+#  define debug(x)
+#endif
+
 void yyerror(const char *s){};
 extern "C" int yylex();
 extern "C" int yyparse();
@@ -206,7 +212,7 @@ void add_ring(char *family_name, int n) {
   std::string neighbour_string;		/* std::string for neighbour name to push onto list */
   struct node new_node;			/* struct to hold new node */
 
-  printf("family: %s", family_name);
+  debug(std::cout << "family: " << family_name);
 
   /* Loop through nodes in ring */
 
@@ -254,7 +260,7 @@ void add_linear(char *family_name, int n) {
   std::string neighbour_string;		/* std::string for neighbour name to push onto list */
   struct node new_node;			/* struct to hold new node */
 
-  printf("family: %s", family_name);
+  debug(std::cout << "family: " << family_name);
 
   /* For the first node */
 
@@ -353,7 +359,7 @@ void add_complete(char *family_name, int n) {
   std::string neighbour_string;		/* std::string for neighbour name to push onto list */
   struct node new_node;			/* struct to hold new node */
 
-  printf("family: %s", family_name);
+  debug(std::cout << "family: " << family_name);
 
   /* Loop through nodes in ring */
 
@@ -401,7 +407,7 @@ void add_star(char *family_name, int n) {
   std::string neighbour_string;		/* std::string for neighbour name to push onto list */
   struct node new_node;			/* struct to hold new node */
 
-  printf("family: %s", family_name);
+  debug(std::cout << "family: " << family_name);
 
   /* Central node */
 
