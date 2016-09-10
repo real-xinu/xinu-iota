@@ -67,7 +67,7 @@
 
 %start program
 %token MAKETOP
-%token LEFT RIGHT BI RING EQ LINEAR COMPLETE STAR LEFTPAREN RIGHTPAREN
+%token LEFT RIGHT BI RING EQ LINEAR COMPLETE STAR LEFTPAREN RIGHTPAREN ADD DELETE
 
 %{
 #include <cstdio>
@@ -75,6 +75,7 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 #include <list>
 #include <string>
@@ -93,21 +94,22 @@ extern "C" int yylex();
 extern "C" int yyparse();
 
 struct node {
-	char name[NAMLEN+3];
+	std::string name;
 	std::list<std::string> adj_list;
 };
 
 std::list<struct node> nodes;
 
-//int nnodes = 0;
-
-void add_neighbour(struct node *curr_node, char *neighbour);
-void add_ring(char *family_name, int n);
-void add_linear(char *family_name, int n);
-void add_complete(char *family_name, int n);
-void add_star(char *family_name, int n);
+void add_neighbour(struct node *curr_node, std::string neighbour);
+void add_ring(std::string family_name, int n);
+void add_linear(std::string family_name, int n);
+void add_complete(std::string family_name, int n);
+void add_star(std::string family_name, int n);
 void print_node(struct node curr_node);
 void output_to_file();
+struct node* node_lookup(std::string name);
+void add_connection(struct node &sender, struct node &receiver, int symmetric=0);
+void delete_connection(struct node &sender, struct node &receiver, int symmetric=0);
 
 %}
 
@@ -121,13 +123,59 @@ void output_to_file();
 
 %%
 
-program : statements MAKETOP {printf ("End\n"); output_to_file(); exit(1); }
+program : statements MAKETOP {debug(printf ("End\n")); output_to_file(); exit(1); }
 ;
 
-statement : assign | connect
+statement : assign {printf(">>> ");}| connect {printf(">>> ");}
 ;
 
-connect : NODE LEFT NODE | NODE RIGHT NODE | NODE BI NODE
+connect : NODE LEFT NODE |
+	  NODE RIGHT NODE |
+	  NODE BI NODE |
+	  ADD NODE NODE
+		{
+                  std::string sender = std::string($2);
+		  std::string receiver = std::string($3);
+		  add_connection(*node_lookup(sender), *node_lookup(receiver));
+		  print_node(*node_lookup(sender));
+		} |
+	  ADD NODE RIGHT NODE
+		{
+		  std::string sender = std::string($2);
+		  std::string receiver = std::string($4);
+		  add_connection(*node_lookup(sender), *node_lookup(receiver));
+		  print_node(*node_lookup(sender));
+		} |
+	  ADD NODE BI NODE
+		{
+		  int s = 1;
+		  std::string sender = std::string($2);
+		  std::string receiver = std::string($4);
+		  add_connection(*node_lookup(sender), *node_lookup(receiver), s);
+		  print_node(*node_lookup(sender));
+		} |
+	  DELETE NODE NODE
+		{
+		  std::string sender = std::string($2);
+		  std::string receiver = std::string($3);
+		  delete_connection(*node_lookup(sender), *node_lookup(receiver));
+		  print_node(*node_lookup(sender));
+		} |
+	  DELETE NODE RIGHT NODE
+		{
+		  std::string sender = std::string($2);
+		  std::string receiver = std::string($4);
+		  delete_connection(*node_lookup(sender), *node_lookup(receiver));
+		  print_node(*node_lookup(sender));
+		} |
+	  DELETE NODE BI NODE
+		{
+		  int s = 1;
+		  std::string sender = std::string($2);
+		  std::string receiver = std::string($4);
+		  delete_connection(*node_lookup(sender), *node_lookup(receiver), s);
+		  print_node(*node_lookup(sender));
+		}
 ;
 
 assign : NODE EQ RING LEFTPAREN INT RIGHTPAREN
@@ -179,26 +227,71 @@ void error_message(const char *msg) {
   exit(1);
 }
 
-/*void add_neighbour(struct node *curr_node, char *neighbour) {
-  char **temp_list;
-  if ((*curr_node).nadj == 0) {
-    (*curr_node).nadj++;
-    (*curr_node).adj_list = (char**)malloc((*curr_node).nadj*sizeof(char *));
-    if ((*curr_node).adj_list == NULL) {
-      error_message("Memory could not be allocated");
-    }
-  }
+/**************************************************************/
+/*	initialize_node - function takes a node to which a    */
+/*			neighbour needs to be added, and the  */
+/*			name of the neighbour, along with     */
+/*			a suffix, if necessary. The suffix is */
+/*			a default argument, set at -1. If no  */
+/*			suffix is given, the neighbour is     */
+/*			added as is.			      */
+/**************************************************************/
+
+struct node initialize_node(std::string name, int suffix=-1) {
+  struct node new_node;
+
+  /* Initialize name */
+  if (suffix != -1)
+    name = name + "_" + std::to_string(suffix);
+
+  new_node.name = name;
+
+  /* Clear adjacency list */
+  new_node.adj_list.clear();
+
+  debug(std::cout << "\nName: \n" << new_node.name);
+
+  return new_node;
+}
+
+/**************************************************************/
+/*	add_neighbour - function takes a node to which a      */
+/*			neighbour needs to be added, and the  */
+/*			name of the neighbour, along with     */
+/*			a suffix, if necessary. The suffix is */
+/*			a default argument, set at -1. If no  */
+/*			suffix is given, the neighbour is     */
+/*			added as is.			      */
+/**************************************************************/
+void add_neighbour(struct node &curr_node, std::string name, int suffix=-1) {
+  std::string neighbour_string;
+
+  if (suffix == -1)
+    neighbour_string = name;
+
   else {
-    (*curr_node).nadj++;
-    temp_list = (char**)realloc((*curr_node).adj_list, (*curr_node).nadj*sizeof(char *));
-    if (temp_list == NULL) {
-      error_message("Memory could not be allocated");
-    }
-    (*curr_node).adj_list = temp_list;
+    neighbour_string = name + "_" + std::to_string(suffix);
   }
-  (*curr_node).adj_list[(*curr_node).nadj-1] = (char*)malloc(sizeof(strlen(neighbour)));
-  strcpy((*curr_node).adj_list[(*curr_node).nadj-1], neighbour);
-  }*/
+
+  //TODO: Check for dups in the adjacency list
+  curr_node.adj_list.push_back(neighbour_string);
+}
+
+void delete_neighbour(struct node &curr_node, std::string name, int suffix=-1) {
+  if (suffix == -1)
+    name = name;
+
+  else {
+    name = name + "_" + std::to_string(suffix);
+  }
+
+  curr_node.adj_list.erase(std::remove_if(curr_node.adj_list.begin(),
+					  curr_node.adj_list.end(),
+					  [=](std::string neighbour) {
+						return neighbour == name;
+					   }),
+			   curr_node.adj_list.end());
+}
 
 /**************************************************************/
 /*	add_ring - function takes a family_name	and the       */
@@ -206,10 +299,8 @@ void error_message(const char *msg) {
 /*		   nodes to the global nodes list	      */
 /**************************************************************/
 
-void add_ring(char *family_name, int n) {
+void add_ring(std::string family_name, int n) {
   int i;				/* index for nodes */
-  char neighbour[NAMLEN+3];		/* C style string to hold neighbour name */
-  std::string neighbour_string;		/* std::string for neighbour name to push onto list */
   struct node new_node;			/* struct to hold new node */
 
   debug(std::cout << "family: " << family_name);
@@ -222,23 +313,14 @@ void add_ring(char *family_name, int n) {
     if(!node_check(nodes.size()))
       error_message("Node limit exceeded");
 
-    /* Insert name of next node */
-    sprintf(new_node.name, "%s_%d", family_name, i);
-    //printf("Got here");
-    printf("\nName: %s\n", new_node.name);
-
-    /* Clear adjacency list from the last node */
-    new_node.adj_list.clear();
+    /* Initialize node */
+    new_node = initialize_node(family_name, i);
 
     /* Add first neighbour */
-    sprintf(neighbour, "%s_%d", family_name, (((i-1) % n) + n)%n);
-    neighbour_string = std::string(neighbour);
-    new_node.adj_list.push_back(neighbour_string);
+    add_neighbour(new_node, family_name, (((i-1) % n) + n)%n);
 
     /* Add second neighbour */
-    sprintf(neighbour, "%s_%d", family_name, (i+1) % n);
-    neighbour_string = std::string(neighbour);
-    new_node.adj_list.push_back(neighbour_string);
+    add_neighbour(new_node, family_name, (i+1) % n);
 
     /* Push node on to global nodes list */
     nodes.push_back(new_node);
@@ -254,10 +336,8 @@ void add_ring(char *family_name, int n) {
 /*		   nodes to the global nodes list	      */
 /**************************************************************/
 
-void add_linear(char *family_name, int n) {
+void add_linear(std::string family_name, int n) {
   int i = 0;				/* index for nodes */
-  char neighbour[NAMLEN+3];		/* C style string to hold neighbour name */
-  std::string neighbour_string;		/* std::string for neighbour name to push onto list */
   struct node new_node;			/* struct to hold new node */
 
   debug(std::cout << "family: " << family_name);
@@ -268,18 +348,11 @@ void add_linear(char *family_name, int n) {
   if(!node_check(nodes.size()))
     error_message("Node limit exceeded");
 
-  /* Insert name of next node */
-  sprintf(new_node.name, "%s_%d", family_name, i);
-  //printf("Got here");
-  printf("\nName: %s\n", new_node.name);
-
-  /* Clear adjacency list from the last node */
-  new_node.adj_list.clear();
+  /* Initialize node */
+  new_node = initialize_node(family_name, i);
 
   /* Add first neighbour */
-  sprintf(neighbour, "%s_%d", family_name, ((i+1) % n));
-  neighbour_string = std::string(neighbour);
-  new_node.adj_list.push_back(neighbour_string);
+  add_neighbour(new_node, family_name, ((i+1) % n));
 
   /* Push node on to global nodes list */
   nodes.push_back(new_node);
@@ -295,23 +368,14 @@ void add_linear(char *family_name, int n) {
     if(!node_check(nodes.size()))
       error_message("Node limit exceeded");
 
-    /* Insert name of next node */
-    sprintf(new_node.name, "%s_%d", family_name, i);
-    //printf("Got here");
-    printf("\nName: %s\n", new_node.name);
-
-    /* Clear adjacency list from the last node */
-    new_node.adj_list.clear();
+    /* Initialize next node */
+    new_node = initialize_node(family_name, i);
 
     /* Add first neighbour */
-    sprintf(neighbour, "%s_%d", family_name, (((i-1) % n) + n)%n);
-    neighbour_string = std::string(neighbour);
-    new_node.adj_list.push_back(neighbour_string);
+    add_neighbour(new_node, family_name, (((i-1) % n) + n) % n);
 
     /* Add second neighbour */
-    sprintf(neighbour, "%s_%d", family_name, (i+1) % n);
-    neighbour_string = std::string(neighbour);
-    new_node.adj_list.push_back(neighbour_string);
+    add_neighbour(new_node, family_name, (i+1) % n);
 
     /* Push node on to global nodes list */
     nodes.push_back(new_node);
@@ -326,18 +390,11 @@ void add_linear(char *family_name, int n) {
   if(!node_check(nodes.size()))
     error_message("Node limit exceeded");
 
-  /* Insert name of next node */
-  sprintf(new_node.name, "%s_%d", family_name, i);
-  //printf("Got here");
-  printf("\nName: %s\n", new_node.name);
-
-  /* Clear adjacency list from the last node */
-  new_node.adj_list.clear();
+  /* Initialize node */
+  new_node = initialize_node(family_name, i);
 
   /* Add first neighbour */
-  sprintf(neighbour, "%s_%d", family_name, (((i-1) % n) + n)%n);
-  neighbour_string = std::string(neighbour);
-  new_node.adj_list.push_back(neighbour_string);
+  add_neighbour(new_node, family_name, (((i-1) % n) + n) % n);
 
   /* Push node on to global nodes list */
   nodes.push_back(new_node);
@@ -353,10 +410,8 @@ void add_linear(char *family_name, int n) {
 /*		       list.				      */
 /**************************************************************/
 
-void add_complete(char *family_name, int n) {
+void add_complete(std::string family_name, int n) {
   int i, j;				/* indices for nodes */
-  char neighbour[NAMLEN+3];		/* C style string to hold neighbour name */
-  std::string neighbour_string;		/* std::string for neighbour name to push onto list */
   struct node new_node;			/* struct to hold new node */
 
   debug(std::cout << "family: " << family_name);
@@ -370,23 +425,16 @@ void add_complete(char *family_name, int n) {
       error_message("Node limit exceeded");
 
     /* Insert name of next node */
-    sprintf(new_node.name, "%s_%d", family_name, i);
-    //printf("Got here");
-    printf("\nName: %s\n", new_node.name);
-
-    /* Clear adjacency list from the last node */
-    new_node.adj_list.clear();
+    new_node = initialize_node(family_name, i);
 
     /* Add all the neighbours */
 
     for (j = 0; j < n; j++) {
-      /* Don't add a node to it's adjacency list */
+      /* Don't add a node to its own adjacency list */
       if (i == j)
 	continue;
 
-      sprintf(neighbour, "%s_%d", family_name, j);
-      neighbour_string = std::string(neighbour);
-      new_node.adj_list.push_back(neighbour_string);
+      add_neighbour(new_node, family_name, j);
     }
     /* Push node on to global nodes list */
     nodes.push_back(new_node);
@@ -395,16 +443,15 @@ void add_complete(char *family_name, int n) {
     print_node(nodes.back());
   }
 }
+
 /**************************************************************/
 /*	add_star - function takes a family_name	and the       */
 /*		   number of nodes in the star, and adds all  */
 /*		   nodes to the global nodes list	      */
 /**************************************************************/
 
-void add_star(char *family_name, int n) {
+void add_star(std::string family_name, int n) {
   int i = 0, j;				/* index for nodes */
-  char neighbour[NAMLEN+3];		/* C style string to hold neighbour name */
-  std::string neighbour_string;		/* std::string for neighbour name to push onto list */
   struct node new_node;			/* struct to hold new node */
 
   debug(std::cout << "family: " << family_name);
@@ -416,19 +463,12 @@ void add_star(char *family_name, int n) {
     error_message("Node limit exceeded");
 
   /* Insert name of next node */
-  sprintf(new_node.name, "%s_%d", family_name, i);
-  //printf("Got here");
-  printf("\nName: %s\n", new_node.name);
-
-  /* Clear adjacency list from the last node */
-  new_node.adj_list.clear();
+  new_node = initialize_node(family_name, i);
 
   /* Add neighbours */
 
   for (j = 1; j < n; j++) {
-    sprintf(neighbour, "%s_%d", family_name, j);
-    neighbour_string = std::string(neighbour);
-    new_node.adj_list.push_back(neighbour_string);
+    add_neighbour(new_node, family_name, j);
   }
 
   /* Push node on to global nodes list */
@@ -446,17 +486,10 @@ void add_star(char *family_name, int n) {
       error_message("Node limit exceeded");
 
     /* Insert name of next node */
-    sprintf(new_node.name, "%s_%d", family_name, i);
-    //printf("Got here");
-    printf("\nName: %s\n", new_node.name);
-
-    /* Clear adjacency list from the last node */
-    new_node.adj_list.clear();
+    new_node = initialize_node(family_name, i);
 
     /* Add first neighbour */
-    sprintf(neighbour, "%s_%d", family_name, 0);
-    neighbour_string = std::string(neighbour);
-    new_node.adj_list.push_back(neighbour_string);
+    add_neighbour(new_node, family_name, 0);
 
     /* Push node on to global nodes list */
     nodes.push_back(new_node);
@@ -479,7 +512,7 @@ void print_node(struct node curr_node) {
 	std::cout << *iter << " ";;
   }
 
-  std::cout << std::endl;
+  std::cout << std::endl << std::endl;
 }
 
 /**************************************************************/
@@ -487,7 +520,7 @@ void print_node(struct node curr_node) {
 /**************************************************************/
 
 void output_to_file() {
-	const char *filename = "output_file";
+	std::string filename = "output_file";
 
 	std::ofstream fout(filename);
 
@@ -499,4 +532,46 @@ void output_to_file() {
 		fout << std::endl;
 	}
 	fout.close();
+}
+
+
+/****************************************************************/
+/*	node_lookup - accepts a node's name and checks if it is */
+/*		      already there, and if it is, returns the  */
+/*		      node, otherwise returns NULL.		*/
+/****************************************************************/
+
+struct node* node_lookup(std::string name) {
+	for(std::list<struct node>::iterator curr_node = nodes.begin(); curr_node != nodes.end(); curr_node++) {
+	  if ((*curr_node).name == name)
+	    return &(*curr_node);
+	}
+	return NULL;
+}
+
+/****************************************************************/
+/*	add_connection - adds receiver as a neighbour to sender	*/
+/*			 Takes sender and receiver as arguments	*/
+/*			 along with a symmetry option		*/
+/****************************************************************/
+
+void add_connection(struct node &sender, struct node &receiver, int symmetric) {
+  add_neighbour(sender, receiver.name);
+  if(symmetric) {
+	add_neighbour(receiver, sender.name);
+  }
+}
+
+
+/****************************************************************/
+/*	delete_connection - deletes receiver as a neighbour to sender	*/
+/*			 Takes sender and receiver as arguments	*/
+/*			 along with a symmetry option		*/
+/****************************************************************/
+
+void delete_connection(struct node &sender, struct node &receiver, int symmetric) {
+  delete_neighbour(sender, receiver.name);
+  if(symmetric) {
+	delete_neighbour(receiver, sender.name);
+  }
 }
