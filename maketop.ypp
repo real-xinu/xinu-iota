@@ -194,19 +194,16 @@ statements : /* empty */|
 %%
 
 int main( int argc, char *argv[] )
-{ //extern FILE *yyin;
-  //++argv; −−argc;
-  //yyin = fopen( argv[0], ”r” );
-  //int nnodes = 0;
+{
   struct node nodes[MAX];
-  //int yydebug = 1;
-  //int errors = 0;
-  yyparse ();
+  while (true) {
+    printf(">>> ");
+    yyparse ();
+  }
 }
 
-void yyerror (char *s) /* Called by yyparse on error */
-{
-printf ("%s\n", s);
+void yyerror (char *s) {/* Called by yyparse on error */
+  printf ("%s\n", s);
 }
 
 int node_check(int n) {
@@ -215,15 +212,8 @@ int node_check(int n) {
   return 1;
 }
 
-void error_message(const char *msg) {
-  //int i, j;
-  fprintf(stderr, "%s", msg);
-  /*for (i = 0; i < nnodes; i++) {
-    for (j = 0; j < nodes[i].nadj; j++) {
-      free(nodes[i].adj_list[j]);
-    }
-    free(nodes[i].adj_list);
-    }*/
+void error_message(std::string msg) {
+  std::cerr << msg;
   exit(1);
 }
 
