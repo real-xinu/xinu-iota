@@ -99,6 +99,8 @@
 void yyerror(const char *s){};
 extern "C" int yylex();
 extern "C" int yyparse();
+extern void yyrestart(FILE *input_file);
+extern "C" FILE* yyin;
 
 struct node {
 	std::string name;
@@ -111,7 +113,7 @@ void add_neighbour(struct node *curr_node, std::string neighbour);
 void add_ring(std::string family_name, int n);
 void add_linear(std::string family_name, int n);
 void add_complete(std::string family_name, int n);
-void add_star(std::string family_name, int n);
+void add_star(std::string family_name, int n, int mode=STAR_BI);
 void print_node(struct node curr_node);
 void output_to_file();
 struct node* node_lookup(std::string name);
@@ -127,6 +129,8 @@ void delete_connection(struct node &sender, struct node &receiver, int symmetric
 
 %token <ival> INT
 %token <node_name_value> NODE
+%type <node_name_value> node
+%type <ival> int_node
 
 %%
 
@@ -136,24 +140,35 @@ program : statements MAKETOP {debug(printf ("End\n")); output_to_file(); exit(1)
 statement : assign {printf(">>> ");}| connect {printf(">>> ");}
 ;
 
-connect : NODE LEFT NODE |
-	  NODE RIGHT NODE |
-	  NODE BI NODE |
-	  ADD NODE NODE
+node: NODE
+	{
+	  $$=$1;
+	  std::string name = std::string($1);
+	  if (name.length() > NAMLEN) {
+	    std::cout << "Node name is too long" << std::endl;
+	    YYABORT;
+	  }
+	}
+;
+
+connect : node LEFT node |
+	  node RIGHT node |
+	  node BI node |
+	  ADD node node
 		{
                   std::string sender = std::string($2);
 		  std::string receiver = std::string($3);
 		  add_connection(*node_lookup(sender), *node_lookup(receiver));
 		  print_node(*node_lookup(sender));
 		} |
-	  ADD NODE RIGHT NODE
+	  ADD node RIGHT node
 		{
 		  std::string sender = std::string($2);
 		  std::string receiver = std::string($4);
 		  add_connection(*node_lookup(sender), *node_lookup(receiver));
 		  print_node(*node_lookup(sender));
 		} |
-	  ADD NODE BI NODE
+	  ADD node BI node
 		{
 		  int s = 1;
 		  std::string sender = std::string($2);
@@ -161,21 +176,21 @@ connect : NODE LEFT NODE |
 		  add_connection(*node_lookup(sender), *node_lookup(receiver), s);
 		  print_node(*node_lookup(sender));
 		} |
-	  DELETE NODE NODE
+	  DELETE node node
 		{
 		  std::string sender = std::string($2);
 		  std::string receiver = std::string($3);
 		  delete_connection(*node_lookup(sender), *node_lookup(receiver));
 		  print_node(*node_lookup(sender));
 		} |
-	  DELETE NODE RIGHT NODE
+	  DELETE node RIGHT node
 		{
 		  std::string sender = std::string($2);
 		  std::string receiver = std::string($4);
 		  delete_connection(*node_lookup(sender), *node_lookup(receiver));
 		  print_node(*node_lookup(sender));
 		} |
-	  DELETE NODE BI NODE
+	  DELETE node BI node
 		{
 		  int s = 1;
 		  std::string sender = std::string($2);
@@ -185,13 +200,22 @@ connect : NODE LEFT NODE |
 		}
 ;
 
-assign : NODE EQ RING LEFTPAREN INT RIGHTPAREN
+int_node: INT
+{
+  $$ = $1;
+  if (nodes.size() + $1 > MAX) {
+    std::cout << "Node limit exceeded" << std::endl;
+    YYABORT;
+  }
+};
+
+assign : node EQ RING LEFTPAREN int_node RIGHTPAREN
 		{add_ring($1, $5);} |
-	 NODE EQ LINEAR LEFTPAREN INT RIGHTPAREN
+	 node EQ LINEAR LEFTPAREN int_node RIGHTPAREN
 		{add_linear($1, $5);} |
-	 NODE EQ COMPLETE LEFTPAREN INT RIGHTPAREN
+	 node EQ COMPLETE LEFTPAREN int_node RIGHTPAREN
 		{add_complete($1, $5);} |
-	 NODE EQ STAR LEFTPAREN INT RIGHTPAREN
+	 node EQ STAR LEFTPAREN int_node RIGHTPAREN
 		{add_star($1, $5);}
 ;
 
@@ -202,10 +226,10 @@ statements : /* empty */|
 
 int main( int argc, char *argv[] )
 {
-  struct node nodes[MAX];
   while (true) {
     printf(">>> ");
     yyparse ();
+    yyrestart(yyin);
   }
 }
 
@@ -447,7 +471,7 @@ void add_complete(std::string family_name, int n) {
 /*		   nodes to the global nodes list	      */
 /**************************************************************/
 
-void add_star(std::string family_name, int n) {
+void add_star(std::string family_name, int n, int mode) {
   int i = 0, j;				/* index for nodes */
   struct node new_node;			/* struct to hold new node */
 
@@ -462,19 +486,29 @@ void add_star(std::string family_name, int n) {
   /* Insert name of next node */
   new_node = initialize_node(family_name, i);
 
-  /* Add neighbours */
 
-  for (j = 1; j < n; j++) {
-    add_neighbour(new_node, family_name, j);
+  switch(mode) {
+  case STAR_BI:
+  case STAR_OUT:
+    /* Add neighbours */
+
+    for (j = 1; j < n; j++) {
+      add_neighbour(new_node, family_name, j);
+    }
+    break;
+  case STAR_IN:
+    /* do nothing */
+    break;
+  default:
+    std::cout << "Invalid option";
   }
-
   /* Push node on to global nodes list */
   nodes.push_back(new_node);
 
   /* Print details of node just added */
   print_node(nodes.back());
 
-  /* Loop through nodes in ring */
+  /* Loop through spokes */
 
   for (i = 1; i < n; i++) {
 
@@ -482,17 +516,25 @@ void add_star(std::string family_name, int n) {
     if(!node_check(nodes.size()))
       error_message("Node limit exceeded");
 
-    /* Insert name of next node */
-    new_node = initialize_node(family_name, i);
+    switch(mode) {
+    case STAR_BI:
+    case STAR_IN:
+      /* Insert name of next node */
+      new_node = initialize_node(family_name, i);
 
-    /* Add first neighbour */
-    add_neighbour(new_node, family_name, 0);
+      /* Add first neighbour */
+      add_neighbour(new_node, family_name, 0);
 
-    /* Push node on to global nodes list */
-    nodes.push_back(new_node);
+      /* Push node on to global nodes list */
+      nodes.push_back(new_node);
 
-    /* Print details of node just added */
-    print_node(nodes.back());
+      /* Print details of node just added */
+      print_node(nodes.back());
+      break;
+    case STAR_OUT:
+      /* do nothing */
+      break;
+    }
   }
 }
 
