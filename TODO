@@ -1,0 +1,25 @@
+1. Fix up documentation at the beginning
+
+2. Create a man page
+
+3. Add options for modes and symmetry for the different functions
+
+4. Check for existing nodes
+
+5. Add support to read from files (command line or a load command or both?)
+
+6. Pass the graph as an arguement to the functions - should this be converted into a class?
+
+7. Add a command to print details of the topology and nodes so far
+
+8. Add shorthand * for the commands
+
+9. Factor out macros and headers, add guards
+
+10. Deal with edge cases - 0, 1 nodes
+
+11. Default behaviour for + a b
+
+12. Error handling in UDFs
+
+13. Remove node size checks inside functions
