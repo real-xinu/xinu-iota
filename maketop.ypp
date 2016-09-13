@@ -83,6 +83,13 @@
 #define NAMLEN 128
 #define MAX 45
 
+#define STAR_IN 0
+#define STAR_OUT 1
+#define STAR_BI 2
+
+#define BIDIREC 0
+#define UNIDIREC 1
+
 #ifdef DEBUG
 #  define debug(x) x
 #else
