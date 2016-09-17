@@ -20,6 +20,7 @@
 "="		{ debug(printf("Found equals %s\n", yytext)); return(EQ);}
 "("		{ debug(printf("Found left paren %s\n", yytext)); return(LEFTPAREN);}
 ")"		{ debug(printf("Found right paren %s\n", yytext)); return(RIGHTPAREN);}
+","		{ debug(printf("Found comma %s\n", yytext)); return(COMMA); }
 "maketop"	{ debug(printf("Found maketop\n")); return(MAKETOP);}
 "ring"		{ debug(printf("Found ring")); return(RING);}
 "linear"	{ debug(printf("Found linear")); return(LINEAR);}
@@ -32,6 +33,6 @@
 
 [0-9]+\.[0-9]+  { debug(printf("Found a floating-point number:%s\n", yytext)); }
 [0-9]+          { debug(printf("Found an integer:%s\n", yytext)); yylval.ival = atoi(yytext); return(INT); }
+[a-z]		{ debug(printf("Found a char: %c\n", yytext[0])); yylval.cval = yytext[0]; return (CHAR); }
 [a-zA-Z0-9]+    { debug(printf("Found a string: %s\n", yytext)); }
-
 %%
