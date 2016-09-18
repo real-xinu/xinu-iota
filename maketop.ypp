@@ -101,7 +101,7 @@ extern void stop_mode_char();
 program : statements MAKETOP {debug(std::cout << "End\n"); output_to_file(); exit(1); }
 ;
 
- statement : assign {std::cout << ">>> ";}| connect {std::cout << ">>> ";}
+statement : assign {std::cout << ">>> ";}| connect {std::cout << ">>> ";}
 ;
 
 node: NODE
