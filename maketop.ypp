@@ -98,10 +98,10 @@ extern void stop_mode_char();
 
 %%
 
-program : statements MAKETOP {debug(printf ("End\n")); output_to_file(); exit(1); }
+program : statements MAKETOP {debug(std::cout << "End\n"); output_to_file(); exit(1); }
 ;
 
-statement : assign {printf(">>> ");}| connect {printf(">>> ");}
+ statement : assign {std::cout << ">>> ";}| connect {std::cout << ">>> ";}
 ;
 
 node: NODE
@@ -199,7 +199,7 @@ statements : /* empty */|
 int main( int argc, char *argv[] )
 {
   while (true) {
-    printf(">>> ");
+    std::cout << ">>> ";
     yyparse ();
     yyrestart(yyin);
   }
