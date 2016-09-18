@@ -173,8 +173,6 @@ int_node: INT
   }
 };
 
-mode_prod: COMMA CHAR { $$ = $2; printf("%d", yychar);};
-
 assign : node EQ RING LEFTPAREN int_node RIGHTPAREN
 		{add_ring($1, $5);} |
 	 node EQ RING LEFTPAREN int_node { recognize_mode_char(); } COMMA CHAR {stop_mode_char(); } RIGHTPAREN
