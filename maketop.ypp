@@ -78,16 +78,21 @@ extern "C" int yylex();
 extern "C" int yyparse();
 extern void yyrestart(FILE *input_file);
 extern "C" FILE* yyin;
+extern void recognize_mode_char();
+extern void stop_mode_char();
 
 %}
 
 %union {
 	int ival;
 	char *node_name_value;
+	char cval;
 }
 
 %token <ival> INT
 %token <node_name_value> NODE
+%token <cval> CHAR
+%type <cval> mode_prod
 %type <node_name_value> node
 %type <ival> int_node
 
@@ -162,20 +167,28 @@ connect : node LEFT node |
 int_node: INT
 {
   $$ = $1;
-  if (nodes.size() + $1 > MAX) {
+  if (node_check($1) == 0) {
     std::cout << "Node limit exceeded" << std::endl;
     YYABORT;
   }
 };
 
+mode_prod: COMMA CHAR { $$ = $2; printf("%d", yychar);};
+
 assign : node EQ RING LEFTPAREN int_node RIGHTPAREN
 		{add_ring($1, $5);} |
+	 node EQ RING LEFTPAREN int_node { recognize_mode_char(); } COMMA CHAR {stop_mode_char(); } RIGHTPAREN
+	 {add_ring($1, $5, $8);} |
 	 node EQ LINEAR LEFTPAREN int_node RIGHTPAREN
 		{add_linear($1, $5);} |
+	 node EQ LINEAR LEFTPAREN int_node { recognize_mode_char(); } COMMA CHAR { stop_mode_char(); } RIGHTPAREN
+	 {add_linear($1, $5, $8);} |
 	 node EQ COMPLETE LEFTPAREN int_node RIGHTPAREN
 		{add_complete($1, $5);} |
 	 node EQ STAR LEFTPAREN int_node RIGHTPAREN
-		{add_star($1, $5);}
+	 	{add_star($1, $5);} |
+	 node EQ STAR LEFTPAREN int_node { recognize_mode_char(); } COMMA CHAR { stop_mode_char(); } RIGHTPAREN
+		{add_star($1, $5, $8);}
 ;
 
 statements : /* empty */|
