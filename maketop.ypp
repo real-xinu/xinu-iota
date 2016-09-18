@@ -92,7 +92,6 @@ extern void stop_mode_char();
 %token <ival> INT
 %token <node_name_value> NODE
 %token <cval> CHAR
-%type <cval> mode_prod
 %type <node_name_value> node
 %type <ival> int_node
 
