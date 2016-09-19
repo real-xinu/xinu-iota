@@ -1,15 +1,30 @@
 /* net.h */
 
+struct	a_msg {
+	int32	amsgtyp;
+	int32	anodeid;
+	union {
+		byte	amcastaddr[6];
+		byte	apingdata[8];
+		byte	aacking[16];
+		byte	aerrmsg[16];
+	};
+};
+
 /* Structure of an Ethernet packet */
 #pragma pack(1)
 struct	netpacket_e {
 	byte	net_ethdst[ETH_ADDR_LEN];/* Ethernet destination	*/
 	byte	net_ethsrc[ETH_ADDR_LEN];/* Ethernet source		*/
 	uint16	net_ethtype;		 /* Ethernet type		*/
-	byte	net_ethdata[1500];	 /* Ethernet payload		*/
+	union {
+	  byte	net_ethdata[1500];	 /* Ethernet payload		*/
+	  struct a_msg msg;
+	};
 };
 #pragma pack()
 
+#define	RAD_FC_FT	0x0007
 #define	RAD_FC_FT_BCN	0x0000
 #define	RAD_FC_FT_DAT	0x0001
 #define	RAD_FC_FT_ACK	0x0002
@@ -38,6 +53,10 @@ struct	netpacket_e {
 /* Structure of a Radio packet */
 #pragma pack(1)
 struct	netpacket_r {
+	byte	net_ethdst[6];
+	byte	net_ethsrc[6];
+	uint16	net_ethtype;
+	byte	net_pad;
 	uint16	net_radfc;		/* Frame Control		*/
 	byte	net_radseq;		/* Sequence number		*/
 	byte	net_raddstpan[2];	/* Destination PAN ID		*/
@@ -89,7 +108,7 @@ struct	netpacket {
 };
 #pragma pack()
 
-#define	PACKLEN	(sizeof(struct netpacket_e)+16)
+#define	PACKLEN	(sizeof(struct netpacket_e)+32)
 
 #define	NETPRIO	500
 

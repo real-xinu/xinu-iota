@@ -10,13 +10,9 @@ void	icmp_in (
 		struct	netpacket *pkt	/* Packet buffer pointer	*/
 		)
 {
-	//kprintf("Incoming ICMP packet: type %02x, code %02x\n", pkt->net_ictype, pkt->net_iccode);
-
-	//kprintf("ICMP cksum: %04X, %04X\n", pkt->net_iccksum, icmp_cksum(pkt));
-
 	/* Verify ICMP checksum */
 	if(icmp_cksum(pkt) != 0) {
-		return;
+		//return;
 	}
 
 	switch(pkt->net_ictype) {
@@ -29,8 +25,11 @@ void	icmp_in (
 
 	case ICMP_TYPE_NS:
 	case ICMP_TYPE_NA:
-		//kprintf("Incoming nd packet\n");
 		nd_in(pkt);
+		break;
+
+	case ICMP_TYPE_RPL:
+		rpl_in(pkt);
 		break;
 
 	default:

@@ -15,24 +15,40 @@ process	counterproc() {
 process	main(void)
 {
 	/* Start the network */
-	//net_init();
-	//tcp_init();
 
-	int32	tslot = tcp_register(iftab[0].if_ipucast[0].ipaddr, 50001, 0, 0);
-	kprintf("TCP slot = %d\n", tslot);
+	wsnode_join();
 
-	int32	nslot;
-	int32	rv;
+	byte	prefix[] = {0x20, 0x01, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0};
 
-	rv = tcp_recv(tslot, (char *)&nslot, 4);
-	kprintf("TCP connected: %d\n", nslot);
+	memcpy(iftab[1].if_ipucast[1].ipaddr, prefix, 8);
+	memcpy(iftab[1].if_ipucast[1].ipaddr+8, iftab[1].if_ipucast[0].ipaddr+8, 8);
 
-	if(rv != SYSERR) {
-		while(TRUE) {
-			tcp_send(nslot, "Ping...\r\n", 10);
-			sleep(1);
+	memcpy(iftab[1].if_ipmcast[iftab[1].if_nipmcast].ipaddr, ip_allrplnodesmc, 16);
+	iftab[1].if_nipmcast++;
+
+	while(1) {
+		char	c;
+		kprintf("Enter r for root, or n for non-root:");
+		read(CONSOLE, &c, 1);
+		if(c == 'r') {
+			kprintf("Running as root\n");
+
+			iftab[1].if_nipucast++;
+
+			rpl_lbr_init();
+
+			break;
+		}
+		else if(c == 'n') {
+			kprintf("Running as a node\n");
+			rpl_send_dis(-1, 1);
+			break;
 		}
 	}
+
+	while(1);
+
 
 	kprintf("\n...creating a shell\n");
 	recvclr();

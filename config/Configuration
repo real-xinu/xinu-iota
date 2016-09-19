@@ -116,7 +116,7 @@ spi:
 		-w ionull	-s ionull	-n spicontrol
 		-intr ionull
 */
-/*
+
 rad:
 	on spi
 		-i radinit	-o ionull	-c ionull
@@ -125,10 +125,10 @@ rad:
 		-intr ionull
 	on eth
 		-i radinit	-o ioerr	-c ioerr
-		-r radread	-g ioerr	-p ioerr
+		-r ionull	-g ioerr	-p ioerr
 		-w radwrite	-s ioerr	-n radcontrol
 		-intr ioerr
-*/
+
 %%
 
 /* Actual device declarations that each give the name of a device that	*/
@@ -194,7 +194,7 @@ rad:
 
    /* Radio device */
 
-   /*RADIO0 is rad on eth*/
+   RADIO0 is rad on eth
    /*RADIO1 is rad on spi*/
 
 %%

@@ -73,8 +73,12 @@ process	netin(
 
 			switch(epkt->net_ethtype) {
 
+			case ETH_TYPE_A:
+				amsg_handler(epkt);
+				freebuf((char *)epkt);
+				break;
+
 			case ETH_IPV6:
-				kprintf("Incoming IPv6 packet\n");
 				ip_in((struct netpacket *)epkt->net_ethdata);
 				freebuf((char *)epkt);
 				break;
@@ -85,8 +89,8 @@ process	netin(
 			}
 		}
 		else if(ifptr->if_type == IF_TYPE_RAD) {
-			kprintf("Incoming radio packet\n");
 			rpkt = (struct netpacket_r *)pkt;
+			ip_in((struct netpacket *)rpkt->net_raddata);
 			freebuf((char *)rpkt);
 		}
 		else {
@@ -106,13 +110,12 @@ process	netin(
 process	rawin(void) {
 
 	struct	netpacket_e *epkt;
-	struct	netpacket *pkt;
-	struct	netiface *ifptr;
+	struct	netpacket_r *rpkt;
+	struct	netpacket_r *ackpkt;
+	byte	ackbuf[14+24+30];
 	int32	retval;
 	intmask	mask;
-	int32	count = 0;
-
-	kprintf("rawin created\n");
+	int32	rv;
 
 	while(TRUE) {
 
@@ -123,41 +126,126 @@ process	rawin(void) {
 			panic("rawin: cannot read from the ethernet device");
 		}
 
-		//kprintf("incoming packet type: %02x\n", ntohs(epkt->net_ethtype));
-
 		switch(ntohs(epkt->net_ethtype)) {
 
-		case ETH_RAD:
-			kprintf("rawin: radio packet: %d\n", ++count);
-			ifptr = &iftab[1];
-			//pkt->net_iface = 1;
-			freebuf((char *)epkt);
-			continue;
+		case ETH_TYPE_B:
+
+			#ifdef DEBUG_RAWIN
+			kprintf("rawin: incoming TYPE_B\n");
+			#endif
+
+			rv = srbit(epkt->net_ethdst, info.nodeid, 1);
+			if(rv <= 0) {
+				#ifdef DEBUG_RAWIN
+				kprintf("rawin: srbit rv = %d from a non-neighbor:", rv);
+				int32	i;
+				for(i = 0 ; i < 6; i++) {
+					kprintf("%02x ", epkt->net_ethsrc[i]);
+				}
+				kprintf("\n");
+				#endif
+				freebuf((char *)epkt);
+				break;
+			}
+
+			#ifdef DEBUG_RAWIN
+			kprintf("rawin: srbit rv = %d\n", rv);
+			#endif
+			rpkt = (struct netpacket_r *)epkt;
+
+			if(memcmp(rpkt->net_raddst, iftab[1].if_hwucast, 8) &&
+			   memcmp(rpkt->net_raddst, iftab[1].if_hwbcast, 8)) {
+				#ifdef DEBUG_RAWIN
+				kprintf("rawin: radpkt not for us");
+				int32	i;
+				for(i = 0; i < 8; i++) {
+					kprintf("%02x ", rpkt->net_raddst[i]);
+				}
+				kprintf("\n");
+				#endif
+				freebuf((char *)rpkt);
+				break;
+			}
+
+			switch(rpkt->net_radfc & RAD_FC_FT) {
+
+			case RAD_FC_FT_DAT:
+
+				#ifdef DEBUG_RAWIN
+				kprintf("rawin: incoming radio data\n");
+				#endif
+				ackpkt = (struct netpacket_r *)ackbuf;
+
+				memcpy(ackpkt->net_ethsrc, iftab[0].if_hwucast, 6);
+				memcpy(ackpkt->net_ethdst, info.mcastaddr, 6);
+				ackpkt->net_ethtype = htons(ETH_TYPE_B);
+
+				ackpkt->net_radfc = RAD_FC_FT_ACK |
+						   RAD_FC_DAM3 |
+						   RAD_FC_FV2 |
+						   RAD_FC_SAM3;
+
+				memcpy(ackpkt->net_radsrc, iftab[1].if_hwucast, 8);
+				memcpy(ackpkt->net_raddst, rpkt->net_radsrc, 8);
+
+				#ifdef DEBUG_RAWIN
+				kprintf("rawin: sending ack\n");
+				#endif
+				write(ETHER0, (char *)ackpkt, 14 + 24 + 30);
+
+				mask = disable();
+				if(semcount(iftab[1].if_iqsem) >= 10) {
+					restore(mask);
+					freebuf((char *)epkt);
+					break;
+				}
+
+				((struct netpacket *)rpkt->net_raddata)->net_iface = 1;
+				iftab[1].if_inputq[iftab[1].if_iqtail++] = epkt;
+				if(iftab[1].if_iqtail >= 10) {
+					iftab[1].if_iqtail = 0;
+				}
+
+				restore(mask);
+
+				signal(iftab[1].if_iqsem);
+				break;
+
+			case RAD_FC_FT_ACK:
+
+				#ifdef DEBUG_RAWIN
+				kprintf("rawin: incoming radio ack\n");
+				#endif
+				send(radtab[0].ro_process, OK);
+				freebuf((char *)epkt);
+				break;
+
+			default:
+				freebuf((char *)epkt);
+				break;
+			}
 			break;
 
 		default:
-			ifptr = &iftab[0];
-			pkt = (struct netpacket *)epkt->net_ethdata;
-			pkt->net_iface = 0;
+			mask = disable();
+
+			if(semcount(iftab[0].if_iqsem) >= 10) {
+				restore(mask);
+				freebuf((char *)epkt);
+				break;
+			}
+
+			((struct netpacket *)epkt->net_ethdata)->net_iface = 0;
+			iftab[0].if_inputq[iftab[0].if_iqtail++] = epkt;
+			if(iftab[0].if_iqtail >= 10) {
+				iftab[0].if_iqtail = 0;
+			}
+
+			restore(mask);
+
+			signal(iftab[0].if_iqsem);
 			break;
 		}
-
-		mask = disable();
-
-		if(semcount(ifptr->if_iqsem) >= 10) {
-			kprintf("Interface queue full\n");
-			freebuf((char *)epkt);
-			continue;
-		}
-
-		ifptr->if_inputq[ifptr->if_iqtail] = epkt;
-		ifptr->if_iqtail++;
-		if(ifptr->if_iqtail >= 10) {
-			ifptr->if_iqtail = 0;
-		}
-
-		signal(ifptr->if_iqsem);
-		restore(mask);
 	}
 
 	return OK;

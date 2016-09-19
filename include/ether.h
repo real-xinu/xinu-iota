@@ -37,7 +37,9 @@ struct	etherPkt {
 					/*  	size(cache alignment)	*/
 
 #define ETH_IPV6 0x86dd
-#define	ETH_RAD	 0x1234
+#define	ETH_RAD	 0x1247
+#define	ETH_TYPE_A	0x88b5
+#define	ETH_TYPE_B	0x88b6
 
 /* State of the Ethernet interface */
 

@@ -4,6 +4,13 @@
 #define	ICMP_TYPE_ERP	129
 #define	ICMP_TYPE_NS	135
 #define	ICMP_TYPE_NA	136
+#define	ICMP_TYPE_RPL	155
+
+#define	ICMP_CODE_RPL_DIS	0
+#define	ICMP_CODE_RPL_DIO	1
+#define	ICMP_CODE_RPL_DAO	2
+#define	ICMP_CODE_RPL_DAOK	3
+#define	ICMP_CODE_RPL_CC	0x8A
 
 #pragma pack(1)
 struct	icmp_hdr {

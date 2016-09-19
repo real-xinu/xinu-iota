@@ -14,6 +14,10 @@ byte	ip_nd_snmcprefix[] = { 0xff, 0x02, 0, 0, 0, 0, 0, 0,
 byte	ip_allnodesmc[] = { 0xff, 0x01, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 1};
 
+/* ALL RPL nodes multicast address */
+byte	ip_allrplnodesmc[] = { 0xff, 0x02, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0x1a};
+
 /* Unspecified IP address */
 byte	ip_unspec[16] = {0};
 
@@ -32,6 +36,10 @@ void	ip_in (
 	intmask	mask;			/* Interrupt mask		*/
 	int32	i;			/* Index variable		*/
 
+	#ifdef DEBUG_IP
+	kprintf("ip_in: incoming IP packet %d\n", pkt->net_iplen);
+	#endif
+
 	/* Verify that the version is 6 */
 	if((pkt->net_ipvtch & 0xf0) != 0x60) {
 		kprintf("IP version incorrect\n");
@@ -40,7 +48,7 @@ void	ip_in (
 
 	/* Check the interface on which the packet has arrived */
 	if(pkt->net_iface < 0 || pkt->net_iface >= NIFACES) {
-		kprintf("Invalid interface number\n");
+		kprintf("Invalid interface number %d\n", pkt->net_iface);
 		return;
 	}
 
@@ -63,7 +71,10 @@ void	ip_in (
 			}
 		}
 		if(i >= ifptr->if_nipucast) {
-			//forward the packet
+			//TODO forward the packet
+			#ifdef DEBUG_IP
+			kprintf("ip_in: must forward\n");
+			#endif
 			restore(mask);
 			return;
 		}
@@ -77,6 +88,7 @@ void	ip_in (
 			}
 		}
 		if(i >= ifptr->if_nipmcast) {
+			kprintf("ip_in: multicast address not found\n");
 			restore(mask);
 			return;
 		}
@@ -84,6 +96,10 @@ void	ip_in (
 
 	/* If we are here, that means it is either a local packet or	*/
 	/* a source routed packet. Let's process the extensions		*/
+
+	#ifdef DEBUG_IP
+	kprintf("ip_in: calling ip_in_ext\n");
+	#endif
 
 	ip_in_ext(pkt);
 
@@ -98,12 +114,18 @@ void	ip_in_ext (
 		struct	netpacket *pkt	/* Packet pointer	*/
 		)
 {
+	struct	netpacket *inpkt;	/* Inner IP packet		*/
+	struct	netpacket *fwpkt;	/* Packet to be forwarded	*/
 	struct	ip_ext_hdr *exptr;	/* Extension header pointer	*/
+	struct	netiface *ifptr;	/* Interface pointer		*/
 	byte	tmpaddr[16];		/* Temporary address buffer	*/
 	byte	nh;			/* Next header value		*/
 	bool8	first;			/* Flag indicates first header	*/
 	int32	l4len;			/* Layer 4 data length		*/
 	int32	i;			/* Index variable		*/
+
+	/* Get the interface pointer */
+	ifptr = &iftab[pkt->net_iface];
 
 	/* Get the next header value */
 	nh = pkt->net_ipnh;
@@ -114,99 +136,135 @@ void	ip_in_ext (
 	/* This is the first header */
 	first = TRUE;
 
-	switch(nh) {
+	while(TRUE) {
 
-	/* Hop-by-hop header */
-	case IP_EXT_HBH:
+		switch(nh) {
 
-		first = FALSE;
+		/* Hop-by-hop header */
+		case IP_EXT_HBH:
 
-		/* If hop-by-hop is not the first header, discard packet*/
-		if(!first) {
-			//freebuf_np(pkt);
-			return;
-		}
-
-		//Process the options
-
-		nh = exptr->ipext_nh;
-		exptr = (struct ip_ext_hdr *)((char *)exptr + 8 + exptr->ipext_len * 8);
-		break;
-	
-	/* Routing Header */
-	case IP_EXT_RH:
-
-		first = FALSE;
-
-		if(exptr->ipext_rhrt == 0) { /* Routing type = 0 */
-
-			if(exptr->ipext_rhsegs == 0) {
-				nh = exptr->ipext_nh;
-				exptr = (struct ip_ext_hdr *)((char *)exptr + 8 + exptr->ipext_len * 8);
-				break;
-			}
-
-			if(exptr->ipext_len & 0x1) {
-				//Send ICMP Parameter problem
+			/* If hop-by-hop is not the first header, discard packet*/
+			if(!first) {
+				//freebuf_np(pkt);
 				return;
 			}
 
-			if(exptr->ipext_rhsegs > (exptr->ipext_len / 2)) {
-				//Send ICMP Parameter problem
+			first = FALSE;
+
+			#ifdef DEBUG_IP
+			kprintf("ip_in_ext: hbh, next %02x\n", exptr->ipext_nh);
+			#endif
+			//Process the options
+
+			nh = exptr->ipext_nh;
+			exptr = (struct ip_ext_hdr *)((char *)exptr + 8 + exptr->ipext_len * 8);
+			break;
+		
+		/* Routing Header */
+		case IP_EXT_RH:
+
+			first = FALSE;
+
+			if(exptr->ipext_rhrt == 0) { /* Routing type = 0 */
+
+				if(exptr->ipext_rhsegs == 0) {
+					nh = exptr->ipext_nh;
+					exptr = (struct ip_ext_hdr *)((char *)exptr + 8 + exptr->ipext_len * 8);
+					break;
+				}
+
+				if(exptr->ipext_len & 0x1) {
+					//Send ICMP Parameter problem
+					return;
+				}
+
+				if(exptr->ipext_rhsegs > (exptr->ipext_len / 2)) {
+					//Send ICMP Parameter problem
+					return;
+				}
+
+				exptr->ipext_rhsegs--;
+
+				i = (exptr->ipext_len / 2) - exptr->ipext_rhsegs;
+
+				if(isipmc(exptr->ipext_rhaddrs[i])) {
+					return;
+				}
+
+				memcpy(tmpaddr, pkt->net_ipdst, 16);
+				memcpy(pkt->net_ipdst, exptr->ipext_rhaddrs[i], 16);
+				memcpy(exptr->ipext_rhaddrs[i], tmpaddr, 16);
+
+				if(pkt->net_iphl <= 1) {
+					//Send ICMP Time Exceeded
+					return;
+				}
+
+				pkt->net_iphl--;
+
+				//Forward the packet
+				return;
+			}
+			else { /* Unrecognized routing type */
+				return;
+			}
+			nh = exptr->ipext_nh;
+			exptr = (struct ip_ext_hdr *)((char *)exptr + 8 + exptr->ipext_len * 8);
+			break;
+
+		case IP_IP:
+			#ifdef DEBUG_IP
+			kprintf("ip_in_ext: IP in IP encapsulation\n");
+			#endif
+			inpkt = (struct netpacket *)exptr;
+			for(i = 0; i < ifptr->if_nipucast; i++) {
+				if(!memcmp(inpkt->net_ipdst, ifptr->if_ipucast[i].ipaddr, 16)) {
+					break;
+				}
+			}
+			if(i >= ifptr->if_nipucast) {
+				//Forward the packet
+				#ifdef DEBUG_IP
+				kprintf("ip_in_ext: must forward\n");
+				#endif
+				fwpkt = (struct netpacket *)getbuf(netbufpool);
+				memcpy(fwpkt, inpkt, 40 + ntohs(inpkt->net_iplen));
+				ip_ntoh(fwpkt);
+				ip_send(fwpkt);
 				return;
 			}
 
-			exptr->ipext_rhsegs--;
+			pkt = inpkt;
+			nh = pkt->net_ipnh;
+			exptr = (struct ip_ext_hdr *)pkt->net_ipdata;
+			break;
 
-			i = (exptr->ipext_len / 2) - exptr->ipext_rhsegs;
+		//IP_UDP:
+		case IP_ICMP:
+			/* Process ICMP packet */
+			if((char *)exptr != (char *)pkt->net_ipdata) {
+				l4len = pkt->net_iplen - ((char *)exptr - (char *)pkt->net_ipdata);
+				memcpy(pkt->net_ipdata, exptr, l4len);
+				pkt->net_iplen = l4len;
+			}
+			#ifdef DEBUG_IP
+			kprintf("ip_in_ext: calling icmp_in\n");
+			#endif
+			icmp_in(pkt);
+			return;
 
-			if(isipmc(exptr->ipext_rhaddrs[i])) {
+		case IP_TCP:
+			if(tcpcksum(pkt) != 0) {
 				return;
 			}
+			tcp_ntoh(pkt);
+			tcp_in(pkt);
+			return;
 
-			memcpy(tmpaddr, pkt->net_ipdst, 16);
-			memcpy(pkt->net_ipdst, exptr->ipext_rhaddrs[i], 16);
-			memcpy(exptr->ipext_rhaddrs[i], tmpaddr, 16);
-
-			if(pkt->net_iphl <= 1) {
-				//Send ICMP Time Exceeded
-				return;
-			}
-
-			pkt->net_iphl--;
-
-			//Forward the packet
+		default:
+			kprintf("Unknown IP next header: %02x. Discarding packet\n", nh);
 			return;
 		}
-		else { /* Unrecognized routing type */
-			return;
-		}
-		nh = exptr->ipext_nh;
-		exptr = (struct ip_ext_hdr *)((char *)exptr + 8 + exptr->ipext_len * 8);
-		break;
-
-	//IP_UDP:
-	//IP_TCP:
-	case IP_ICMP:
-		/* Process ICMP packet */
-		if((char *)exptr != (char *)pkt->net_ipdata) {
-			l4len = pkt->net_iplen - ((char *)exptr - (char *)pkt->net_ipdata);
-			memcpy(pkt->net_ipdata, exptr, l4len);
-			pkt->net_iplen = l4len;
-		}
-		icmp_in(pkt);
-		return;
-
-	case IP_TCP:
-		if(tcpcksum(pkt) != 0) {
-			return;
-		}
-		tcp_ntoh(pkt);
-		tcp_in(pkt);
-		return;
-
-	default:
-		kprintf("Unknown IP next header: %02x. Discarding packet\n", nh);
 	}
 }
 
@@ -281,7 +339,11 @@ int32	ip_route (
 		}
 
 		ipfptr = &ip_fwtab[i];
-		if(!memcmp(ipdst, ipfptr->ipfw_prefix.ipaddr,
+
+		if(ipfptr->ipfw_prefix.prefixlen == 0) {
+			found = i;
+		}
+		else if(!memcmp(ipdst, ipfptr->ipfw_prefix.ipaddr,
 					ipfptr->ipfw_prefix.prefixlen)) {
 			if(ipfptr->ipfw_prefix.prefixlen > maxlen) {
 				found = i;
@@ -330,10 +392,20 @@ int32	ip_send (
 	int32	retval;			/* Return value variable	*/
 	intmask	mask;			/* Interrupt mask		*/
 
+	#ifdef DEBUG_IP
+	kprintf("ip_send: sending to "); ip_printaddr(pkt->net_ipdst);
+	kprintf("\n");
+	#endif
+
 	/* Route the packet */
 	retval = ip_route(pkt->net_ipdst, pkt->net_ipsrc, nxthop, &pkt->net_iface);
 
-	//kprintf("ip_send: ip_route returns %d\n", retval);
+	#ifdef DEBUG_IP
+	kprintf("ip_send: ip_route returns %d\n", retval);
+	kprintf("ip_send: nxthop: "); ip_printaddr(nxthop);
+	kprintf("\n");
+	kprintf("ip_send: iface = %d\n", pkt->net_iface);
+	#endif
 
 	/* If we cannot route the packet, discard it and return */
 	if(retval == SYSERR) {
@@ -365,10 +437,20 @@ int32	ip_send (
 
 	ifptr = &iftab[pkt->net_iface];
 
+	/* If this is to be sent on radio, RPL rules apply */
+	if(ifptr->if_type == IF_TYPE_RAD) {
+		ip_send_rpl(pkt, nxthop);
+		restore(mask);
+		return OK;
+	}
+
 	ncptr = NULL;
 
 	/* If destination is not multicast... */
-	if(!isipmc(pkt->net_ipdst)) {
+	if(ifptr->if_type == IF_TYPE_RAD && isipllu(nxthop)) {
+		//resolve L3 to L2 using L3
+	}
+	else if(!isipmc(pkt->net_ipdst)) {
 
 		/* Look for the next hop in the neighbor cache */
 		ncindex = nd_ncfind(nxthop);
@@ -457,9 +539,146 @@ int32	ip_send (
 		return OK;
 	}
 	else {
+		freebuf((char *)pkt);
 		restore(mask);
 		return OK;
 	}
+}
+
+/*------------------------------------------------------------------------
+ * ip_send_rpl  -  Send IP datagrams using RPL protocol rules
+ *------------------------------------------------------------------------
+ */
+int32	ip_send_rpl (
+		struct	netpacket *pkt,	/* Packet buffer	*/
+		byte	nxthop[]	/* Next-hop IP address	*/
+		)
+{
+	struct	netpacket_r *rpkt;	/* Radio packet pointer	*/
+	struct	netpacket *npkt;	/* IP packet pointer	*/
+	struct	ip_ext_hdr *exptr;	/* IP extension header	*/
+	struct	netiface *ifptr;	/* Network interface	*/
+	intmask	mask;			/* Interrupt mask	*/
+	int32	iplen;			/* IP length		*/
+
+	mask = disable();
+
+	ifptr = &iftab[pkt->net_iface];
+
+	if(ifptr->if_type != IF_TYPE_RAD) {
+		restore(mask);
+		freebuf((char *)pkt);
+		return SYSERR;
+	}
+
+	/* Allocate a buffer for radio packet */
+	rpkt = (struct netpacket_r *)getbuf(netbufpool);
+	if((int32)rpkt == SYSERR) {
+		restore(mask);
+		freebuf((char *)pkt);
+		return SYSERR;
+	}
+
+	/* Initialize the ethernet fields */
+	memcpy(rpkt->net_ethsrc, iftab[0].if_hwucast, 6);
+	memcpy(rpkt->net_ethdst, info.mcastaddr, 6);
+	rpkt->net_ethtype = htons(ETH_TYPE_B);
+
+	/* Initialize the radio header fields */
+	rpkt->net_radfc = (RAD_FC_FT_DAT |
+			   RAD_FC_AR |
+			   RAD_FC_DAM3 |
+			   RAD_FC_FV2 |
+			   RAD_FC_SAM3);
+
+	rpkt->net_radseq = ifptr->if_seq++;
+
+	memcpy(rpkt->net_radsrc, ifptr->if_hwucast, 8);
+
+	iplen = 40 + ntohs(pkt->net_iplen);
+
+	/* Check the IP destination to determine next step */
+
+	if(isipmc(pkt->net_ipdst)) { /* Multicast IP */
+		memset(rpkt->net_raddst, 0xff, 8);
+		memcpy(rpkt->net_raddata, pkt, iplen);
+	}
+	else if(isipllu(pkt->net_ipdst)) { /* Link-local IP */
+
+		/* Resolve the IP address into L2 address */
+		memcpy(rpkt->net_raddst, pkt->net_ipdst+8, 8);
+		if(rpkt->net_raddst[0] & 0x02) {
+			rpkt->net_raddst[0] &= 0xfd;
+		}
+		else {
+			rpkt->net_raddst[0] |= 0x02;
+		}
+		memcpy(rpkt->net_raddata, pkt, iplen);
+	}
+	else { /* Off-link IP address */
+
+		/* Next hop must be a link-local IP */
+		if(!isipllu(nxthop)) {
+			restore(mask);
+			freebuf((char *)pkt);
+			return SYSERR;
+		}
+
+		/* Original IP packet will be encapsulated in an IP packet */
+
+		/* Outer IP header fields */
+		npkt = (struct netpacket *)rpkt->net_raddata;
+		memset(npkt, 0, 40);
+		npkt->net_ipvtch = 0x60;
+		npkt->net_iplen = 8 + iplen;
+		npkt->net_ipnh = IP_EXT_HBH;
+		npkt->net_iphl = 0xff;
+		memcpy(npkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+		memcpy(npkt->net_ipdst, nxthop, 16);
+
+		/* Hop-by-hop RPL extension header */
+		exptr = (struct ip_ext_hdr *)npkt->net_ipdata;
+		exptr->ipext_nh = IP_IP;
+		exptr->ipext_len = 0;
+		exptr->ipext_optype = 0x63;
+		exptr->ipext_optlen = 4;
+		exptr->ipext_f = 0;
+		exptr->ipext_r = 0;
+		exptr->ipext_o = 0;
+		exptr->ipext_rplinsid = 0;
+		exptr->ipext_sndrank = 0;
+
+		/* Copy the original IP Packet */
+		memcpy(npkt->net_ipdata+8, pkt, iplen);
+
+		/* Resolve L2 address from nexthop IP address */
+		memcpy(rpkt->net_raddst, nxthop+8, 8);
+		if(rpkt->net_raddst[0] & 0x02) {
+			rpkt->net_raddst[0] &= 0xfd;
+		}
+		else {
+			rpkt->net_raddst[0] |= 0x02;
+		}
+
+		iplen += 48;
+	}
+
+	#ifdef DEBUG_IP
+	int32	i;
+	kprintf("ip_send_rpl: sending radio packet\n");
+	for(i = 0; i < 14 + 24 + 40 + 8 + 40; i++) {
+		kprintf("%02x ", *((byte *)rpkt + i));
+	}
+	kprintf("\n");
+	#endif
+
+	write(RADIO0, (char *)rpkt, 14 + 24 + iplen);
+
+	freebuf((char *)pkt);
+	freebuf((char *)rpkt);
+
+	restore(mask);
+	return OK;
 }
 
 /*------------------------------------------------------------------------

@@ -170,6 +170,7 @@ extern	int32	ip_send(struct netpacket *);
 extern	void	ip_hton(struct netpacket *);
 extern	void	ip_ntoh(struct netpacket *);
 extern	void	ip_printaddr(byte []);
+extern	int32	ip_send_rpl(struct netpacket *, byte []);
 
 /* in file net.c */
 
@@ -389,7 +390,7 @@ extern  int32 radinit(struct dentry *);
 extern  int32 radread(struct dentry *, char *, int32);
 
 /* in file radwrite.c */
-extern  int32 radwrite(struct dentry *, char *, int32);
+extern  int32 radwrite(struct dentry *, char *, uint32);
 
 /* in file ramclose.c */
 extern	devcall	ramclose(struct dentry *);
@@ -527,6 +528,19 @@ extern	void	rdsprocess(struct rdscblk *);
 /* in file resched.c */
 extern	status	resched_cntl(int32);
 
+/* in file rpl.c */
+extern	void	rpl_init(int32);
+extern	void	rpl_in(struct netpacket *);
+extern	void	rpl_in_dis(struct netpacket *);
+extern	void	rpl_in_dio(struct netpacket *);
+extern	int32	rpl_parents(int32);
+extern	int32	rpl_send_dis(int32, int32);
+extern	int32	rpl_send_dio(int32, byte []);
+extern	int32	rpl_send_dao(int32, int32);
+
+/* in file rpl_lbr.c */
+extern	void	rpl_lbr_init(void);
+extern	void	rpl_in_dao(struct netpacket *);
 /* in file seek.c */
 extern	syscall	seek(did32, uint32);
 
@@ -770,6 +784,15 @@ extern	void	wakeup(void);
 
 /* in file write.c */
 extern	syscall	write(did32, char *, uint32);
+
+/* WSNode related prototypes */
+extern	void	amsg_handler(struct netpacket_e *);
+extern	void	print_info(void);
+extern	int32	srbit(byte [], int32, int32);
+extern	status	wsnode_join(void);
+extern	void	process_typb(struct netpacket_e *);
+extern	struct	netpacket_e *create_etherPkt(struct netpacket_e *);
+extern	status	wsnode_sendack(struct netpacket_e *);
 
 /* in file xdone.c */
 extern	void	xdone(void);

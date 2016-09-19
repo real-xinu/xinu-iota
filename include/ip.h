@@ -1,5 +1,6 @@
 /* ip.h  -  IP related definitions */
 
+#define	IP_IP		41
 #define	IP_ICMP		58
 #define	IP_TCP		6
 #define	IP_UDP		17
@@ -19,6 +20,16 @@ struct	ip_ext_hdr {
 	    uint32	ipext_rhresvd;	/* Reserved		*/
 	    byte	ipext_rhaddrs[][16];
 	    			 	/* List of addresses	*/
+	  };
+	  struct { /* RPL Hop-by-Hop */
+	    byte	ipext_optype;	/* Option type		*/
+	    byte	ipext_optlen;	/* Option length	*/
+	    byte	ipext_rsvd:5;	/* Reserved		*/
+	    byte	ipext_f:1;
+	    byte	ipext_r:1;
+	    byte	ipext_o:1;
+	    byte	ipext_rplinsid; /* RPL instance ID	*/
+	    uint16	ipext_sndrank;	/* Sender's rank	*/
 	  };
 	};
 };

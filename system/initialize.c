@@ -76,6 +76,8 @@ void	nulluser()
 
 	tcp_init();
 
+	rpl_init(1);
+
 	/* Enable interrupts */
 
 	enable();

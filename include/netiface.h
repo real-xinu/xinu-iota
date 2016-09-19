@@ -47,6 +47,9 @@ struct	netiface {
 	struct	ifipaddr if_ipucast[IF_MAX_NIPUCAST];
 	struct	ifipaddr if_ipmcast[IF_MAX_NIPMCAST];
 
+	/* Sequence number for radio interface */
+	byte	if_seq;
+
 	/* Neighbor Discovery related fields */
 	int32	if_nd_reachtime;
 	int32	if_nd_retranstime;
