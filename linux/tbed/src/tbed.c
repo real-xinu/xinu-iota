@@ -26,17 +26,19 @@ int main (int argc, char **argv)
     char  use[] = "error: use is tbed ( IP | <script> -f | <script> -s )\n";
     log_f = fopen (log_file_path, "w");
     /*DEBUG */ //printf("%s\n", ip_list[0]);
-    if ( (argc != 2)  && (argc != 3) ) {
+    if ( (argc != 2)  && (argc != 3) && (argc !=4)) {
         fprintf (stderr, "%s", use);
         exit (1);
     }
 
     if (argv[2] != NULL) {
-        if (!strcmp ("-s", argv[2])) {
+        if (!strcmp ("-s", argv[2]) && argv[3] == NULL) {
             fp = stdout;
+	    SRV_IP = "0.0.0.0";
 
-        } else if (!strcmp ("-f", argv[2] )) {
+        } else if (!strcmp ("-f", argv[2] ) && argv[3] == NULL) {
             fp = fopen (make_result_file (argv[1]), "w");
+	    SRV_IP = "0.0.0.0";
         }
 
         SRV_IP = "0.0.0.0";
