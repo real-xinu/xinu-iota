@@ -40,8 +40,15 @@ int main (int argc, char **argv)
             fp = fopen (make_result_file (argv[1]), "w");
 	    SRV_IP = "0.0.0.0";
         }
+	else if((!strcmp("-f", argv[3])) && argv[2] != NULL)
+	{
 
-        SRV_IP = "0.0.0.0";
+                fp = fopen (make_result_file (argv[1]), "w");
+                SRV_IP = argv[2];
+
+	}
+
+      
         udp_process (SRV_IP, argv[1]);
 
     } else {
