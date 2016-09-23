@@ -47,6 +47,13 @@ int main (int argc, char **argv)
                 SRV_IP = argv[2];
 
 	}
+	else if((!strcmp("-s", argv[3])) && argv[2] != NULL)
+	{
+
+                fp = stdout;
+                SRV_IP = argv[2];
+
+	}
 
       
         udp_process (SRV_IP, argv[1]);
