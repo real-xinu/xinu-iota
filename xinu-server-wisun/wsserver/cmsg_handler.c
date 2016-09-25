@@ -102,6 +102,7 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
         case C_TS_REQ:
             kprintf ( "Message type is %d\n", C_TS_REQ );
             cmsg_reply->cmsgtyp = htonl ( C_TS_RESP );
+	    cmsg_reply->uptime  = htonl(clktime);
             break;
 
         case C_MAP:

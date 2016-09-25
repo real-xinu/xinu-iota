@@ -17,7 +17,7 @@ process	main(void)
 	/* Start the network */
 	net_init();
 
-	sleep(7);
+	sleep(5);
 
 	kprintf("\n...creating a node\n");
 	recvclr();

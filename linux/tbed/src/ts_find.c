@@ -21,6 +21,7 @@ int ts_find()
     tv.tv_sec = 0;
     tv.tv_usec = TIME_OUT_TS;
     char list_ip[15][46];
+    unsigned int uptime[15]; 
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons (PORT);
 
@@ -81,6 +82,7 @@ int ts_find()
 
             if (flag == 0) {
                 strcpy (list_ip[j], inet_ntoa (si_other.sin_addr));
+		uptime[j] = ntohl(buf->uptime);
                 j++;
             }
         }
@@ -94,7 +96,7 @@ int ts_find()
      * print the list of IP addresses
      * -----------------------------------------------------*/
     for (i = 0; i < j; i++) {
-        fprintf (fp, "IP address of Testbed server %d is :%s\n", i + 1, list_ip[i]);
+        fprintf (fp, "IP address of Testbed server %d is :%s, and it is running for %d seconds\n", i + 1, list_ip[i], uptime[i]);
     }
 
     tv.tv_sec = TIME_OUT;
