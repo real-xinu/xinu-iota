@@ -37,6 +37,8 @@ status wsserver_assign ( struct netpacket *pkt )
     memset ( ack_info, 0, sizeof ( ack_info ) );
     memcpy ( ack_info, ( char * ) ( assign_msg ) + 14, 16 );
     retval = write ( ETHER0, ( char * ) assign_msg, sizeof (struct etherPkt) );
+    //uint32 t1 = clktime;
+    //kprintf("t1:%d\n", t1);
     freemem ( ( char * ) assign_msg, sizeof (struct etherPkt) );
     freebuf ( ( char * ) pkt );
 

@@ -89,7 +89,7 @@ process	netin(
 				amsg_handler(epkt);
 				break;
 			case ETH_TYPE_B:
-				//process_typb(epkt);
+				process_typb(epkt);
 				break;
 
 

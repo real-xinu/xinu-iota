@@ -25,6 +25,8 @@ void ack_handler ( struct netpacket *pkt )
         if ( ack_info[3] == A_ASSIGN ) {
             topo_update_mac ( pkt );
             kprintf ( "====>Assign ACK message is received\n" );
+	    //uint32 t2 = clktime;
+	    //kprintf("t2:%d\n", t2);
 
         } else if ( ack_info[3] == A_PING ) {
             i = ntohl ( node_msg->msg.anodeid );

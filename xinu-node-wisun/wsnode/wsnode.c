@@ -15,27 +15,32 @@ struct node_info info;
  * ------------------------------------------------------*/
 void process_typb (struct netpacket_e *pkt)
 {
-    //int i;
+    int i;
     if (xon) {
-        /*if (srbit (pkt->dst, info.nodeid, 1 )) {
+
+	
+      if (srbit (pkt->net_ethdst, info.nodeid, 1 )) {
+            uint32 t1 = clktime;
+	    printf("t1:%d\n", t1);
             for (i = 0; i < 6; i++) {
-                //kprintf ("%02x:", pkt->src[i]);
+                kprintf ("%02x:", pkt->net_ethsrc[i]);
             }
 
             kprintf ("\n");
 
             for (i = 0; i < 6; i++) {
-                kprintf ("%02x:", pkt->dst[i]);
+                //kprintf ("%02x:", pkt->net_ethdst[i]);
             }
 
-            kprintf ("\ndata:%s\n", pkt->radpkt.rad_data);
-        //udp_send(slot, (char *) pkt, sizeof(struct etherPkt));
-        }*/
+            //kprintf ("\ndata:%s\n", pkt->net_ethdata);
+      } 
         freebuf ((char *)pkt);
 
     } else if (!xon) {
         freebuf ((char *)pkt);
     }
+    kprintf("\n*************************\n");
+
 }
 
 /*-------------------------------------------------------------
@@ -44,8 +49,8 @@ void process_typb (struct netpacket_e *pkt)
 
 process wsnodeapp()
 {
-    //int32 retval;
-    //int j;
+    int32 retval;
+    int j;
     /* DEBUG */
     /*
         for (j = 0; j < 6; j++) {
@@ -59,7 +64,7 @@ process wsnodeapp()
 
     kprintf("\n");
     */
-    /*while (TRUE) {
+    while (TRUE) {
         sleepms (200);
         int flag = 0;
         //kprintf ("xon:%d\n", xon);
@@ -77,28 +82,39 @@ process wsnodeapp()
                 flag = 6;
 
             if (flag != 6) {
-                struct etherPkt *pkt;
-                struct radpacket radpkt;
+                struct netpacket_e *pkt;
+		struct netpacket   *npkt;
+		npkt = (struct netpacket *)getmem(sizeof(struct netpacket));
                 char *buf;
+		//memset(npkt, 0 , PACKLEN);
+		//npkt->net_iface = 1;
+		//npkt->net_ipvtch = 0x60;
+		//npkt->net_ipnh = IP_ICMP;
+		//npkt->net_iphl = 255;
+		//npkt->net_iplen = 4 + 50;
+		
                 buf = (char *)getmem (50 * sizeof (char));
                 //buf = info.nodeid;
                 sprintf (buf, "%d", info.nodeid);
-                memcpy (radpkt.rad_data, buf, 50 * sizeof (char) );
-                pkt = ( struct etherPkt * ) getmem ( sizeof ( struct etherPkt) );
-                memcpy (pkt->src, NetData.ethucast, ETH_ADDR_LEN );
-                memcpy (pkt->dst, info.mcastaddr, ETH_ADDR_LEN );
-                pkt->type = htons (ETH_TYPE_B);
-                pkt->radpkt = radpkt;
-                retval = write ( ETHER0, ( char * )pkt, sizeof ( struct etherPkt) );
+                memcpy (npkt->net_icdata, buf, 50 * sizeof (char) );
+                pkt = ( struct netpacket_e *) getmem ( sizeof ( struct netpacket_e) );
+                memcpy (pkt->net_ethsrc, NetData.ethucast, ETH_ADDR_LEN );
+                memcpy (pkt->net_ethdst, info.mcastaddr, ETH_ADDR_LEN );
+                pkt->net_ethtype = htons (ETH_TYPE_B);
+                memcpy(pkt->net_ethdata, npkt, 1500 - 44);
+                retval = write ( ETHER0, ( char * )pkt, sizeof ( struct netpacket_e) );
 
                 if (retval > 0) {
                 }
 
-                freemem ((char *) pkt , sizeof (struct etherPkt));
+                freemem ((char *) pkt , sizeof (struct netpacket_e));
                 freemem ((char *)buf, sizeof (char) * 50);
             }
         }
-    }*/
+    }
+
+
+    
 }
 
 
