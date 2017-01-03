@@ -260,6 +260,13 @@ void	ip_in_ext (
 			tcp_ntoh(pkt);
 			tcp_in(pkt);
 			return;
+		case IP_UDP:
+		        if (udp_cksum(pkt) != 0){
+			      return;
+			}
+			udp_ntoh(pkt);
+			udp_in(pkt);
+			return;
 
 		default:
 			kprintf("Unknown IP next header: %02x. Discarding packet\n", nh);
@@ -427,6 +434,12 @@ int32	ip_send (
 		pkt->net_tcpcksum = 0;
 		cksum = tcpcksum(pkt);
 		pkt->net_tcpcksum = htons(cksum);
+		break;
+	case IP_UDP:
+	        udp_hton(pkt);
+		pkt->net_udpcksum = 0;
+		cksum = udp_cksum(pkt);
+		pkt->net_udpcksum = htons(cksum);
 		break;
 	}
 
@@ -689,7 +702,7 @@ void	ip_hton (
 		struct	netpacket *pkt
 		)
 {
-	pkt->net_iplen = ntohs(pkt->net_iplen);
+	pkt->net_iplen = htons(pkt->net_iplen);
 }
 
 /*------------------------------------------------------------------------

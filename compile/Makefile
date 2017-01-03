@@ -35,7 +35,7 @@ REBUILDFLAGS	=	-s $(TOPDIR)/system  debug.c getutime.c gettime.c 	\
 			-s $(TOPDIR)/device/nam			\
 			-s $(TOPDIR)/device/eth			\
 			-s $(TOPDIR)/device/rad radread.c _6lowpan.c \
-			-s $(TOPDIR)/net udp.c			\
+			-s $(TOPDIR)/net			\
 					pdump.c 'xinu_*'	\
 			-s $(TOPDIR)/net/tcp			\
 			-s $(TOPDIR)/shell  'xsh_rdstest*' 'xsh_arp*' 'xsh_date*' 'xsh_ipaddr*' 'xsh_ping*' 'xsh_udp*' \

@@ -757,18 +757,19 @@ extern	devcall	ttyread(struct dentry *, char *, int32);
 extern	devcall	ttywrite(struct dentry *, char *, int32);
 
 /* in file udp.c */
-/*
+
 extern	void	udp_init(void);
 extern	void	udp_in(struct netpacket *);
-extern	uid32	udp_register(uint32, uint16, uint16);
-extern	int32	udp_recv(uid32, char *, int32, uint32);
-extern	int32	udp_recvaddr(uid32, uint32 *, uint16 *, char *, int32, uint32);
-extern	status	udp_send(uid32, char *, int32);
-extern	status	udp_sendto(uid32, uint32, uint16, char *, int32);
-extern	status	udp_release(uid32);
+extern	int32	udp_register(int32, byte[], uint16, uint16);
+extern	int32	udp_recv(int32, char *, int32, uint32);
+extern	int32	udp_recvaddr(int32, char *, int32, uint32, struct ipinfo *);
+extern	status	udp_send(int32, char *, int32);
+//extern	status	udp_sendto(uid32, uint32, uint16, char *, int32);
+//extern	status	udp_release(uid32);
+extern  uint16  udp_cksum(struct netpacket *);
 extern	void	udp_ntoh(struct netpacket *);
 extern	void	udp_hton(struct netpacket *);
-*/
+
 
 /* in file unsleep.c */
 extern	syscall	unsleep(pid32);

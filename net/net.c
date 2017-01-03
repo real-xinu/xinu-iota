@@ -60,7 +60,7 @@ process	netin(
 		wait(ifptr->if_iqsem);
 		pkt = ifptr->if_inputq[ifptr->if_iqhead];
 		ifptr->if_iqhead++;
-		if(ifptr->if_iqhead >= 10) {
+		if(ifptr->if_iqhead >= IFQSIZ) {
 			ifptr->if_iqhead = 0;
 		}
 
@@ -97,7 +97,7 @@ process	netin(
 			freebuf((char *)pkt);
 		}
 
-		freebuf((char *)pkt);
+		//freebuf((char *)pkt);
 	}
 
 	return OK;
@@ -194,7 +194,7 @@ process	rawin(void) {
 				write(ETHER0, (char *)ackpkt, 14 + 24 + 30);
 
 				mask = disable();
-				if(semcount(iftab[1].if_iqsem) >= 10) {
+				if(semcount(iftab[1].if_iqsem) >= IFQSIZ) {
 					restore(mask);
 					freebuf((char *)epkt);
 					break;
@@ -202,7 +202,7 @@ process	rawin(void) {
 
 				((struct netpacket *)rpkt->net_raddata)->net_iface = 1;
 				iftab[1].if_inputq[iftab[1].if_iqtail++] = epkt;
-				if(iftab[1].if_iqtail >= 10) {
+				if(iftab[1].if_iqtail >= IFQSIZ) {
 					iftab[1].if_iqtail = 0;
 				}
 
@@ -229,7 +229,7 @@ process	rawin(void) {
 		default:
 			mask = disable();
 
-			if(semcount(iftab[0].if_iqsem) >= 10) {
+			if(semcount(iftab[0].if_iqsem) >= IFQSIZ) {
 				restore(mask);
 				freebuf((char *)epkt);
 				break;
@@ -237,7 +237,7 @@ process	rawin(void) {
 
 			((struct netpacket *)epkt->net_ethdata)->net_iface = 0;
 			iftab[0].if_inputq[iftab[0].if_iqtail++] = epkt;
-			if(iftab[0].if_iqtail >= 10) {
+			if(iftab[0].if_iqtail >= IFQSIZ) {
 				iftab[0].if_iqtail = 0;
 			}
 

@@ -133,18 +133,21 @@ void	udp_in (
 	}
 
 	if(found == -1) {
-		freebuf((char *)pkt);
+		//freebuf((char *)pkt);
 		return;
 	}
 
 	udptr = &udptab[found];
 
 	if(udptr->udcount >= UDP_QSIZ) {
-		freebuf((char *)pkt);
+		//freebuf((char *)pkt);
 		return;
 	}
 
-	udptr->udqueue[udptr->udtail] = pkt;
+	struct netpacket *udp_pkt = (struct netpacket *)getbuf(netbufpool);
+	memcpy(udp_pkt, pkt, sizeof(struct netpacket));
+
+	udptr->udqueue[udptr->udtail] = udp_pkt;
 	udptr->udtail++;
 	if(udptr->udtail >= UDP_QSIZ) {
 		udptr->udtail = 0;
@@ -291,10 +294,12 @@ int32	udp_recvaddr (
 	}
 
 	memcpy(buf, pkt->net_udpdata, len);
-
+        
+	memcpy(udptr->udremip, pkt->net_ipsrc, 16);
 	memcpy(ipdata->ipsrc, pkt->net_ipsrc, 16);
 	memcpy(ipdata->ipdst, pkt->net_ipdst, 16);
 	ipdata->iphl = pkt->net_iphl;
+	ipdata->port = pkt->net_udpsport;
 
 	freebuf((char *)pkt);
 	restore(mask);
@@ -361,7 +366,7 @@ int32	udp_send (
 	memcpy(pkt->net_udpdata, buf, len);
 
 	kprintf("udp_send: sending\n");
-	ip_enqueue(pkt);
+	ip_send(pkt);
 
 	restore(mask);
 	return len;

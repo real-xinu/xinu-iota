@@ -51,6 +51,14 @@ struct	ip_fwentry {
 	byte	ipfw_nxthop[16];
 };
 
+struct ipinfo{
+        byte    ipsrc[16];
+	byte    ipdst[16];
+	byte    iphl;
+	uint16  port;
+};
+
+
 extern	struct	ip_fwentry ip_fwtab[];
 
 extern	byte	ip_nd_snmcprefix[];
