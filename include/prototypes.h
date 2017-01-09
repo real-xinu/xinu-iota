@@ -764,7 +764,7 @@ extern	int32	udp_register(int32, byte[], uint16, uint16);
 extern	int32	udp_recv(int32, char *, int32, uint32);
 extern	int32	udp_recvaddr(int32, char *, int32, uint32, struct ipinfo *);
 extern	status	udp_send(int32, char *, int32);
-//extern	status	udp_sendto(uid32, uint32, uint16, char *, int32);
+extern	status	udp_sendto(int32, byte[], uint16, char *, int32);
 //extern	status	udp_release(uid32);
 extern  uint16  udp_cksum(struct netpacket *);
 extern	void	udp_ntoh(struct netpacket *);
