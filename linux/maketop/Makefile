@@ -1,7 +1,7 @@
 default:
 	bison -tvd maketop.ypp
 	flex --header-file=lex.yy.h maketop.l
-	g++ lex.yy.c maketop.tab.cpp Topology.cpp -o maketop -ggdb -lfl -Wall
+	g++ lex.yy.c maketop.tab.cpp Topology.cpp -o maketop -ggdb -lfl -Wall -std=c++11
 
 clean:
 	rm -f maketop
