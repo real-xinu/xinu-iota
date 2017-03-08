@@ -967,8 +967,8 @@ int	main(
 
 		fin = fopen(infile, "rb");
 		if (fin == NULL) {
-		  printf("Can't open file");
-		  exit(1);
+			printf("Can't open file");
+			exit(1);
 		}
 
 		printf("%s\n", infile);
