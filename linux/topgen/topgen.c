@@ -845,6 +845,7 @@ int	main(
 	int	rindex;			/* Index of receiver in nodes	*/
 	char	*infile;		/* Ptr to input file name	*/
 	char	*outfile;		/* Ptr to output file name	*/
+	char	*update_file;		/* Ptr to update file name	*/
 	FILE	*fout;			/* Stdio file ptr for outfile	*/
 	FILE	*fin;			/* Stdio file ptr for intop	*/
 	struct	node	*sptr;		/* Ptr to sending node entry	*/
@@ -867,11 +868,12 @@ int	main(
 	sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
 			sentinel[4] = sentinel[5] = 0x00;
 
-	char	use[] = "error: use is topgen [-s] (filename | -u topname)\n";
+	char	use[] = "error: use is topgen [-s] (filename | -u topname [-f newtopfile])\n";
 
+	int newtopfile = 0;
 	/* Process arguments */
 
-	if ( (argc!=2) && (argc!=3) && (argc!= 4) ) {
+	if ( (argc!=2) && (argc!=3) && (argc!= 4) && (argc != 5 )) {
 		fprintf(stderr, "%s", use);
 		exit(1);
 	}
@@ -913,6 +915,29 @@ int	main(
 		}
 	}
 
+	if (argc == 5) {
+		if (strcmp(argv[1], "-u") == 0) {
+			if (strcmp(argv[3], "-f") == 0) {
+				newtopfile = 1;
+				parse = 0;
+				update_file = argv[4];
+				argv++;
+			}
+			else{
+				fprintf(stderr, "%s", use);
+				exit(1);
+			}
+		}
+		else{
+				fprintf(stderr, "%s", use);
+				exit(1);
+			}
+	}
+
+	/* Initialize data structures */
+
+	init();
+
 	/* Parse branch */
 
 	if (parse) {
@@ -920,91 +945,11 @@ int	main(
 
 		infile = argv[1];
 		outfile = malloc(strlen(infile)+3);
+
 		strcpy(outfile, infile);
 		strcat(outfile, ".0");
 
-		if (freopen(infile, "r", stdin) == NULL) {
-			fprintf(stderr, "error: cannot read input file %s\n", infile);
-			exit(1);
-		}
-
-		/* Initialize data structures */
-
-		init();
-
-		/* Start with the first token */
-
-		typ = gettok(tok);
-		if (typ == TOKEOF) {
-			fprintf(stderr, "error: no tokens found in input file %s\n", infile, 0);
-			exit(1);
-		}
-
-		/* While items remain to be processed */
-
-		while(1) {
-
-			/* Verify that the next item is the name of a sending node */
-
-			if (typ != TOKSEND) {
-				errexit("Sending node expected on line %d\n", linenum, 0);
-			}
-
-			/* Lookup name of sender and verify that the sender did	*/
-			/*	not have a previous specification		*/
-
-			sindex = lookup(tok);
-			sptr = &nodes[sindex];
-			if (sptr->nstatus == RECVDEF) {
-				errexit("error: multiple definitions for node %s on line %d\n", (long)tok, linenum);
-			}
-
-			/* Mark the sender as having appeared in a definition */
-
-			sptr->nstatus = RECVDEF;
-
-			/* Get the first receiver on the list */
-
-			typ = gettok(tok);
-
-			if (typ != TOKRECV) {
-				/* The node does not have any receivers on its	*/
-				/*  list.  An error exit can be inserted here	*/
-				/*  isolated nodes are not allowed (the current	*/
-				/*  version allows them to permit testing the	*/
-				/*  effects of isolation.			*/
-
-				if (typ == TOKEOF) {
-					break;
-				} else {
-					continue;
-				}
-			}
-
-			/* While additional receiving nodes are found, add each to the list of receivers */
-
-			while (typ == TOKRECV) {
-				rindex = lookup(tok);
-				if (rindex == sindex) {
-					errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
-				}
-				rptr = &nodes[rindex];
-				rptr->nrecv = 1;
-				sptr->nsend = 1;
-				srbit(sptr->nmcast, rindex, BIT_SET);
-				if (symmetric > 0) {
-					/* Force symmetry */
-					srbit(nodes[rindex].nmcast, sindex, BIT_SET);
-					rptr->nsend = 1;
-					sptr->nrecv = 1;
-				}
-				/* Move to the next token */
-				typ = gettok(tok);
-			}
-			if (typ == TOKEOF) {
-				break;
-			}
-		}
+		parse_topo(infile, outfile, symmetric, nodes);
 	}
 
 	/* Update branch */
@@ -1032,8 +977,11 @@ int	main(
 				break;
 			}
 			nptr = &nodes[nnodes++];
-			for(int j = 0; j < 6; j++) {
-			  nptr -> nmcast[j] = buffer[j];
+
+			if (!newtopfile){ // if file is specified, don't read old mac addresses - they're all blank
+				for(int j = 0; j < 6; j++) {
+					nptr -> nmcast[j] = buffer[j];
+				}
 			}
 		}
 
@@ -1050,20 +998,24 @@ int	main(
 
 		fclose(fin);
 
+		if (!newtopfile) {
 		/* Accept update commands from the user and apply them	*/
-		/* the topology						*/
+		  /* the topology						*/
 
-		printf("\nEnter update commands, and enter \"write\" at the end: \n");
-		scanf("%[^\n]", update_string);
-		getchar();
-
-		while(strcmp(update_string, "write") != 0) {
-			apply_update(update_string, symmetric);
-			linenum++;
-		        scanf("%[^\n]", update_string);
+			printf("\nEnter update commands, and enter \"write\" at the end: \n");
+			scanf("%[^\n]", update_string);
 			getchar();
-		}
 
+			while(strcmp(update_string, "write") != 0) {
+				apply_update(update_string, symmetric);
+				linenum++;
+				scanf("%[^\n]", update_string);
+				getchar();
+			}
+		}
+		else {
+			parse_topo(update_file, outfile, symmetric, nodes);
+		}
 		/* test for isolation, sending and receiving capabiliites */
 
 		for (i = 0; i < nnodes; i++) {
