@@ -740,6 +740,94 @@ void	find_output_file(
 	}
 }
 
+void parse_topo(char *infile, char *outfile, int symmetric, struct node nodes[]) {
+	char	tok[NAMLEN];		/* The next input token		*/
+	int	typ;			/* Type of a token		*/
+	int	sindex;			/* Index of sender in nodes	*/
+	int	rindex;			/* Index of receiver in nodes	*/
+	struct	node	*sptr;		/* Ptr to sending node entry	*/
+	struct	node	*rptr;		/* Ptr to receiving node */
+	if (freopen(infile, "r", stdin) == NULL) {
+		fprintf(stderr, "error: cannot read input file %s\n", infile);
+		exit(1);
+	}
+
+
+	/* Start with the first token */
+
+	typ = gettok(tok);
+	if (typ == TOKEOF) {
+		fprintf(stderr, "error: no tokens found in input file %s\n", infile, 0);
+		exit(1);
+	}
+
+	/* While items remain to be processed */
+
+	while(1) {
+
+		/* Verify that the next item is the name of a sending node */
+
+		if (typ != TOKSEND) {
+			errexit("Sending node expected on line %d\n", linenum, 0);
+		}
+
+		/* Lookup name of sender and verify that the sender did	*/
+		/*	not have a previous specification		*/
+
+		sindex = lookup(tok);
+		sptr = &nodes[sindex];
+		if (sptr->nstatus == RECVDEF) {
+			errexit("error: multiple definitions for node %s on line %d\n", (long)tok, linenum);
+		}
+
+		/* Mark the sender as having appeared in a definition */
+
+		sptr->nstatus = RECVDEF;
+
+		/* Get the first receiver on the list */
+
+		typ = gettok(tok);
+
+		if (typ != TOKRECV) {
+			/* The node does not have any receivers on its	*/
+			/*  list.  An error exit can be inserted here	*/
+			/*  isolated nodes are not allowed (the current	*/
+			/*  version allows them to permit testing the	*/
+			/*  effects of isolation.			*/
+
+			if (typ == TOKEOF) {
+				break;
+			} else {
+				continue;
+			}
+		}
+
+		/* While additional receiving nodes are found, add each to the list of receivers */
+
+		while (typ == TOKRECV) {
+			rindex = lookup(tok);
+			if (rindex == sindex) {
+				errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
+			}
+			rptr = &nodes[rindex];
+			rptr->nrecv = 1;
+			sptr->nsend = 1;
+			srbit(sptr->nmcast, rindex, BIT_SET);
+			if (symmetric > 0) {
+				/* Force symmetry */
+				srbit(nodes[rindex].nmcast, sindex, BIT_SET);
+				rptr->nsend = 1;
+				sptr->nrecv = 1;
+			}
+			/* Move to the next token */
+			typ = gettok(tok);
+		}
+		if (typ == TOKEOF) {
+			break;
+		}
+	}
+}
+
 /************************************************************************/
 /*									*/
 /* main program								*/
