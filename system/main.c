@@ -16,6 +16,8 @@ process	main(void)
 {
 	/* Start the network */
 
+	sleep(3);
+
 	wsnode_join();
 
 	byte	prefix[] = {0x20, 0x01, 0, 0, 0, 0, 0, 0,

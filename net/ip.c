@@ -234,6 +234,7 @@ void	ip_in_ext (
 				return;
 			}
 
+			ip_ntoh(inpkt);
 			pkt = inpkt;
 			nh = pkt->net_ipnh;
 			exptr = (struct ip_ext_hdr *)pkt->net_ipdata;

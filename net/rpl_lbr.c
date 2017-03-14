@@ -87,7 +87,7 @@ void	rpl_in_dao (
 	int32	i, j, k;		/* Index variables	*/
 
 	#ifdef DEBUG_RPL
-	kprintf("rpl_in_dao: ...\n");
+	kprintf("rpl_in_dao: ... %d IP len\n", pkt->net_iplen);
 	#endif
 
 	daomsg = (struct rpl_dao *)pkt->net_icdata;
@@ -181,6 +181,16 @@ void	rpl_in_dao (
 
 			rplopt += tgtopt->rplopt_len + 2;
 			while(rplopt < (pkt->net_ipdata + pkt->net_iplen)) {
+
+				if((*rplopt) == RPLOPT_TYPE_P1) {
+					rplopt++;
+					continue;
+				}
+
+				if((*rplopt) == RPLOPT_TYPE_PN) {
+					rplopt += 2 + (*(rplopt+1));
+					continue;
+				}
 
 				if((*rplopt) != RPLOPT_TYPE_TI) {
 					break;
