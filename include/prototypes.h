@@ -144,7 +144,7 @@ extern	void	halt(void);
 
 /* in file icmp.c */
 void	icmp_in(struct netpacket *);
-int32	icmp_send(byte, byte, byte [], void *, int32, int32);
+int32	icmp_send(byte, byte, byte [], byte [], void *, int32, int32);
 uint16	icmp_cksum(struct netpacket *);
 
 /* in file init.c */

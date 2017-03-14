@@ -16,6 +16,8 @@ process	main(void)
 {
 	/* Start the network */
 
+	struct netpacket *pkt;
+
 	sleep(3);
 
 	wsnode_join();
@@ -39,6 +41,31 @@ process	main(void)
 			iftab[1].if_nipucast++;
 
 			rpl_lbr_init();
+
+			read(CONSOLE, &c, 1);
+			read(CONSOLE, &c, 1);
+
+			pkt = (struct netpacket *)getbuf(netbufpool);
+
+			byte	ipdst[] = {0x20, 0x01, 0x00, 0x00, 0x0, 0x00, 0x00, 0x00, 0x6E, 0xEC, 0xEB, 0xFF, 0xFE, 0xAD, 0x68, 0xF2};
+
+			memcpy(ip_fwtab[1].ipfw_prefix.ipaddr, ipdst, 16);
+			ip_fwtab[1].ipfw_prefix.prefixlen = 8;
+			ip_fwtab[1].ipfw_iface = 1;
+			ip_fwtab[1].ipfw_onlink = 0;
+			ip_fwtab[1].ipfw_state = 1;
+
+			memset(pkt, 0, 40);
+
+			pkt->net_ipvtch = 0x60;
+			pkt->net_iplen = 100;
+			pkt->net_ipnh = 0xed;
+			pkt->net_iphl = 0xff;
+			memcpy(pkt->net_ipsrc, iftab[1].if_ipucast[1].ipaddr, 16);
+			memcpy(pkt->net_ipdst, ipdst, 16);
+			kprintf("Sending to C...");
+
+			ip_send(pkt);
 
 			break;
 		}

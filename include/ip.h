@@ -10,6 +10,7 @@
 #define	IP_EXT_RH_RT0	0
 
 /* Structure of IP Extension Header */
+#pragma pack(1)
 struct	ip_ext_hdr {
 	byte	ipext_nh;	/* Next header		*/
 	byte	ipext_len;	/* Header length	*/
@@ -33,6 +34,7 @@ struct	ip_ext_hdr {
 	  };
 	};
 };
+#pragma pack()
 
 extern	byte	ip_llprefix[];
 extern	byte	ip_unspec[];

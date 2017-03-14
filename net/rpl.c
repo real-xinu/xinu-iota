@@ -599,6 +599,7 @@ int32	rpl_parents (
 	for(i = 0; i < n; i++) {
 		rplptr->neighbors[sorted[i]].parent = TRUE;
 		rplptr->parents[i] = sorted[i];
+		nd_regaddr(rplptr->neighbors[sorted[i]].lluip, rplptr->iface);
 	}
 
 	/* First sorted neighbor is our preferred parent */
@@ -686,7 +687,7 @@ int32	rpl_send_dis (
 		}
 
 		kprintf("rpl_send_dis: Sending DIS to all-rpl-nodes-mc\n");
-		icmp_send(ICMP_TYPE_RPL, ICMP_CODE_RPL_DIS, ip_allrplnodesmc,
+		icmp_send(ICMP_TYPE_RPL, ICMP_CODE_RPL_DIS, ip_unspec, ip_allrplnodesmc,
 				dismsg, msglen, iface);
 		return OK;
 	}
@@ -711,7 +712,7 @@ int32	rpl_send_dis (
 	memcpy(siopt->rplopt_dodagid, rplptr->dodagid, 16);
 	siopt->rplopt_vers = rplptr->vers;
 
-	icmp_send(ICMP_TYPE_RPL, ICMP_CODE_RPL_DIS, ip_allrplnodesmc,
+	icmp_send(ICMP_TYPE_RPL, ICMP_CODE_RPL_DIS, ip_unspec, ip_allrplnodesmc,
 			dismsg, msglen, rplptr->iface);
 
 	restore(mask);
@@ -803,6 +804,7 @@ int32	rpl_send_dio (
 	/* Send the message */
 	icmp_send(ICMP_TYPE_RPL,
 		  ICMP_CODE_RPL_DIO,
+		  ip_unspec,
 		  ipdst,
 		  diomsg,
 		  msglen,
@@ -934,6 +936,7 @@ int32	rpl_send_dao (
 	#endif
 	icmp_send(ICMP_TYPE_RPL,
 		  ICMP_CODE_RPL_DAO,
+		  ip_unspec,
 		  rplptr->dodagid,
 		  daomsg,
 		  msglen,

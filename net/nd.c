@@ -172,6 +172,7 @@ int32	nd_ncnew (
 	memset(ncptr, NULLCH, sizeof(struct nd_ncentry));
 
 	/* Initialize the interface, reachable state and IP address */
+	ncptr->nc_type = NC_TYPE_GC;
 	ncptr->nc_iface = iface;
 	ncptr->nc_rstate = rstate;
 	memcpy(ncptr->nc_ipaddr, ipaddr, 16);
@@ -240,6 +241,7 @@ void	nd_in_ns (
 	int32	ncindex;		/* Neighbor cache index		*/
 	intmask	mask;			/* Interrupt mask		*/
 	int32	i;			/* Index variable		*/
+	byte	aro_status;		/* Addr. Registration status	*/
 
 	/* Pointer to neighbor solicitation msg */
 	nsmsg = (struct nd_nbrsol *)pkt->net_icdata;
@@ -319,6 +321,44 @@ void	nd_in_ns (
 			ndopt = (struct nd_opt *)((char *)ndopt + (ndopt->ndopt_len * 8));
 			break;
 
+		case NDOPT_TYPE_AR:
+			if(isipllu(pkt->net_ipsrc)) {
+				return;
+			}
+
+			mask = disable();
+
+			ncindex = nd_ncfind(pkt->net_ipsrc);
+
+			if(ncindex == SYSERR) {
+				ncindex = nd_ncnew(pkt->net_ipsrc,
+						   ndopt->ndopt_eui64,
+						   pkt->net_iface,
+						   NC_RSTATE_RCH,
+						   0);
+				if(ncindex == SYSERR) {
+					aro_status = 2;
+				}
+				else {
+					kprintf("Registering child: ");
+					ip_printaddr(pkt->net_ipsrc);
+					kprintf("\n");
+					nd_ncache[ncindex].nc_type = NC_TYPE_REG2;
+					nd_ncache[ncindex].nc_texpire = ntohs(ndopt->ndopt_reglife) * 60000;
+					aro_status = 0;
+				}
+			}
+			else {
+				if(memcmp(ndopt->ndopt_eui64, nd_ncache[ncindex].nc_hwaddr, 8)) {
+					aro_status = 1;
+				}
+			}
+
+			restore(mask);
+
+			ndopt = (struct nd_opt *)((char *)ndopt + ndopt->ndopt_len * 8);
+			break;
+
 		default:
 			ndopt = (struct nd_opt *)((char *)ndopt + (ndopt->ndopt_len * 8));
 			break;
@@ -328,7 +368,17 @@ void	nd_in_ns (
 	//kprintf("nd_in_ns: sending na\n");
 
 	/* Allocate memory for neighbor advertisement */
-	nalen = sizeof(struct nd_nbradv) + 8;
+
+	mask = disable();
+
+	ifptr = &iftab[pkt->net_iface];
+
+	if(ifptr->if_type == IF_TYPE_ETH) {
+		nalen = sizeof(struct nd_nbradv) + 8;
+	}
+	else {
+		nalen = sizeof(struct nd_nbradv) + 16;
+	}
 
 	namsg = (struct nd_nbradv *)getmem(nalen);
 
@@ -341,15 +391,20 @@ void	nd_in_ns (
 	namsg->nd_rso = ND_NA_S | ND_NA_O;
 	memcpy(namsg->nd_tgtaddr, nsmsg->nd_tgtaddr, 16);
 
-	mask = disable();
-
-	ifptr = &iftab[pkt->net_iface];
-
-	/* Insert a target link-layer address option */
-	ndopt = (struct nd_opt *)namsg->nd_opts;
-	ndopt->ndopt_type = NDOPT_TYPE_TLLA;
-	ndopt->ndopt_len = 1;
-	memcpy(ndopt->ndopt_addr, ifptr->if_hwucast, ifptr->if_halen);
+	if(ifptr->if_type == IF_TYPE_ETH) {
+		/* Insert a target link-layer address option */
+		ndopt = (struct nd_opt *)namsg->nd_opts;
+		ndopt->ndopt_type = NDOPT_TYPE_TLLA;
+		ndopt->ndopt_len = 1;
+		memcpy(ndopt->ndopt_addr, ifptr->if_hwucast, ifptr->if_halen);
+	}
+	else {
+		ndopt = (struct nd_opt *)namsg->nd_opts;
+		ndopt->ndopt_type = NDOPT_TYPE_AR;
+		ndopt->ndopt_len = 2;
+		ndopt->ndopt_status = aro_status;
+		ndopt->ndopt_reglife = 0;
+	}
 
 	//kprintf("nd_in_ns: calling icmp_send\n");
 	/* Select the destination IP address */
@@ -361,7 +416,13 @@ void	nd_in_ns (
 	}
 
 	/* Send the neighbor advertisement */
-	icmp_send(ICMP_TYPE_NA, 0, ipdst, namsg, nalen, pkt->net_iface);
+
+	if(ifptr->if_type == IF_TYPE_ETH) {
+		icmp_send(ICMP_TYPE_NA, 0, ip_unspec, ipdst, namsg, nalen, pkt->net_iface);
+	}
+	else {
+		icmp_send(ICMP_TYPE_NA, 0, pkt->net_ipdst, ipdst, namsg, nalen, pkt->net_iface);
+	}
 
 	/* Free the memory */
 	freemem((char *)namsg, nalen);
@@ -384,6 +445,7 @@ void	nd_in_na (
 	struct	netpacket_e *epkt;	/* Ethernet packet pointer	*/
 	struct	nd_opt *ndopt;		/* ND option			*/
 	struct	nd_opt *tllao;		/* Target link-layer address opt*/
+	struct	nd_opt *aro;		/* Addr. Registration option	*/
 	int32	ncindex;		/* Neighbor cache index		*/
 	bool8	l2updated;		/* Flag L2 address updated?	*/
 	intmask	mask;			/* Interrupt mask		*/
@@ -443,12 +505,33 @@ void	nd_in_na (
 			ndopt = (struct nd_opt *)((char *)ndopt + ndopt->ndopt_len * 8);
 			break;
 
+		case NDOPT_TYPE_AR:
+			aro = ndopt;
+
+			ndopt = (struct nd_opt *)((char *)ndopt + ndopt->ndopt_len * 8);
+			break;
+
 		default:
 			ndopt = (struct nd_opt *)((char *)ndopt + ndopt->ndopt_len * 8);
 		}
 	}
 
 	//kprintf("nd_in_na: done processing options\n");
+
+	if(ncptr->nc_type != NC_TYPE_GC) {
+		if(!aro) {
+			restore(mask);
+			return;
+		}
+
+		if(ncptr->nc_type == NC_TYPE_TEN) {
+			ncptr->nc_type = NC_TYPE_REG1;
+			ncptr->nc_texpire = 9 * 60000;
+		}
+
+		restore(mask);
+		return;
+	}
 
 	/* Take a decision of what to do based on the state of entry */
 
@@ -552,6 +635,7 @@ int32	nd_send_ns (
 	struct	nd_nbrsol *nsmsg;	/* Neighbor solicitation msg	*/
 	struct	nd_opt *ndopt;		/* ND option			*/
 	byte	ipdst[16];		/* IP destination address	*/
+	byte	ipsrc[16];		/* IP source address		*/
 	int32	nslen;			/* Length of nbr. solicitation	*/
 
 	ncptr = &nd_ncache[ncindex];
@@ -576,21 +660,39 @@ int32	nd_send_ns (
 
 	memcpy(nsmsg->nd_tgtaddr, ncptr->nc_ipaddr, 16);
 
-	ndopt = (struct nd_opt *)nsmsg->nd_opts;
-	ndopt->ndopt_type = NDOPT_TYPE_SLLA;
-	ndopt->ndopt_len = 1;
-	memcpy(ndopt->ndopt_addr, iftab[ncptr->nc_iface].if_hwucast,
-			iftab[ncptr->nc_iface].if_halen);
-
-	if(ncptr->nc_rstate == NC_RSTATE_INC) {
-		memcpy(ipdst, ip_nd_snmcprefix, 16);
-		memcpy(ipdst+13, ncptr->nc_ipaddr+13, 3);
+	if(ncptr->nc_type == NC_TYPE_GC) {
+		ndopt = (struct nd_opt *)nsmsg->nd_opts;
+		ndopt->ndopt_type = NDOPT_TYPE_SLLA;
+		ndopt->ndopt_len = 1;
+		memcpy(ndopt->ndopt_addr, iftab[ncptr->nc_iface].if_hwucast,
+				iftab[ncptr->nc_iface].if_halen);
+		if(ncptr->nc_rstate == NC_RSTATE_INC) {
+			memcpy(ipdst, ip_nd_snmcprefix, 16);
+			memcpy(ipdst+13, ncptr->nc_ipaddr+13, 3);
+		}
+		else {
+			memcpy(ipdst, ncptr->nc_ipaddr, 16);
+		}
 	}
 	else {
+		ndopt = (struct nd_opt *)nsmsg->nd_opts;
+		ndopt->ndopt_type = NDOPT_TYPE_AR;
+		ndopt->ndopt_len = 2;
+		ndopt->ndopt_status = 0;
+		//TODO
+		ndopt->ndopt_reglife = 10;
+		memcpy(ndopt->ndopt_eui64, iftab[ncptr->nc_iface].if_hwucast, 8);
 		memcpy(ipdst, ncptr->nc_ipaddr, 16);
+		//TODO
+		memcpy(ipsrc, iftab[ncptr->nc_iface].if_ipucast[1].ipaddr, 16);
 	}
 
-	icmp_send(ICMP_TYPE_NS, 0, ipdst, nsmsg, nslen, ncptr->nc_iface);
+	if(ncptr->nc_type != NC_TYPE_GC) {
+		icmp_send(ICMP_TYPE_NS, 0, ipsrc, ipdst, nsmsg, nslen, ncptr->nc_iface);
+	}
+	else {
+		icmp_send(ICMP_TYPE_NS, 0, ip_unspec, ipdst, nsmsg, nslen, ncptr->nc_iface);
+	}
 
 	freemem((char *)nsmsg, nslen);
 
@@ -642,6 +744,55 @@ int32	nd_resolve (
 	nd_send_ns(ncindex);
 
 	ncptr->nc_retries++;
+
+	restore(mask);
+	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * nd_regaddr  -  Register own address with a neighbor
+ *------------------------------------------------------------------------
+ */
+int32	nd_regaddr (
+		byte	nbrip[],	/* LL IP address of neighbor	*/
+		int32	iface
+		)
+{
+	struct	nd_ncentry *ncptr;
+	int32	ncindex;
+	intmask	mask;
+
+	if(!isipllu(nbrip)) {
+		return SYSERR;
+	}
+
+	mask = disable();
+
+	ncindex = nd_ncfind(nbrip);
+
+	if(ncindex == SYSERR) {
+		ncindex = nd_ncnew(nbrip, NULL, iface, NC_RSTATE_RCH, 0);
+		if(ncindex == SYSERR) {
+			restore(mask);
+			return SYSERR;
+		}
+	}
+	else {
+		restore(mask);
+		return OK;
+	}
+
+	ncptr = &nd_ncache[ncindex];
+
+	ncptr->nc_type = NC_TYPE_TEN;
+
+	ncptr->nc_texpire = 10;
+
+	kprintf("Registering with neighbor: ");
+	ip_printaddr(nbrip);
+	kprintf("\n");
+
+	nd_send_ns(ncindex);
 
 	restore(mask);
 	return OK;

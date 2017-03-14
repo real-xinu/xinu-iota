@@ -19,7 +19,7 @@ void	icmp_in (
 
 	case ICMP_TYPE_ERQ:
 
-		icmp_send(ICMP_TYPE_ERP, 0, pkt->net_ipsrc, pkt->net_icdata,
+		icmp_send(ICMP_TYPE_ERP, 0, ip_unspec, pkt->net_ipsrc, pkt->net_icdata,
 				pkt->net_iplen - 4, pkt->net_iface);
 		break;
 
@@ -45,6 +45,7 @@ void	icmp_in (
 int32	icmp_send (
 		byte	ictype,		/* ICMP type		*/
 		byte	iccode,		/* ICMP code		*/
+		byte	ipsrc[],	/* IP source		*/
 		byte	ipdst[],	/* IP destination	*/
 		void	*icdata,	/* ICMP data		*/
 		int32	datalen,	/* ICMP data length	*/
@@ -73,6 +74,7 @@ int32	icmp_send (
 	pkt->net_ipnh = IP_ICMP;
 	pkt->net_iphl = 255;
 	pkt->net_iplen = 4 + datalen;
+	memcpy(pkt->net_ipsrc, ipsrc, 16);
 	memcpy(pkt->net_ipdst, ipdst, 16);
 
 	pkt->net_ictype = ictype;

@@ -241,11 +241,14 @@ void	rpl_in_dao (
 							//TODO rplnodes[i].parents[k].texpire =
 
 							if(rplnodes[i].nparents == 0) {
-								rplnodes[i].prefparent = k;
+								rplnodes[i].prefparent = j;
 							}
 							else if(tiopt->rplopt_pc > rplnodes[i].parents[rplnodes[i].prefparent].pc) {
-								rplnodes[i].prefparent = k;
+								rplnodes[i].prefparent = j;
 							}
+							#ifdef DEBUG_RPL
+							kprintf("\tprefered parent of %d is at index %d\n", i, rplnodes[i].prefparent);
+							#endif
 							rplnodes[i].nparents++;
 							break;
 						}
@@ -266,4 +269,144 @@ void	rpl_in_dao (
 	}
 
 	restore(mask);
+}
+
+/*------------------------------------------------------------------------
+ * ip_send_rpl_lbr  -  Send an IP packet over the radio interface
+ *------------------------------------------------------------------------
+ */
+int32	ip_send_rpl_lbr (
+		struct	netpacket *pkt	/* Packet buffer	*/
+		)
+{
+	struct	netpacket_r *rpkt;	/* Radio packet pointer	*/
+	struct	netpacket *npkt;	/* IP packet pointer	*/
+	struct	ip_ext_hdr *exptr;	/* IP extension header	*/
+	struct	netiface *ifptr;	/* Network interface	*/
+	int32	path[30];
+	int32	curr;
+	intmask	mask;
+	int32	ncindex;
+	int32	iplen;
+	int32	i, j;
+
+	mask = disable();
+
+	for(i = 0; i < NRPLNODES; i++) {
+		if(rplnodes[i].state == RPLNODE_STATE_FREE) {
+			continue;
+		}
+
+		if(!memcmp(pkt->net_ipdst, rplnodes[i].ipprefix, 16)) {
+			break;
+		}
+	}
+	if(i >= NRPLNODES) {
+		freebuf((char *)pkt);
+		restore(mask);
+		return SYSERR;
+	}
+
+	path[0] = i;
+	curr = rplnodes[i].prefparent;
+	i = 1;
+	kprintf("node %d, parent %d\n", path[0], curr); 
+	while(curr != 0) {
+		path[i++] = curr;
+		curr = rplnodes[curr].prefparent;
+		kprintf("curr: %d\n", curr);
+	}
+
+	kprintf("Path: 0 -> ");
+	for(j = i-1; j >= 0; j--) {
+		kprintf("%d ", path[j]);
+		if(j > 0) {
+			kprintf("-> ");
+		}
+	}
+	kprintf("\n");
+
+	ifptr = &iftab[pkt->net_iface];
+
+	rpkt = (struct netpacket_r *)getbuf(netbufpool);
+	if((int32)rpkt == SYSERR) {
+		restore(mask);
+		return SYSERR;
+	}
+
+	memcpy(rpkt->net_ethsrc, iftab[0].if_hwucast, 6);
+	memcpy(rpkt->net_ethdst, info.mcastaddr, 6);
+	rpkt->net_ethtype = htons(ETH_TYPE_B);
+
+	rpkt->net_radfc = (RAD_FC_FT_DAT |
+			   RAD_FC_AR |
+			   RAD_FC_DAM3 |
+			   RAD_FC_FV2 |
+			   RAD_FC_SAM3);
+
+	rpkt->net_radseq = ifptr->if_seq++;
+
+	memcpy(rpkt->net_radsrc, ifptr->if_hwucast, 8);
+
+	iplen = 40 + ntohs(pkt->net_iplen);
+
+	if(i == 1) {
+		memcpy(rpkt->net_raddata, pkt, iplen);
+	}
+	else {
+		npkt = (struct netpacket *)rpkt->net_raddata;
+		memset(npkt, 0, 40);
+		npkt->net_ipvtch = 0x60;
+		npkt->net_ipnh = IP_EXT_RH;
+		npkt->net_iphl = 0xff;
+		memcpy(npkt->net_ipsrc, ifptr->if_ipucast[1].ipaddr, 16);
+		memcpy(npkt->net_ipdst, rplnodes[path[--i]].ipprefix, 16);
+		kprintf("IPdst is: "); ip_printaddr(npkt->net_ipdst); kprintf("\n");
+
+		exptr = (struct ip_ext_hdr *)npkt->net_ipdata;
+		exptr->ipext_nh = IP_IP;
+		exptr->ipext_len = (2 * i);
+		exptr->ipext_rhrt = 0;
+		exptr->ipext_rhsegs = i;
+
+		j = 0;
+		while(i > 0) {
+			memcpy(exptr->ipext_rhaddrs[j++], rplnodes[path[--i]].ipprefix, 16);
+			kprintf("entry at slot %d: ", j-1); ip_printaddr(exptr->ipext_rhaddrs[j-1]); kprintf("\n");
+		}
+
+		kprintf("Copying original packet..\n");
+		memcpy(exptr->ipext_rhaddrs[j], pkt, iplen);
+
+		npkt->net_iplen = ((byte *)exptr->ipext_rhaddrs[j]-npkt->net_ipdata) + iplen;
+		iplen = npkt->net_iplen;
+		ip_hton(npkt);
+	}
+
+	kprintf("Finding neighbor..\n");
+	ncindex = nd_ncfind(npkt->net_ipdst);
+
+	if(ncindex == SYSERR) {
+		freebuf((char *)pkt);
+		freebuf((char *)rpkt);
+		restore(mask);
+		return SYSERR;
+	}
+
+	kprintf("found neighbor\n");
+
+	memcpy(rpkt->net_raddst, nd_ncache[ncindex].nc_hwaddr, 8);
+
+	for(i = 0; i < 14+24+40+8+40; i++) {
+		kprintf("%02x ", *((byte *)rpkt + i));
+	}
+	kprintf("\n");
+
+	write(RADIO0, (char *)rpkt, 14 + 24 + 40 + iplen);
+
+	freebuf((char *)pkt);
+	freebuf((char *)rpkt);
+
+	restore(mask);
+	return OK;
 }
