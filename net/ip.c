@@ -409,9 +409,12 @@ int32	ip_route (
 	}
 
 	if(isipunspec(ipsrc)) {
+		#ifdef DEBUG_IP
+		kprintf("ip_route: choosing src\n");
+		#endif
 		ifptr = &iftab[ipfptr->ipfw_iface];
-		for(i = 0; i < ifptr->if_nipucast; i++) {
-			if(!memcmp(nxthop, ifptr->if_ipucast[i].ipaddr,
+		for(i = 1; i < ifptr->if_nipucast; i++) {
+			if(!memcmp(ipdst, ifptr->if_ipucast[i].ipaddr,
 						ifptr->if_ipucast[i].prefixlen)) {
 				memcpy(ipsrc, ifptr->if_ipucast[i].ipaddr, 16);
 				break;
@@ -422,6 +425,11 @@ int32	ip_route (
 		}
 	}
 
+	#ifdef DEBUG_IP
+	kprintf("ip_route: src ");
+	ip_printaddr(ipsrc);
+	kprintf("\n");
+	#endif
 	restore(mask);
 	return OK;
 }
@@ -800,4 +808,53 @@ void	ip_printaddr (
 		ptr16++;
 	}
 	kprintf("%04X", htons(*ptr16));
+}
+
+/*------------------------------------------------------------------------
+ * colon2ip  -  Convert string IP to binary
+ *------------------------------------------------------------------------
+ */
+int32	colon2ip (
+		char	*ipstr,
+		byte	ipaddr[]
+		)
+{
+	char	*p;
+	byte	b;
+	int32	i, j;
+
+	if(strlen(ipstr) !=39) {
+		return SYSERR;
+	}
+
+	p = ipstr;
+	for(i = 0; i < 16; i++) {
+
+		b = 0;
+		for(j = 0; j < 2; j++) {
+			b = b * 16;
+			if(*p >= '0' && *p <= '9') {
+				b += *p - '0';
+			}
+			else if(*p >= 'a' &&  *p <= 'f') {
+				b += 10 + (*p - 'a');
+			}
+			else if(*p >= 'A' && *p <= 'F') {
+				b += 10 + (*p - 'A');
+			}
+			else {
+				return SYSERR;
+			}
+			p++;
+		}
+		ipaddr[i] = b;
+		if(i > 0 && i < 15 && ((i+1) % 2 == 0)) {
+			if(*p != ':') {
+				return SYSERR;
+			}
+			p++;
+		}
+	}
+
+	return OK;
 }

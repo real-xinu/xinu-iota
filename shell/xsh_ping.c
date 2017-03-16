@@ -10,12 +10,13 @@
  */
 shellcmd xsh_ping(int nargs, char *args[])
 {
-	uint32	ipaddr;			/* IP address in binary		*/
+	byte	ipaddr[16];		/* IP address in binary		*/
 	int32	retval;			/* return value			*/
 	int32	slot;			/* Slot in ICMP to use		*/
 	static	int32	seq = 0;	/* sequence number		*/
 	char	buf[56];		/* buffer of chars		*/
 	int32	i;			/* index into buffer		*/
+	int32	n;			/* No. if echo packets		*/
 	int32	nextval;		/* next value to use		*/
 	bool8	dname;
 
@@ -33,13 +34,65 @@ shellcmd xsh_ping(int nargs, char *args[])
 
 	/* Check for valid number of arguments */
 
-	if (nargs != 2) {
+	if (nargs < 2 || nargs > 3) {
 		fprintf(stderr, "%s: invalid arguments\n", args[0]);
 		fprintf(stderr, "Try '%s --help' for more information\n",
 				args[0]);
 		return 1;
 	}
 
+	retval = colon2ip(args[1], ipaddr);
+	if(retval == SYSERR) {
+		fprintf(stderr, "%s invalid IP address\n");
+		return 1;
+	}
+
+	slot = icmp_register(ICMP_TYPE_ERP, 0, ipaddr, ip_unspec, -1);
+	if(slot == SYSERR) {
+		fprintf(stderr, "ICMP registration failed\n");
+		return 1;
+	}
+
+	n = 1;
+	if(nargs == 3) {
+		n = atoi(args[2]);
+	}
+
+	for(i = 0; i < n; i++) {
+
+		retval = icmp_send(ICMP_TYPE_ERQ, 0, ip_unspec, ipaddr, buf, sizeof(buf), 0);
+		if(retval == SYSERR) {
+			fprintf(stderr, "ICMP Sending Failed\n");
+			icmp_remove(slot);
+			return 1;
+		}
+
+		retval = icmp_recv(slot, buf, sizeof(buf), 3000);
+		if(retval == SYSERR) {
+			fprintf(stderr, "ICMP receiving Failed\n");
+			icmp_remove(slot);
+			return 1;
+		}
+
+		if(retval == TIMEOUT) {
+			fprintf(stderr, "ICMP Echo Request Timed out\n");
+			continue;
+		}
+
+		if(retval != sizeof(buf)) {
+			fprintf(stderr, "Expected %d bytes, got back %d\n", sizeof(buf), retval);
+			continue;
+		}
+
+		fprintf(stderr, "Response from %s, seq = %d\n", args[1], i);
+	}
+
+	//fprintf(stderr, "Host %s is alive\n", args[1]);
+
+	icmp_remove(slot);
+
+	return 0;
+#if 0
 	dname = FALSE;
 	for(i = 0; i < strlen(args[1]); i++) {
 		if( ( (args[1][i] >= 65) && (args[1][i] <= 90) ) ||
@@ -111,4 +164,5 @@ shellcmd xsh_ping(int nargs, char *args[])
 		}
 	fprintf(stderr, "host %s is alive\n", args[1]);
 	return 0;
+#endif
 }

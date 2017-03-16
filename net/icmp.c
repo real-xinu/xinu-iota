@@ -16,8 +16,10 @@ void	icmp_in (
 	intmask	mask;
 	int32	i;
 
+	#ifdef DEBUG_ICMP
 	kprintf("icmp_in: type %d code %d src: ", pkt->net_ictype, pkt->net_iccode); ip_printaddr(pkt->net_ipsrc);
 	kprintf(" dst: "); ip_printaddr(pkt->net_ipdst); kprintf("\n");
+	#endif
 
 	/* Verify ICMP checksum */
 	if(icmp_cksum(pkt) != 0) {
@@ -28,19 +30,21 @@ void	icmp_in (
 
 	case ICMP_TYPE_ERQ:
 
+		#ifdef DEBUG_ICMP
 		kprintf("icmp_in: ERQ from :"); ip_printaddr(pkt->net_ipsrc); kprintf("\n");
+		#endif
 		icmp_send(ICMP_TYPE_ERP, 0, pkt->net_ipdst, pkt->net_ipsrc, pkt->net_icdata,
 				pkt->net_iplen - 4, pkt->net_iface);
-		break;
+		return;
 
 	case ICMP_TYPE_NS:
 	case ICMP_TYPE_NA:
 		nd_in(pkt);
-		break;
+		return;
 
 	case ICMP_TYPE_RPL:
 		rpl_in(pkt);
-		break;
+		return;
 
 	default:
 		break;
@@ -56,9 +60,11 @@ void	icmp_in (
 			continue;
 		}
 
+		#ifdef DEBUG_ICMP
 		kprintf("icmp_in: slot: t %d c %d remip ", icptr->ictype, icptr->iccode);
 		ip_printaddr(icptr->icremip); kprintf(" locip "); ip_printaddr(icptr->iclocip);
 		kprintf(" iface %d\n", icptr->iciface);
+		#endif
 		if( (icptr->ictype == pkt->net_ictype) &&
 		    (icptr->iccode == pkt->net_iccode) &&
 		    (isipunspec(icptr->icremip) || !memcmp(icptr->icremip, pkt->net_ipsrc, 16)) &&
@@ -69,7 +75,9 @@ void	icmp_in (
 	}
 
 	if(i >= ICMP_TABSIZE) {
+		#ifdef DEBUG_ICMP
 		kprintf("icmp_in: no matching slot\n");
+		#endif
 		restore(mask);
 		return;
 	}
@@ -114,8 +122,10 @@ int32	icmp_send (
 {
 	struct	netpacket *pkt;	/* Packet buffer pointer	*/
 
+	#ifdef DEBUG_ICMP
 	kprintf("icmp_send: type %d, code: %d, dst: ", ictype, iccode); ip_printaddr(ipdst);
 	kprintf("\n");
+	#endif
 
 	/* Allocate buffer for the packet */
 	pkt = (struct netpacket *)getbuf(netbufpool);
@@ -144,7 +154,6 @@ int32	icmp_send (
 	pkt->net_iccode = iccode;
 	memcpy(pkt->net_icdata, icdata, datalen);
 
-	//kprintf("icmp_send: calling ip_send\n");
 	ip_send(pkt);
 
 	return OK;
@@ -207,6 +216,46 @@ int32	icmp_register (
 
 	restore(mask);
 	return found;
+}
+
+/*------------------------------------------------------------------------
+ * icmp_remove  -  Remove a slot from ICMP table
+ *------------------------------------------------------------------------
+ */
+int32	icmp_remove (
+		int32	slot
+		)
+{
+	struct	icentry *icptr;
+	intmask	mask;
+
+	if(slot < 0 || slot >= ICMP_TABSIZE) {
+		return SYSERR;
+	}
+
+	icptr = &icmptab[slot];
+
+	if(icptr->icstate == ICENTRY_FREE) {
+		restore(mask);
+		return SYSERR;
+	}
+
+	if(icptr->icstate == ICENTRY_RECV) {
+		send(icptr->icpid, SYSERR);
+	}
+
+	while(icptr->iccount > 0) {
+		freebuf((char *)icptr->icpktq[icptr->ichead++]);
+		if(icptr->ichead >= ICENTRY_PQSIZE) {
+			icptr->ichead = 0;
+		}
+		icptr->iccount--;
+	}
+
+	icptr->icstate = ICENTRY_FREE;
+
+	restore(mask);
+	return OK;
 }
 
 /*------------------------------------------------------------------------

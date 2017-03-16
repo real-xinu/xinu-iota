@@ -11,16 +11,29 @@ process	counterproc() {
 	}
 	return OK;
 }
-
+sid32	sem1;
 process	main(void)
 {
 	/* Start the network */
 
 	struct netpacket *pkt;
 
+	sem1 = semcreate(0);
+
+	char *ipstr = "2001:0000:0000:0000:abcd:1234:eedd:1ab3";
+	byte ipaddr[16];
+	colon2ip(ipstr, ipaddr);
+	kprintf("%s\n", ipstr);
+	ip_printaddr(ipaddr); kprintf("\n");
+
 	sleep(3);
 
 	wsnode_join();
+
+	kprintf("main waiting 1\n");
+	wait(sem1);
+	kprintf("main waiting 2\n");
+	wait(sem1);
 
 	byte	prefix[] = {0x20, 0x01, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0};
@@ -31,6 +44,22 @@ process	main(void)
 	memcpy(iftab[1].if_ipmcast[iftab[1].if_nipmcast].ipaddr, ip_allrplnodesmc, 16);
 	iftab[1].if_nipmcast++;
 
+#ifdef ROOT
+	kprintf("ROOT\n");
+	iftab[1].if_nipucast++;
+	memcpy(ip_fwtab[0].ipfw_prefix.ipaddr, prefix, 16);
+	ip_fwtab[0].ipfw_prefix.prefixlen = 8;
+	ip_fwtab[0].ipfw_iface = 1;
+	ip_fwtab[0].ipfw_onlink = 0;
+	ip_fwtab[0].ipfw_state = 1;
+	rpl_lbr_init();
+#else
+	kprintf("NODE\n");
+	sleep(1+info.nodeid);
+	rpl_send_dis(-1, 1);
+	//while(1);
+#endif
+#if 0
 	while(1) {
 		char	c;
 		kprintf("Enter r for root, or n for non-root:");
@@ -97,7 +126,7 @@ process	main(void)
 	}
 
 	while(1);
-
+#endif
 
 	kprintf("\n...creating a shell\n");
 	recvclr();

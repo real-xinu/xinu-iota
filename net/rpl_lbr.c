@@ -310,13 +310,18 @@ int32	ip_send_rpl_lbr (
 	path[0] = i;
 	curr = rplnodes[i].prefparent;
 	i = 1;
+	#ifdef DEBUG_RPL
 	kprintf("node %d, parent %d\n", path[0], curr); 
+	#endif
 	while(curr != 0) {
 		path[i++] = curr;
 		curr = rplnodes[curr].prefparent;
+		#ifdef DEBUG_RPL
 		kprintf("curr: %d\n", curr);
+		#endif
 	}
 
+	#ifdef DEBUG_RPL
 	kprintf("Path: 0 -> ");
 	for(j = i-1; j >= 0; j--) {
 		kprintf("%d ", path[j]);
@@ -325,6 +330,7 @@ int32	ip_send_rpl_lbr (
 		}
 	}
 	kprintf("\n");
+	#endif
 
 	ifptr = &iftab[pkt->net_iface];
 
@@ -348,10 +354,11 @@ int32	ip_send_rpl_lbr (
 
 	memcpy(rpkt->net_radsrc, ifptr->if_hwucast, 8);
 
-	iplen = 40 + ntohs(pkt->net_iplen);
+	iplen = ntohs(pkt->net_iplen);
 
 	if(i == 1) {
-		memcpy(rpkt->net_raddata, pkt, iplen);
+		memcpy(rpkt->net_raddata, pkt, 40 + iplen);
+		npkt = (struct netpacket *)rpkt->net_raddata;
 	}
 	else {
 		npkt = (struct netpacket *)rpkt->net_raddata;
@@ -361,7 +368,9 @@ int32	ip_send_rpl_lbr (
 		npkt->net_iphl = 0xff;
 		memcpy(npkt->net_ipsrc, ifptr->if_ipucast[1].ipaddr, 16);
 		memcpy(npkt->net_ipdst, rplnodes[path[--i]].ipprefix, 16);
+		#ifdef DEBUG_RPL
 		kprintf("IPdst is: "); ip_printaddr(npkt->net_ipdst); kprintf("\n");
+		#endif
 
 		exptr = (struct ip_ext_hdr *)npkt->net_ipdata;
 		exptr->ipext_nh = IP_IP;
@@ -372,10 +381,14 @@ int32	ip_send_rpl_lbr (
 		j = 0;
 		while(i > 0) {
 			memcpy(exptr->ipext_rhaddrs[j++], rplnodes[path[--i]].ipprefix, 16);
+			#ifdef DEBUG_RPL
 			kprintf("entry at slot %d: ", j-1); ip_printaddr(exptr->ipext_rhaddrs[j-1]); kprintf("\n");
+			#endif
 		}
 
+		#ifdef DEBUG_RPL
 		kprintf("Copying original packet..\n");
+		#endif
 		memcpy(exptr->ipext_rhaddrs[j], pkt, iplen);
 
 		npkt->net_iplen = ((byte *)exptr->ipext_rhaddrs[j]-npkt->net_ipdata) + iplen;
@@ -383,7 +396,9 @@ int32	ip_send_rpl_lbr (
 		ip_hton(npkt);
 	}
 
-	kprintf("Finding neighbor..\n");
+	#ifdef DEBUG_RPL
+	kprintf("Finding neighbor..");
+	#endif
 	ncindex = nd_ncfind(npkt->net_ipdst);
 
 	if(ncindex == SYSERR) {
@@ -393,14 +408,18 @@ int32	ip_send_rpl_lbr (
 		return SYSERR;
 	}
 
+	#ifdef DEBUG_RPL
 	kprintf("found neighbor\n");
+	#endif
 
 	memcpy(rpkt->net_raddst, nd_ncache[ncindex].nc_hwaddr, 8);
 
+	#ifdef DEBUG_RPL
 	for(i = 0; i < 14+24+40+8+40; i++) {
 		kprintf("%02x ", *((byte *)rpkt + i));
 	}
 	kprintf("\n");
+	#endif
 
 	write(RADIO0, (char *)rpkt, 14 + 24 + 40 + iplen);
 
