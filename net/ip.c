@@ -213,9 +213,9 @@ void	ip_in_ext (
 
 				pkt->net_iphl--;
 
-				kprintf("ip_in_ext: rt forward packet\n");
+				kprintf("ip_in_ext: rt forward packet..%d\n", pkt->net_iplen);
 				fwpkt = (struct netpacket *)getbuf(netbufpool);
-				memcpy(fwpkt, pkt, 40 + ntohs(pkt->net_iplen));
+				memcpy(fwpkt, pkt, 40 + pkt->net_iplen);
 				ip_send(fwpkt);
 				//Forward the packet
 				return;
@@ -251,6 +251,7 @@ void	ip_in_ext (
 				return;
 			}
 
+			inpkt->net_iface = pkt->net_iface;
 			ip_ntoh(inpkt);
 			pkt = inpkt;
 			nh = pkt->net_ipnh;
@@ -259,9 +260,17 @@ void	ip_in_ext (
 
 		//IP_UDP:
 		case IP_ICMP:
+			#ifdef DEBUG_IP
+			kprintf("ip_in_ext: icmp. Dst: ");
+			ip_printaddr(pkt->net_ipdst);
+			kprintf("\n");
+			#endif
 			/* Process ICMP packet */
 			if((char *)exptr != (char *)pkt->net_ipdata) {
 				l4len = pkt->net_iplen - ((char *)exptr - (char *)pkt->net_ipdata);
+				#ifdef DEBUG_IP
+				kprintf("ip_in_ext: icmp. removing extensions. l4len: %d, exptr: %08x, %08x\n", l4len, exptr, pkt->net_ipdata);
+				#endif
 				memcpy(pkt->net_ipdata, exptr, l4len);
 				pkt->net_iplen = l4len;
 			}
@@ -305,6 +314,7 @@ int32	ip_route (
 		)
 {
 	struct	ip_fwentry *ipfptr;	/* IP forwarding table entry ptr*/
+	struct	netiface *ifptr;	/* Network interface pointer	*/
 	intmask	mask;			/* Interrupt mask		*/
 	int32	found;			/* Flag indicating found entry	*/
 	int32	maxlen;			/*				*/
@@ -398,6 +408,21 @@ int32	ip_route (
 		}
 	}
 
+	if(isipunspec(ipsrc)) {
+		ifptr = &iftab[ipfptr->ipfw_iface];
+		for(i = 0; i < ifptr->if_nipucast; i++) {
+			if(!memcmp(nxthop, ifptr->if_ipucast[i].ipaddr,
+						ifptr->if_ipucast[i].prefixlen)) {
+				memcpy(ipsrc, ifptr->if_ipucast[i].ipaddr, 16);
+				break;
+			}
+		}
+		if(i >= ifptr->if_nipucast) {
+			memcpy(ipsrc, ifptr->if_ipucast[1].ipaddr, 16);
+		}
+	}
+
+	restore(mask);
 	return OK;
 }
 
@@ -726,7 +751,9 @@ int32	ip_send_rpl (
 
 	write(RADIO0, (char *)rpkt, 14 + 24 + iplen);
 
+	kprintf("Freeing pkt\n");
 	freebuf((char *)pkt);
+	kprintf("Freeing rpkt\n");
 	freebuf((char *)rpkt);
 
 	restore(mask);

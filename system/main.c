@@ -63,10 +63,30 @@ process	main(void)
 			pkt->net_iphl = 0xff;
 			memcpy(pkt->net_ipsrc, iftab[1].if_ipucast[1].ipaddr, 16);
 			memcpy(pkt->net_ipdst, ipdst, 16);
-			kprintf("Sending to C...");
+			//kprintf("Sending to C...");
 
-			ip_send(pkt);
+			//ip_send(pkt);
 
+			char	data[] = "Test Data";
+			char	data2[10];
+			int32	icmpslot;
+			int32	retval;
+
+			icmpslot = icmp_register(ICMP_TYPE_ERP, 0, ipdst, ip_unspec, 1);
+			kprintf("ICMP slot: %d\n", icmpslot);
+
+			icmp_send(ICMP_TYPE_ERQ, 0, iftab[1].if_ipucast[1].ipaddr, ipdst, data, strlen(data), 1);
+			retval = icmp_recv(icmpslot, data2, 10, 4000);
+			if(retval == SYSERR) {
+				kprintf("ICMP recv error\n");
+			}
+			else if(retval == TIMEOUT) {
+				kprintf("ICMP timeout\n");
+			}
+			else {
+				data[10] = '\0';
+				kprintf("Received data: %s\n", data2);
+			}
 			break;
 		}
 		else if(c == 'n') {
