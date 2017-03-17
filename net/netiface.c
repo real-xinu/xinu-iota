@@ -73,6 +73,8 @@ void	netiface_init(void) {
 				kprintf("Cannot assign Link-local IP address to interface %d\n", ifindex);
 				panic("");
 			}
+
+			ifptr->if_state = IF_UP;
 		}
 		else if(ifindex == 1) { /* Second is the radio interface */
 
@@ -98,6 +100,8 @@ void	netiface_init(void) {
 			else {
 				ifptr->if_ipucast[0].ipaddr[8] |= 0x02;
 			}
+
+			ifptr->if_state = IF_UP;
 		}
 
 		kprintf("Stateless Address Autoconfiguration performed on interface %d.\n", ifindex);

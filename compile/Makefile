@@ -38,7 +38,7 @@ REBUILDFLAGS	=	-s $(TOPDIR)/system  debug.c getutime.c gettime.c 	\
 			-s $(TOPDIR)/net			\
 					pdump.c 'xinu_*'	\
 			-s $(TOPDIR)/net/tcp			\
-			-s $(TOPDIR)/shell  'xsh_rdstest*' 'xsh_arp*' 'xsh_date*' 'xsh_ipaddr*' 'xsh_udp*' \
+			-s $(TOPDIR)/shell  'xsh_rdstest*' 'xsh_arp*' 'xsh_date*' 'xsh_udp*' \
 			-s $(TOPDIR)/wsnode
 
 INCLUDE		=	-I$(TOPDIR)/include
@@ -52,10 +52,13 @@ SFLAGS  = ${INCLUDE}
 
 LDFLAGS = -dn -m armelf -Map xinu.map -T ld.script
 
-all:	xinu
+all:	_rmrpl xinu
 
 root: CFLAGS = -DROOT -mcpu=cortex-a8 -mno-unaligned-access -marm -fno-builtin -fno-stack-protector -nostdlib -c -Wall -O ${DEFS} ${INCLUDE}
-root: xinu
+root: _rmrpl xinu
+
+_rmrpl:
+	@rm -f binaries/rpl*.o
 #--------------------------------------------------------------------------------
 # Handle generation of a new version string when initialize is recompiled
 #--------------------------------------------------------------------------------

@@ -23,7 +23,7 @@ byte	ip_unspec[16] = {0};
 
 /* IP forwarding table */
 struct	ip_fwentry ip_fwtab[IPFW_TABSIZE];
-#define DEBUG_IP 1
+//#define DEBUG_IP 1
 /*------------------------------------------------------------------------
  * ip_in  -  Handle incoming IPv6 packets
  *------------------------------------------------------------------------
@@ -88,7 +88,9 @@ void	ip_in (
 			}
 		}
 		if(i >= ifptr->if_nipmcast) {
+			#ifdef DEBUG_IP
 			kprintf("ip_in: multicast address not found\n");
+			#endif
 			restore(mask);
 			return;
 		}
@@ -177,13 +179,11 @@ void	ip_in_ext (
 				}
 
 				if(exptr->ipext_len & 0x1) {
-					kprintf("ip_in_ext: rt error 1\n");
 					//Send ICMP Parameter problem
 					return;
 				}
 
 				if(exptr->ipext_rhsegs > (exptr->ipext_len / 2)) {
-					kprintf("ip_in_ext: rt error 2\n");
 					//Send ICMP Parameter problem
 					return;
 				}
@@ -193,7 +193,6 @@ void	ip_in_ext (
 				i = (exptr->ipext_len / 2) - exptr->ipext_rhsegs;
 
 				if(isipmc(exptr->ipext_rhaddrs[i])) {
-					kprintf("ip_in_ext: rt error 3\n");
 					return;
 				}
 
@@ -206,14 +205,15 @@ void	ip_in_ext (
 				memcpy(exptr->ipext_rhaddrs[i-1], tmpaddr, 16);
 
 				if(pkt->net_iphl <= 1) {
-					kprintf("ip_in_ext: rt error 4\n");
 					//Send ICMP Time Exceeded
 					return;
 				}
 
 				pkt->net_iphl--;
 
+				#ifdef DEBUG_IP
 				kprintf("ip_in_ext: rt forward packet..%d\n", pkt->net_iplen);
+				#endif
 				fwpkt = (struct netpacket *)getbuf(netbufpool);
 				memcpy(fwpkt, pkt, 40 + pkt->net_iplen);
 				ip_send(fwpkt);
@@ -685,7 +685,7 @@ int32	ip_send_rpl (
 	else { /* Off-link IP address */
 
 		if(rpltab[0].root) {
-			ip_send_rpl_lbr(pkt, nxthop);
+			ip_send_rpl_lbr(pkt);
 			restore(mask);
 			return OK;
 		}
@@ -759,9 +759,7 @@ int32	ip_send_rpl (
 
 	write(RADIO0, (char *)rpkt, 14 + 24 + iplen);
 
-	kprintf("Freeing pkt\n");
 	freebuf((char *)pkt);
-	kprintf("Freeing rpkt\n");
 	freebuf((char *)rpkt);
 
 	restore(mask);

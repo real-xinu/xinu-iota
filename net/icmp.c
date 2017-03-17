@@ -219,10 +219,10 @@ int32	icmp_register (
 }
 
 /*------------------------------------------------------------------------
- * icmp_remove  -  Remove a slot from ICMP table
+ * icmp_release  -  Release a slot from ICMP table
  *------------------------------------------------------------------------
  */
-int32	icmp_remove (
+int32	icmp_release (
 		int32	slot
 		)
 {
@@ -232,6 +232,8 @@ int32	icmp_remove (
 	if(slot < 0 || slot >= ICMP_TABSIZE) {
 		return SYSERR;
 	}
+
+	mask = disable();
 
 	icptr = &icmptab[slot];
 

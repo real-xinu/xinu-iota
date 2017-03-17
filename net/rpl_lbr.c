@@ -2,9 +2,12 @@
 
 #include <xinu.h>
 
-#define	DEBUG_RPL	1
+//#define	DEBUG_RPL	1
 
 struct	rplnode rplnodes[NRPLNODES];
+
+byte	global_ipprefix[] = {0x20, 0x01, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0};
 
 /*------------------------------------------------------------------------
  * rpl_lbr_init  -  Initialize RPL LBR data structures
@@ -14,6 +17,8 @@ void	rpl_lbr_init (void) {
 
 	struct	rplnode *nodeptr;
 	struct	rplentry *rplptr;
+	struct	netiface *ifptr;
+	struct	ip_fwentry *ipfptr;
 	intmask	mask;
 	int32	i;
 
@@ -27,6 +32,29 @@ void	rpl_lbr_init (void) {
 
 		nodeptr->state = RPLNODE_STATE_FREE;
 	}
+
+	/* For now, add a global IP address to interface */
+
+	ifptr = &iftab[1];
+	memcpy(ifptr->if_ipucast[1].ipaddr, global_ipprefix, 8);
+	memcpy(&ifptr->if_ipucast[1].ipaddr[8], ifptr->if_hwucast, 8);
+	if(ifptr->if_hwucast[0] & 0x02) {
+		ifptr->if_ipucast[1].ipaddr[8] &= 0xfd;
+	}
+	else {
+		ifptr->if_ipucast[1].ipaddr[8] |= 0x02;
+	}
+	ifptr->if_ipucast[1].prefixlen = 8;
+	ifptr->if_nipucast++;
+
+	/* Add an entry in IP forwarding table */
+
+	ipfptr = &ip_fwtab[0];
+	memcpy(ipfptr->ipfw_prefix.ipaddr, global_ipprefix, 16);
+	ipfptr->ipfw_prefix.prefixlen = 8;
+	ipfptr->ipfw_onlink = 0;
+	ipfptr->ipfw_iface = 1;
+	ipfptr->ipfw_state = 1;
 
 	/* Add a RPL entry and make us root of the DODAG */
 
@@ -254,7 +282,9 @@ void	rpl_in_dao (
 						}
 					}
 					if(j >= NRPLNODES) {
+						#ifdef DEBUG_RPL
 						kprintf("rpl_in_dao: cannot find parent in the set of nodes!\n");
+						#endif
 					}
 				}
 

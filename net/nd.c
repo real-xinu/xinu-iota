@@ -241,7 +241,7 @@ void	nd_in_ns (
 	int32	ncindex;		/* Neighbor cache index		*/
 	intmask	mask;			/* Interrupt mask		*/
 	int32	i;			/* Index variable		*/
-	byte	aro_status;		/* Addr. Registration status	*/
+	byte	aro_status = 0;		/* Addr. Registration status	*/
 
 	/* Pointer to neighbor solicitation msg */
 	nsmsg = (struct nd_nbrsol *)pkt->net_icdata;
@@ -340,9 +340,9 @@ void	nd_in_ns (
 					aro_status = 2;
 				}
 				else {
-					kprintf("Registering child: ");
-					ip_printaddr(pkt->net_ipsrc);
-					kprintf("\n");
+					//kprintf("Registering child: ");
+					//ip_printaddr(pkt->net_ipsrc);
+					//kprintf("\n");
 					nd_ncache[ncindex].nc_type = NC_TYPE_REG2;
 					nd_ncache[ncindex].nc_texpire = ntohs(ndopt->ndopt_reglife) * 60000;
 					aro_status = 0;
@@ -490,6 +490,7 @@ void	nd_in_na (
 	ndopt = (struct nd_opt *)namsg->nd_opts;
 
 	tllao = NULL;
+	aro = NULL;
 
 	/* Parse the options... */
 	while((char *)ndopt < (char *)pkt->net_ipdata + pkt->net_iplen) {
@@ -788,9 +789,9 @@ int32	nd_regaddr (
 
 	ncptr->nc_texpire = 10;
 
-	kprintf("Registering with neighbor: ");
-	ip_printaddr(nbrip);
-	kprintf("\n");
+	//kprintf("Registering with neighbor: ");
+	//ip_printaddr(nbrip);
+	//kprintf("\n");
 
 	nd_send_ns(ncindex);
 

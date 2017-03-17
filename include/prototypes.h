@@ -143,9 +143,12 @@ extern	status	getutime(uint32 *);
 extern	void	halt(void);
 
 /* in file icmp.c */
-void	icmp_in(struct netpacket *);
-int32	icmp_send(byte, byte, byte [], byte [], void *, int32, int32);
-uint16	icmp_cksum(struct netpacket *);
+extern	void	icmp_in(struct netpacket *);
+extern	int32	icmp_send(byte, byte, byte [], byte [], void *, int32, int32);
+extern	uint16	icmp_cksum(struct netpacket *);
+extern	int32	icmp_register(byte, byte, byte [], byte [], int32);
+extern	int32	icmp_release(int32);
+extern	int32	icmp_recv(int32, char [], int32, uint32);
 
 /* in file init.c */
 extern	syscall	init(did32);
@@ -171,6 +174,8 @@ extern	void	ip_hton(struct netpacket *);
 extern	void	ip_ntoh(struct netpacket *);
 extern	void	ip_printaddr(byte []);
 extern	int32	ip_send_rpl(struct netpacket *, byte []);
+extern	int32	ip_send_rpl_lbr(struct netpacket *);
+extern	int32	colon2ip(char *, byte []);
 
 /* in file net.c */
 
@@ -330,6 +335,7 @@ extern	void	nd_in_na(struct netpacket *);
 extern	int32	nd_send_ns(int32);
 extern	int32	nd_resolve(byte [], int32, void *);
 extern	process	nd_timer(void);
+extern	int32	nd_regaddr(byte [], int32);
 
 /* in file netiface.c */
 extern  void netiface_init(void);
@@ -537,6 +543,7 @@ extern	int32	rpl_parents(int32);
 extern	int32	rpl_send_dis(int32, int32);
 extern	int32	rpl_send_dio(int32, byte []);
 extern	int32	rpl_send_dao(int32, int32);
+extern	process	rpl_timer(void);
 
 /* in file rpl_lbr.c */
 extern	void	rpl_lbr_init(void);

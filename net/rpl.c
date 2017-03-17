@@ -2,7 +2,7 @@
 
 #include <xinu.h>
 
-#define	DEBUG_RPL	1
+//#define	DEBUG_RPL	1
 
 struct	rplentry rpltab[NRPL];
 
@@ -16,8 +16,20 @@ void	rpl_init (
 {
 
 	struct	rplentry *rplptr;	/* Pointer to RPL entry	*/
+	struct	netiface *ifptr;	/* Pointer to net iface	*/
 	intmask	mask;			/* Interrupt mask	*/
 	int32	i;			/* Index variable	*/
+
+	ifptr = &iftab[1];
+
+	memcpy(ifptr->if_ipmcast[ifptr->if_nipmcast].ipaddr, ip_allrplnodesmc,
+					16);
+	ifptr->if_nipmcast++;
+
+	#ifdef ROOT
+		rpl_lbr_init();
+		return;
+	#endif
 
 	mask = disable();
 
@@ -32,6 +44,8 @@ void	rpl_init (
 
 		rplptr->state = RPL_STATE_FREE;
 	}
+
+	resume(create(rpl_timer, 8192, NETPRIO, "rpl timer", 0, NULL));
 
 	restore(mask);
 }
@@ -518,7 +532,7 @@ void	rpl_in_dio (
 
 		memcpy(rplptr->neighbors[0].lluip, pkt->net_ipsrc, 16);
 		memcpy(rplptr->neighbors[0].gip, piopt_r->rplopt_prefix, 16);
-		#ifdef DEGUB_RPL
+		#ifdef DEGUG_RPL
 		kprintf("rpl_in_dio: newrpl info from ");
 		ip_printaddr(piopt_r->rplopt_prefix);
 		kprintf("\n");
@@ -686,7 +700,9 @@ int32	rpl_send_dis (
 			return SYSERR;
 		}
 
+		#ifdef DEBUG_RPL
 		kprintf("rpl_send_dis: Sending DIS to all-rpl-nodes-mc\n");
+		#endif
 		icmp_send(ICMP_TYPE_RPL, ICMP_CODE_RPL_DIS, ip_unspec, ip_allrplnodesmc,
 				dismsg, msglen, iface);
 		return OK;
@@ -840,19 +856,25 @@ int32	rpl_send_dao (
 	rplptr = &rpltab[rplindex];
 
 	if(rplptr->state == RPL_STATE_FREE) {
+		#ifdef DEBUG_RPL
 		kprintf("rpl_send_dao: invalid rpl state\n");
+		#endif
 		return SYSERR;
 	}
 
 	ifptr = &iftab[rplptr->iface];
 
 	if(pindex >= rplptr->nneighbors) {
+		#ifdef DEBUG_RPL
 		kprintf("rpl_send_dao: pindex %d, nneighbors %d\n", pindex, rplptr->nneighbors);
+		#endif
 		return SYSERR;
 	}
 
 	if((pindex != -1) && (rplptr->neighbors[pindex].parent == FALSE)) {
+		#ifdef DEBUG_RPL
 		kprintf("rpl_send_dao: neighbor is not a parent\n");
+		#endif
 		return SYSERR;
 	}
 
@@ -943,6 +965,28 @@ int32	rpl_send_dao (
 		  rplptr->iface);
 
 	freemem((char *)daomsg, msglen);
+
+	return OK;
+}
+
+/*------------------------------------------------------------------------
+ * rpl_timer  -  RPL Timer process
+ *------------------------------------------------------------------------
+ */
+process	rpl_timer (void) {
+
+	struct	rplentry *rplptr;
+	intmask	mask;
+
+	rplptr = &rpltab[0];
+
+	mask = disable();
+
+	while(rplptr->state == RPL_STATE_FREE) {
+		restore(mask);
+		rpl_send_dis(-1, 1);
+		sleep(5);
+	}
 
 	return OK;
 }

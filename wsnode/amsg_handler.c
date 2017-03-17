@@ -28,7 +28,6 @@ void amsg_handler ( struct netpacket_e *node_msg )
                 kprintf ("\n");
                 print_info();
                 kprintf ( "\n====>ACK message is sent\n" );
-		signal(sem1);
             }
 
             break;

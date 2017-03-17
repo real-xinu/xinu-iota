@@ -11,30 +11,17 @@ process	counterproc() {
 	}
 	return OK;
 }
-sid32	sem1;
+
 process	main(void)
 {
 	/* Start the network */
-
-	struct netpacket *pkt;
-
-	sem1 = semcreate(0);
-
-	char *ipstr = "2001:0000:0000:0000:abcd:1234:eedd:1ab3";
-	byte ipaddr[16];
-	colon2ip(ipstr, ipaddr);
-	kprintf("%s\n", ipstr);
-	ip_printaddr(ipaddr); kprintf("\n");
 
 	sleep(3);
 
 	wsnode_join();
 
-	kprintf("main waiting 1\n");
-	wait(sem1);
-	kprintf("main waiting 2\n");
-	wait(sem1);
-
+	sleep(1);
+#if 0
 	byte	prefix[] = {0x20, 0x01, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -59,7 +46,6 @@ process	main(void)
 	rpl_send_dis(-1, 1);
 	//while(1);
 #endif
-#if 0
 	while(1) {
 		char	c;
 		kprintf("Enter r for root, or n for non-root:");
