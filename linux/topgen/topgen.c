@@ -92,6 +92,7 @@
 #define	TOKEOF	 -1		/* Token for End-Of-File		*/
 #define	TOKRECV	  0		/* Token of the form xxx (a receiver)	*/
 #define	TOKSEND	  1		/* Token of the form xxx: (a sender)	*/
+#define TOKNUM	  2		/* Token for numbers - link parameters	*/
 
 #define	RECVUDEF  0		/* No specification of receivers has	*/
 				/*   been encoutered for this node	*/
@@ -119,6 +120,10 @@ struct	node {			/* An entry in the list of node names	*/
 	int	nsend;		/* Can the node send to any others?	*/
 	char	nname[NAMLEN];	/* Name of the node			*/
 	unsigned char nmcast[6];/* Multicast address to use when sending*/
+	struct {
+		unsigned char lqi;	/* Link quality info - def 255	*/
+		unsigned char loss;	/* Link loss - default 0	*/
+	} linkinfo[NODES];
 };
 
 struct	node	nodes[NODES];	/* List of node names			*/
@@ -151,6 +156,7 @@ void	init (void)
 {
 	int	i;		/* Array index used with nap and nodes	*/
 	int	j;		/* Index in a multicast array		*/
+	int	k;		/* Index to node link array		*/
 	struct	node	*nptr;	/* Ptr to an entry in modes		*/
 
 	/* Initialize the nodes array */
@@ -163,6 +169,10 @@ void	init (void)
 		nptr->nmcast[0]= 0x01;
 		for (j=1; j<6; j++) {
 			nptr->nmcast[j] = 0x00;
+		}
+		for(k = 0; k < NODES; k++) {
+			nptr->linkinfo[k].lqi = 0xff;
+			nptr->linkinfo[k].loss = 0x00;
 		}
 	}
 
@@ -246,6 +256,17 @@ int	skipblanks(void)
 	return ch;
 }
 
+/************************************************************************/
+/*									*/
+/* istoknumber - checks if a token is a number				*/
+/*									*/
+/************************************************************************/
+int istoknumber(char *tok) {
+  int i;
+  for(i = 0; i < strlen(tok); i++)
+    if(!isdigit(tok[i])) return 0;
+  return 1;
+}
 
 /************************************************************************/
 /*									*/
@@ -298,14 +319,15 @@ int	gettok(
 
 	tok[len] = NULLCH;
 
-	/* Ensure that the first character of the token is not numeric */
-
-	if ( (tok[0]>='0') && (tok[0]<='9') ) {
-		errexit("error: on line %d, token name '%s' starts with a digit\n",linenum, (long)tok);
-	}
-
 	if (ch == NEWLINE) {
 		linenum++;
+	}
+
+	if(istoknumber(tok))
+	  return TOKNUM;
+	/* Ensure that the first character of the token is not numeric */
+	else if ( (tok[0]>='0') && (tok[0]<='9') ) {
+		errexit("error: on line %d, token name '%s' starts with a digit\n",linenum, (long)tok);
 	}
 
 	if (colonseen > 0) {
@@ -740,7 +762,7 @@ void	find_output_file(
 	}
 }
 
-void parse_topo(char *infile, char *outfile, int symmetric, struct node nodes[]) {
+void parse_topo(char *infile, char *outfile, int symmetric, struct node nodes[], int linkinfo) {
 	char	tok[NAMLEN];		/* The next input token		*/
 	int	typ;			/* Type of a token		*/
 	int	sindex;			/* Index of sender in nodes	*/
@@ -819,6 +841,27 @@ void parse_topo(char *infile, char *outfile, int symmetric, struct node nodes[])
 				rptr->nsend = 1;
 				sptr->nrecv = 1;
 			}
+
+			/* Process link information */
+			if (linkinfo) {
+				int lqi, loss;
+				typ = gettok(tok);
+				if (typ != TOKNUM)
+					errexit("error: lqi %s is not valid (line %d)", (long)tok, linenum);
+				lqi = atoi(tok);
+				if(!(1 <= lqi <= 255))
+					errexit("error: lqi %s out of range (line %d)", (long)tok, linenum);
+
+				sptr->linkinfo[rindex].lqi = (unsigned char)lqi;
+
+				typ = gettok(tok);
+				if (typ != TOKNUM)
+					errexit("error: loss %s is not valid (line %d)", (long)tok, linenum);
+				loss = atoi(tok);
+				if(!(1 <= loss < 100))
+					errexit("error: loss %s out of range (line %d)", (long)tok, linenum);
+				sptr->linkinfo[rindex].loss = (unsigned char)loss;
+			}
 			/* Move to the next token */
 			typ = gettok(tok);
 		}
@@ -865,6 +908,7 @@ int	main(
 	struct node *nptr;
 
 	int parse = 1;
+	int linkinfo = 1;
 	sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
 			sentinel[4] = sentinel[5] = 0x00;
 
@@ -949,7 +993,7 @@ int	main(
 		strcpy(outfile, infile);
 		strcat(outfile, ".0");
 
-		parse_topo(infile, outfile, symmetric, nodes);
+		parse_topo(infile, outfile, symmetric, nodes, linkinfo);
 	}
 
 	/* Update branch */
@@ -1014,7 +1058,7 @@ int	main(
 			}
 		}
 		else {
-			parse_topo(update_file, outfile, symmetric, nodes);
+			parse_topo(update_file, outfile, symmetric, nodes, linkinfo);
 		}
 		/* test for isolation, sending and receiving capabiliites */
 
@@ -1046,6 +1090,16 @@ int	main(
 
 	for (nindex=0; nindex<nnodes; nindex++) {
 		fwrite(nodes[nindex].nmcast, 1, 6, fout);
+
+		/* Write linkinfo if necessary */
+
+		if(linkinfo) {
+			int i;
+			for(i = 0; i < nnodes; i++) {
+				  fwrite(&(nodes[nindex].linkinfo[i].lqi), 1, 1, fout);
+				  fwrite(&(nodes[nindex].linkinfo[i].loss), 1, 1, fout);
+			}
+		}
 	}
 
 	/* Write the sentinel value */
