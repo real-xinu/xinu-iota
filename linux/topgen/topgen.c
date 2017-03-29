@@ -858,7 +858,7 @@ void parse_topo(char *infile, char *outfile, int symmetric, struct node nodes[],
 				if (typ != TOKNUM)
 					errexit("error: loss %s is not valid (line %d)", (long)tok, linenum);
 				loss = atoi(tok);
-				if(!(1 <= loss < 100))
+				if(!(0 <= loss < 100))
 					errexit("error: loss %s out of range (line %d)", (long)tok, linenum);
 				sptr->linkinfo[rindex].loss = (unsigned char)loss;
 			}
