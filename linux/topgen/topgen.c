@@ -120,8 +120,10 @@ struct	node {			/* An entry in the list of node names	*/
 	int	nsend;		/* Can the node send to any others?	*/
 	char	nname[NAMLEN];	/* Name of the node			*/
 	unsigned char nmcast[6];/* Multicast address to use when sending*/
+
 	struct {
-		unsigned char lqi;	/* Link quality info - def 255	*/
+		unsigned char lqi_low;	/* Link quality info - def 255	*/
+		unsigned char lqi_high;	/* Link quality info - def 255	*/
 		unsigned char loss;	/* Link loss - default 0	*/
 	} linkinfo[NODES];
 };
@@ -171,7 +173,8 @@ void	init (void)
 			nptr->nmcast[j] = 0x00;
 		}
 		for(k = 0; k < NODES; k++) {
-			nptr->linkinfo[k].lqi = 0xff;
+			nptr->linkinfo[k].lqi_low = 0x00;
+			nptr->linkinfo[k].lqi_high = 0xff;
 			nptr->linkinfo[k].loss = 0x00;
 		}
 	}
@@ -847,12 +850,22 @@ void parse_topo(char *infile, char *outfile, int symmetric, struct node nodes[],
 				int lqi, loss;
 				typ = gettok(tok);
 				if (typ != TOKNUM)
-					errexit("error: lqi %s is not valid (line %d)", (long)tok, linenum);
+					errexit("error: lqi_low %s is not valid (line %d)", (long)tok, linenum);
 				lqi = atoi(tok);
 				if(!(1 <= lqi <= 255))
-					errexit("error: lqi %s out of range (line %d)", (long)tok, linenum);
+					errexit("error: lqi_low %s out of range (line %d)", (long)tok, linenum);
 
-				sptr->linkinfo[rindex].lqi = (unsigned char)lqi;
+				sptr->linkinfo[rindex].lqi_low = (unsigned char)lqi;
+
+				typ = gettok(tok);
+				if (typ != TOKNUM)
+					errexit("error: lqi_high %s is not valid (line %d)", (long)tok, linenum);
+				lqi = atoi(tok);
+				if(!(1 <= lqi <= 255))
+					errexit("error: lqi_high %s out of range (line %d)", (long)tok, linenum);
+
+				sptr->linkinfo[rindex].lqi_high = (unsigned char)lqi;
+
 
 				typ = gettok(tok);
 				if (typ != TOKNUM)
@@ -1096,7 +1109,8 @@ int	main(
 		if(linkinfo) {
 			int i;
 			for(i = 0; i < NODES; i++) {
-				  fwrite(&(nodes[nindex].linkinfo[i].lqi), 1, 1, fout);
+				  fwrite(&(nodes[nindex].linkinfo[i].lqi_low), 1, 1, fout);
+				  fwrite(&(nodes[nindex].linkinfo[i].lqi_high), 1, 1, fout);
 				  fwrite(&(nodes[nindex].linkinfo[i].loss), 1, 1, fout);
 			}
 		}
