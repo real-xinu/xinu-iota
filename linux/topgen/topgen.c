@@ -1107,12 +1107,7 @@ int	main(
 		/* Write linkinfo if necessary */
 
 		if(linkinfo) {
-			int i;
-			for(i = 0; i < NODES; i++) {
-				  fwrite(&(nodes[nindex].linkinfo[i].lqi_low), 1, 1, fout);
-				  fwrite(&(nodes[nindex].linkinfo[i].lqi_high), 1, 1, fout);
-				  fwrite(&(nodes[nindex].linkinfo[i].loss), 1, 1, fout);
-			}
+			fwrite(&(nodes[nindex].linkinfo), 3, NODES, fout);
 		}
 	}
 
