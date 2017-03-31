@@ -13,6 +13,11 @@ char map_list[MAXNODES][NAMELEN];
  ***********************************************************************/
 status read_topology ( char *name, char **buff, uint32 *size )
 {
+   
+    int32 status;
+    char * temp;
+    uint32 res_size;
+
     /* Open topology file from server */
     int32 fd = open ( RFILESYS, name, "ro" );
 
@@ -40,7 +45,20 @@ status read_topology ( char *name, char **buff, uint32 *size )
     }
 
     /* Read the topology file into the buffer */
-    int32 status = read ( fd, *buff, *size );
+    if (*size < RF_DATALEN)
+        status = read ( fd, *buff, *size );
+    else
+    {
+        res_size = *size;
+	temp = *buff;
+	while (res_size >= RF_DATALEN)
+        {
+	  status = read ( fd, temp, RF_DATALEN - 1 );
+	  res_size = res_size - (RF_DATALEN - 1);
+	  temp += (RF_DATALEN - 1);
+	}
+	status = read ( fd, temp, res_size );
+    }
 
     if ( status == SYSERR ) {
         printf ( "WARNING: Could not read topology file contents\n" );
@@ -57,9 +75,9 @@ status read_topology ( char *name, char **buff, uint32 *size )
  * print_raw_topology: Print MAC addresses in a binary topology
  *  (this is mostly useful for testing)
  ***********************************************************************/
-int32 topo_update ( char *buff, uint32 size, struct t_entry *topo )
+int32 topo_update ( char *buff, uint32 size, struct topo_entry *topo )
 {
-    int i, j, k;
+    int i, j, k, m;
     int nnodes = 46;
     int32 num_of_entries;
     int counter = 0;
@@ -72,22 +90,24 @@ int32 topo_update ( char *buff, uint32 size, struct t_entry *topo )
     while ( counter <= size ) {
         if ( flag != -1 ) {
             for ( j = 0; j < ETH_ADDR_LEN; j++ ) {
-                /*DEBUG*/   /*
+                /*DEBUG*/ /*  
                           for (k=7; k>=0; k--)
                           {
-                          	kprintf("%d ", (buff[i * ETH_ADDR_LEN + j]>>k)&0x01);
+                          	kprintf("%d ", (buff[counter+ j]>>k)&0x01);
                           }
-                          kprintf(" ");
+			  kprintf(" ");
                    */
-                if ( ( int ) buff[i * ETH_ADDR_LEN + j] == 0 )
+                if ( ( int ) buff[counter + j] == 0 )
                     flag++;
             }
-
             //kprintf("\n");
             if ( flag == 6 )
+	    {
                 flag = -1;
-
+                counter = counter + 6;
+            }
             else {
+
                 flag = 0;
                 topo[i].t_nodeid = i;
                 topo[i].t_status = 0;
@@ -95,11 +115,25 @@ int32 topo_update ( char *buff, uint32 size, struct t_entry *topo )
                 for ( j = 0; j < 6; j++ ) {
                     topo[i].t_neighbors[j] = ( unsigned char ) buff[counter + j];
                 }
+                counter = counter + 6;
+            	for (m = 0;m < 46; m++)
+	    	{
+	        	topo[i].link_info[m].lqi_low = ( unsigned char ) buff[counter];
+			counter++;
+                	topo[i].link_info[m].lqi_high = ( unsigned char ) buff[counter];
+			counter++;
+                	topo[i].link_info[m].probloss = ( unsigned char ) buff[counter];
+			counter++;
+
+			/* DEBUG */// kprintf("link_info: %d, %d, %d  ", topo[i].link_info[m].lqi_low, topo[i].link_info[m].lqi_high, topo[i].link_info[m].probloss);
+	    	}
+	    	//kprintf("\n\n");
+
 
                 i++;
             }
 
-            counter = counter + 6;
+
 
         } else {
             if ( len_flag == 0 ) {

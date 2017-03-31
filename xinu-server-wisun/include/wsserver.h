@@ -136,11 +136,32 @@
 #define C_CLEANUP       21      /* A message sent by management app to testbed
 				   server to shut down all of the nodes */
 
+#define C_SETTIME       22      /* A message sent by management app to testbed server 
+                                   to set current time */
+
 /* The following struct is included here, but should probably go in the	*/
 /*	file that declares items related to the topology database.	*/
 
 #define	MAXNODES	46	/* Maximum number of nodes being tested	*/
 #define NAMELEN         20      /* Maximum length of the node's name */
+
+struct	topo_entry { 		/* Entry in a topology file (also used	*/
+    /*  in messages.			*/
+    int32	t_nodeid;	/* ID of a node				*/
+    int32	t_status;	/* Status of the node			*/
+    byte	t_neighbors[6];	/* The multicast address of neighbors	*/
+    byte	t_macaddr[6];	/* The Mac address of a node		*/
+    struct {
+	          byte lqi_low;
+		  byte lqi_high;
+		  byte probloss;
+    }link_info[46];
+
+};
+
+
+
+
 
 struct	t_entry { 		/* Entry in a topology file (also used	*/
     /*  in messages.			*/
@@ -205,6 +226,9 @@ struct	c_msg {
         uint32	uptime;		/* TS_RESP (amount of time the	*/
         /* server has been up (in msec).*/
 
+
+	uint32 ctime;           /* current time */
+
     };
 };
 
@@ -231,7 +255,7 @@ extern int32 *seqnum;
 extern int32 ping_ack_flag[MAXNODES];
 extern byte ack_info[16];
 extern char map_list[MAXNODES][NAMELEN];
-extern struct t_entry topo[MAXNODES];
-extern struct t_entry old_topo[MAXNODES];
+extern struct topo_entry topo[MAXNODES];
+extern struct topo_entry old_topo[MAXNODES];
 extern int32  bbb_stat[MAX_BBB];
 extern byte   bbb_macs[MAX_BBB][6];

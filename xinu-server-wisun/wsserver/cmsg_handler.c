@@ -129,6 +129,17 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
                     cmsg_reply->cmsgtyp = htonl ( C_ERR );
 	    break;
 
+	case C_SETTIME:
+	     kprintf("Message type is %d:%d\n", C_SETTIME, ctlpkt->ctime);
+	     status retval = settime(ctlpkt->ctime);
+	     if(retval == OK)
+	         cmsg_reply->cmsgtyp = htonl(C_OK);
+             else
+	         cmsg_reply->cmsgtyp = htonl(C_ERR);
+	     
+	     break;
+
+
         default:
             kprintf ( "ERROR\n" );
             cmsg_reply->cmsgtyp = htonl ( C_ERR );

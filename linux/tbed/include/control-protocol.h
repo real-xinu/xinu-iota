@@ -137,6 +137,10 @@
 #define C_CLEANUP       21     /* A message sent by management app to 
 			      testbed server to shut down all of the nodes */
 
+
+#define C_SETTIME       22    /* A message sent by manangement app to 
+                                 testbed server to set the current time */
+
 /* The following struct is included here, but should probably go in the	*/
 /*	file that declares items related to the topology database.	*/
 
@@ -202,6 +206,8 @@ struct	c_msg {
 	};
         uint32	uptime;		/* TS_RESP (amount of time the	*/
         /* server has been up (in msec).*/
+
+	uint32 ctime;         /* current time */
                
     };
 };

@@ -69,6 +69,14 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "inc")) {
         message.cmsgtyp = htonl (C_ERR);
 
+   } else if(!strcmp(array_token[0], "settime")){
+         message.cmsgtyp = htonl(C_SETTIME);
+	 struct timeval tv1;
+	 gettimeofday (&tv1, NULL);
+	 message.ctime = (tv1.tv_usec/1000000) + tv1.tv_sec;
+
+    
+
     } else if (!strcmp (array_token[0], "xon")) {
         cmd_print (command_print);
 

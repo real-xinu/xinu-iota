@@ -4,6 +4,7 @@
  * Message handler is used to call
  * appropiate function based on message type.
  * -----------------------------------------------*/
+extern sid32 sem1;
 void amsg_handler ( struct netpacket_e *node_msg )
 {
     float delay;
@@ -22,6 +23,12 @@ void amsg_handler ( struct netpacket_e *node_msg )
                 for ( i = 0; i < 6; i++ ) {
                     info.mcastaddr[i] = node_msg->msg.amcastaddr[i];
                     kprintf ("%02x:", node_msg->msg.amcastaddr[i]);
+                }
+		for ( i = 0; i < 46; i++)
+		{
+		   info.link_info[i].lqi_high = node_msg->msg.link_info[i].lqi_high;
+		   info.link_info[i].lqi_low = node_msg->msg.link_info[i].lqi_low;
+		   info.link_info[i].probloss = node_msg->msg.link_info[i].probloss;
                 }
 
                 kprintf ("\n");
@@ -81,6 +88,11 @@ void amsg_handler ( struct netpacket_e *node_msg )
         case A_CLEANUP:
             panic("The node is down\n");
 	    break;
+
+	case A_SETTIME:
+	     kprintf("<==== Settime message is received:current time: %d\n",node_msg->msg.ctime);
+	     info.ctime = node_msg->msg.ctime;
+	     break;
         default:
             //freebuf ((char *) node_msg);
             break;

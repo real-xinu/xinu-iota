@@ -2,9 +2,12 @@
 
 #include <xinu.h>
 
-#define	DEBUG_RPL	1
+//#define	DEBUG_RPL	1
 
 struct	rplnode rplnodes[NRPLNODES];
+
+byte	global_ipprefix[] = {0x20, 0x01, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0};
 
 /*------------------------------------------------------------------------
  * rpl_lbr_init  -  Initialize RPL LBR data structures
@@ -14,6 +17,8 @@ void	rpl_lbr_init (void) {
 
 	struct	rplnode *nodeptr;
 	struct	rplentry *rplptr;
+	struct	netiface *ifptr;
+	struct	ip_fwentry *ipfptr;
 	intmask	mask;
 	int32	i;
 
@@ -27,6 +32,29 @@ void	rpl_lbr_init (void) {
 
 		nodeptr->state = RPLNODE_STATE_FREE;
 	}
+
+	/* For now, add a global IP address to interface */
+
+	ifptr = &iftab[1];
+	memcpy(ifptr->if_ipucast[1].ipaddr, global_ipprefix, 8);
+	memcpy(&ifptr->if_ipucast[1].ipaddr[8], ifptr->if_hwucast, 8);
+	if(ifptr->if_hwucast[0] & 0x02) {
+		ifptr->if_ipucast[1].ipaddr[8] &= 0xfd;
+	}
+	else {
+		ifptr->if_ipucast[1].ipaddr[8] |= 0x02;
+	}
+	ifptr->if_ipucast[1].prefixlen = 8;
+	ifptr->if_nipucast++;
+
+	/* Add an entry in IP forwarding table */
+
+	ipfptr = &ip_fwtab[0];
+	memcpy(ipfptr->ipfw_prefix.ipaddr, global_ipprefix, 16);
+	ipfptr->ipfw_prefix.prefixlen = 8;
+	ipfptr->ipfw_onlink = 0;
+	ipfptr->ipfw_iface = 1;
+	ipfptr->ipfw_state = 1;
 
 	/* Add a RPL entry and make us root of the DODAG */
 
@@ -87,7 +115,7 @@ void	rpl_in_dao (
 	int32	i, j, k;		/* Index variables	*/
 
 	#ifdef DEBUG_RPL
-	kprintf("rpl_in_dao: ...\n");
+	kprintf("rpl_in_dao: ... %d IP len\n", pkt->net_iplen);
 	#endif
 
 	daomsg = (struct rpl_dao *)pkt->net_icdata;
@@ -182,6 +210,16 @@ void	rpl_in_dao (
 			rplopt += tgtopt->rplopt_len + 2;
 			while(rplopt < (pkt->net_ipdata + pkt->net_iplen)) {
 
+				if((*rplopt) == RPLOPT_TYPE_P1) {
+					rplopt++;
+					continue;
+				}
+
+				if((*rplopt) == RPLOPT_TYPE_PN) {
+					rplopt += 2 + (*(rplopt+1));
+					continue;
+				}
+
 				if((*rplopt) != RPLOPT_TYPE_TI) {
 					break;
 				}
@@ -231,17 +269,22 @@ void	rpl_in_dao (
 							//TODO rplnodes[i].parents[k].texpire =
 
 							if(rplnodes[i].nparents == 0) {
-								rplnodes[i].prefparent = k;
+								rplnodes[i].prefparent = j;
 							}
 							else if(tiopt->rplopt_pc > rplnodes[i].parents[rplnodes[i].prefparent].pc) {
-								rplnodes[i].prefparent = k;
+								rplnodes[i].prefparent = j;
 							}
+							#ifdef DEBUG_RPL
+							kprintf("\tprefered parent of %d is at index %d\n", i, rplnodes[i].prefparent);
+							#endif
 							rplnodes[i].nparents++;
 							break;
 						}
 					}
 					if(j >= NRPLNODES) {
+						#ifdef DEBUG_RPL
 						kprintf("rpl_in_dao: cannot find parent in the set of nodes!\n");
+						#endif
 					}
 				}
 
@@ -256,4 +299,163 @@ void	rpl_in_dao (
 	}
 
 	restore(mask);
+}
+
+/*------------------------------------------------------------------------
+ * ip_send_rpl_lbr  -  Send an IP packet over the radio interface
+ *------------------------------------------------------------------------
+ */
+int32	ip_send_rpl_lbr (
+		struct	netpacket *pkt	/* Packet buffer	*/
+		)
+{
+	struct	netpacket_r *rpkt;	/* Radio packet pointer	*/
+	struct	netpacket *npkt;	/* IP packet pointer	*/
+	struct	ip_ext_hdr *exptr;	/* IP extension header	*/
+	struct	netiface *ifptr;	/* Network interface	*/
+	int32	path[30];
+	int32	curr;
+	intmask	mask;
+	int32	ncindex;
+	int32	iplen;
+	int32	i, j;
+
+	mask = disable();
+
+	for(i = 0; i < NRPLNODES; i++) {
+		if(rplnodes[i].state == RPLNODE_STATE_FREE) {
+			continue;
+		}
+
+		if(!memcmp(pkt->net_ipdst, rplnodes[i].ipprefix, 16)) {
+			break;
+		}
+	}
+	if(i >= NRPLNODES) {
+		freebuf((char *)pkt);
+		restore(mask);
+		return SYSERR;
+	}
+
+	path[0] = i;
+	curr = rplnodes[i].prefparent;
+	i = 1;
+	#ifdef DEBUG_RPL
+	kprintf("node %d, parent %d\n", path[0], curr); 
+	#endif
+	while(curr != 0) {
+		path[i++] = curr;
+		curr = rplnodes[curr].prefparent;
+		#ifdef DEBUG_RPL
+		kprintf("curr: %d\n", curr);
+		#endif
+	}
+
+	#ifdef DEBUG_RPL
+	kprintf("Path: 0 -> ");
+	for(j = i-1; j >= 0; j--) {
+		kprintf("%d ", path[j]);
+		if(j > 0) {
+			kprintf("-> ");
+		}
+	}
+	kprintf("\n");
+	#endif
+
+	ifptr = &iftab[pkt->net_iface];
+
+	rpkt = (struct netpacket_r *)getbuf(netbufpool);
+	if((int32)rpkt == SYSERR) {
+		restore(mask);
+		return SYSERR;
+	}
+
+	memcpy(rpkt->net_ethsrc, iftab[0].if_hwucast, 6);
+	memcpy(rpkt->net_ethdst, info.mcastaddr, 6);
+	rpkt->net_ethtype = htons(ETH_TYPE_B);
+
+	rpkt->net_radfc = (RAD_FC_FT_DAT |
+			   RAD_FC_AR |
+			   RAD_FC_DAM3 |
+			   RAD_FC_FV2 |
+			   RAD_FC_SAM3);
+
+	rpkt->net_radseq = ifptr->if_seq++;
+
+	memcpy(rpkt->net_radsrc, ifptr->if_hwucast, 8);
+
+	iplen = ntohs(pkt->net_iplen);
+
+	if(i == 1) {
+		memcpy(rpkt->net_raddata, pkt, 40 + iplen);
+		npkt = (struct netpacket *)rpkt->net_raddata;
+	}
+	else {
+		npkt = (struct netpacket *)rpkt->net_raddata;
+		memset(npkt, 0, 40);
+		npkt->net_ipvtch = 0x60;
+		npkt->net_ipnh = IP_EXT_RH;
+		npkt->net_iphl = 0xff;
+		memcpy(npkt->net_ipsrc, ifptr->if_ipucast[1].ipaddr, 16);
+		memcpy(npkt->net_ipdst, rplnodes[path[--i]].ipprefix, 16);
+		#ifdef DEBUG_RPL
+		kprintf("IPdst is: "); ip_printaddr(npkt->net_ipdst); kprintf("\n");
+		#endif
+
+		exptr = (struct ip_ext_hdr *)npkt->net_ipdata;
+		exptr->ipext_nh = IP_IP;
+		exptr->ipext_len = (2 * i);
+		exptr->ipext_rhrt = 0;
+		exptr->ipext_rhsegs = i;
+
+		j = 0;
+		while(i > 0) {
+			memcpy(exptr->ipext_rhaddrs[j++], rplnodes[path[--i]].ipprefix, 16);
+			#ifdef DEBUG_RPL
+			kprintf("entry at slot %d: ", j-1); ip_printaddr(exptr->ipext_rhaddrs[j-1]); kprintf("\n");
+			#endif
+		}
+
+		#ifdef DEBUG_RPL
+		kprintf("Copying original packet..\n");
+		#endif
+		memcpy(exptr->ipext_rhaddrs[j], pkt, iplen);
+
+		npkt->net_iplen = ((byte *)exptr->ipext_rhaddrs[j]-npkt->net_ipdata) + iplen;
+		iplen = npkt->net_iplen;
+		ip_hton(npkt);
+	}
+
+	#ifdef DEBUG_RPL
+	kprintf("Finding neighbor..");
+	#endif
+	ncindex = nd_ncfind(npkt->net_ipdst);
+
+	if(ncindex == SYSERR) {
+		freebuf((char *)pkt);
+		freebuf((char *)rpkt);
+		restore(mask);
+		return SYSERR;
+	}
+
+	#ifdef DEBUG_RPL
+	kprintf("found neighbor\n");
+	#endif
+
+	memcpy(rpkt->net_raddst, nd_ncache[ncindex].nc_hwaddr, 8);
+
+	#ifdef DEBUG_RPL
+	for(i = 0; i < 14+24+40+8+40; i++) {
+		kprintf("%02x ", *((byte *)rpkt + i));
+	}
+	kprintf("\n");
+	#endif
+
+	write(RADIO0, (char *)rpkt, 14 + 24 + 40 + iplen);
+
+	freebuf((char *)pkt);
+	freebuf((char *)rpkt);
+
+	restore(mask);
+	return OK;
 }

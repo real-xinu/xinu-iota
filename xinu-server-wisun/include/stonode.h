@@ -94,3 +94,8 @@
 
 #define A_CLEANUP       10      /* A broadcast message sent by testbed server
 				   to nodes, to shut down them */
+
+
+#define A_SETTIME       11      /* A broadcast message sent by testbed server 
+                                   to nodes in order to inform them the current time */
+

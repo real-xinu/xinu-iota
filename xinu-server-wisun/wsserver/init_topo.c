@@ -6,7 +6,7 @@
 int32 bbb_stat[MAX_BBB];
 void init_topo()
 {
-    int i, j;
+    int i, j, k;
 
     for ( i = 0; i < MAXNODES; i++ ) {
         topo[i].t_nodeid = i;
@@ -16,6 +16,14 @@ void init_topo()
             topo[i].t_neighbors[j] = 0;
 
         topo[i].t_status = 0;
+        
+	for ( k = 0; k < 46; k++)
+	{
+	   topo[i].link_info[k].lqi_high = 0;
+	   topo[i].link_info[k].lqi_low = 0;
+	   topo[i].link_info[k].probloss = 0;
+	}
+ 
     }
 
     seqnum = ( int32 * ) getmem ( sizeof ( int32 ) );

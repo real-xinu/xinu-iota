@@ -60,6 +60,16 @@ status topo_compr()
         for ( j = 0; j < 6; j++ )
             if ( old_topo[i].t_neighbors[j] == topo[i].t_neighbors[j] )
                 flag++;
+	
+	for ( j = 0; j < 46; j++)
+	{
+	    if ( old_topo[i].link_info[j].lqi_low == topo[i].link_info[j].lqi_low )
+	       flag++;
+	    if ( old_topo[i].link_info[j].lqi_high == topo[i].link_info[j].lqi_high )
+	       flag++;
+	    if ( old_topo[i].link_info[j].probloss == topo[i].link_info[j].probloss )
+	       flag++;
+	}
 
         if ( nodeid < i ) {
             freebuf ( ( char * ) pkt );
@@ -67,7 +77,7 @@ status topo_compr()
             return SYSERR;
         }
 
-        if ( flag == 6 ) {
+        if ( flag == 144 ) {
             topo[i].t_status = 1;
             /*DEBuG *///kprintf("mcast addresses are the same\n");
             wsserver_xonoff (XON, i);
@@ -141,6 +151,8 @@ struct c_msg *newtop ( struct c_msg *ctlpkt )
         nnodes = nnodes_temp;
         cmsg_reply->cmsgtyp = htonl ( C_ERR );
     }
+
+    /*DEBUG *///print_topo();
 
     return cmsg_reply;
 }

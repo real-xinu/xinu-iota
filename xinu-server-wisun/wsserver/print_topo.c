@@ -18,6 +18,18 @@ void print_topo()
         for ( j = 0; j < 6; j++ )
             kprintf ( "%d ", topo[i].t_neighbors[j] );
 
+        kprintf ( " --Link Info: ");
+        for ( j = 0; j < 46; j++ )
+            kprintf ( "%d,%d,%d ", old_topo[i].link_info[j].lqi_low, old_topo[i].link_info[j].lqi_high, old_topo[i].link_info[j].probloss);
+
+        kprintf ( "  :  " );
+
+        for ( j = 0; j < 46; j++ )
+            kprintf ( "%d,%d,%d ", topo[i].link_info[j].lqi_low, topo[i].link_info[j].lqi_high, topo[i].link_info[j].probloss );
+
+/*
+
+
         kprintf ( "\n  -- macaddr:  " );
 
         for ( j = 0; j < 6; j++ )
@@ -27,7 +39,7 @@ void print_topo()
 
         for ( j = 0; j < 6; j++ )
             kprintf ( "%02x ", topo[i].t_macaddr[j] );
-
+*/
         kprintf ( "\n" );
     }
 }

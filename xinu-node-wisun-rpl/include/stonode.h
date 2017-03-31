@@ -96,12 +96,22 @@
 				 to the nodes and each of the nodes call panic
 				 function*/
 
+
+#define A_SETTIME       11   /* A broadcast message sent by testbed server 
+                                 to inform nodes about the current time */
+
 /*------------------------------------------------------------------
  a data strucure to keep assigned multicast address and the node ID.
 *------------------------------------------------------------------*/
 struct node_info {
     int32 nodeid;
     byte mcastaddr[6];
+    struct {
+         byte  lqi_high;
+	 byte  lqi_low;
+	 byte  probloss;
+    }link_info[46];
+    uint32 ctime;
 };
 
 extern struct node_info info;

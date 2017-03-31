@@ -19,10 +19,18 @@ struct a_msg
 
 	union
 	{
-           byte  amcastaddr[6];
+           struct {
+		    byte	amcastaddr[6];
+		    struct {
+		           byte  lqi_low;
+			   byte  lqi_high;
+			   byte  probloss;
+	            }link_info[46];
+	   };
 	   byte apingdata[8];
 	   byte aacking[16];
 	   byte aerrmsg[16];
+	   uint32 ctime;
 
 	};
 

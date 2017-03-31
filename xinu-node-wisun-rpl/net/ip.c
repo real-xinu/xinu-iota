@@ -23,7 +23,7 @@ byte	ip_unspec[16] = {0};
 
 /* IP forwarding table */
 struct	ip_fwentry ip_fwtab[IPFW_TABSIZE];
-
+//#define DEBUG_IP 1
 /*------------------------------------------------------------------------
  * ip_in  -  Handle incoming IPv6 packets
  *------------------------------------------------------------------------
@@ -88,7 +88,9 @@ void	ip_in (
 			}
 		}
 		if(i >= ifptr->if_nipmcast) {
+			#ifdef DEBUG_IP
 			kprintf("ip_in: multicast address not found\n");
+			#endif
 			restore(mask);
 			return;
 		}
@@ -165,6 +167,9 @@ void	ip_in_ext (
 
 			first = FALSE;
 
+			#ifdef DEBUG_IP
+			kprintf("ip_in_ext: routing hdr..\n");
+			#endif
 			if(exptr->ipext_rhrt == 0) { /* Routing type = 0 */
 
 				if(exptr->ipext_rhsegs == 0) {
@@ -191,9 +196,13 @@ void	ip_in_ext (
 					return;
 				}
 
+				#ifdef DEBUG_IP
+				kprintf("Copying %d ", i-1); ip_printaddr(exptr->ipext_rhaddrs[i-1]);
+				kprintf(" in destination\n");
+				#endif
 				memcpy(tmpaddr, pkt->net_ipdst, 16);
-				memcpy(pkt->net_ipdst, exptr->ipext_rhaddrs[i], 16);
-				memcpy(exptr->ipext_rhaddrs[i], tmpaddr, 16);
+				memcpy(pkt->net_ipdst, exptr->ipext_rhaddrs[i-1], 16);
+				memcpy(exptr->ipext_rhaddrs[i-1], tmpaddr, 16);
 
 				if(pkt->net_iphl <= 1) {
 					//Send ICMP Time Exceeded
@@ -202,6 +211,12 @@ void	ip_in_ext (
 
 				pkt->net_iphl--;
 
+				#ifdef DEBUG_IP
+				kprintf("ip_in_ext: rt forward packet..%d\n", pkt->net_iplen);
+				#endif
+				fwpkt = (struct netpacket *)getbuf(netbufpool);
+				memcpy(fwpkt, pkt, 40 + pkt->net_iplen);
+				ip_send(fwpkt);
 				//Forward the packet
 				return;
 			}
@@ -213,10 +228,12 @@ void	ip_in_ext (
 			break;
 
 		case IP_IP:
-			#ifdef DEBUG_IP
-			kprintf("ip_in_ext: IP in IP encapsulation\n");
-			#endif
 			inpkt = (struct netpacket *)exptr;
+			#ifdef DEBUG_IP
+			kprintf("ip_in_ext: IP in IP encapsulation. Dst: ");
+			ip_printaddr(inpkt->net_ipdst);
+			kprintf("\n");
+			#endif
 			for(i = 0; i < ifptr->if_nipucast; i++) {
 				if(!memcmp(inpkt->net_ipdst, ifptr->if_ipucast[i].ipaddr, 16)) {
 					break;
@@ -234,6 +251,8 @@ void	ip_in_ext (
 				return;
 			}
 
+			inpkt->net_iface = pkt->net_iface;
+			ip_ntoh(inpkt);
 			pkt = inpkt;
 			nh = pkt->net_ipnh;
 			exptr = (struct ip_ext_hdr *)pkt->net_ipdata;
@@ -241,9 +260,17 @@ void	ip_in_ext (
 
 		//IP_UDP:
 		case IP_ICMP:
+			#ifdef DEBUG_IP
+			kprintf("ip_in_ext: icmp. Dst: ");
+			ip_printaddr(pkt->net_ipdst);
+			kprintf("\n");
+			#endif
 			/* Process ICMP packet */
 			if((char *)exptr != (char *)pkt->net_ipdata) {
 				l4len = pkt->net_iplen - ((char *)exptr - (char *)pkt->net_ipdata);
+				#ifdef DEBUG_IP
+				kprintf("ip_in_ext: icmp. removing extensions. l4len: %d, exptr: %08x, %08x\n", l4len, exptr, pkt->net_ipdata);
+				#endif
 				memcpy(pkt->net_ipdata, exptr, l4len);
 				pkt->net_iplen = l4len;
 			}
@@ -259,6 +286,13 @@ void	ip_in_ext (
 			}
 			tcp_ntoh(pkt);
 			tcp_in(pkt);
+			return;
+		case IP_UDP:
+		        if (udp_cksum(pkt) != 0){
+			      return;
+			}
+			udp_ntoh(pkt);
+			udp_in(pkt);
 			return;
 
 		default:
@@ -280,6 +314,7 @@ int32	ip_route (
 		)
 {
 	struct	ip_fwentry *ipfptr;	/* IP forwarding table entry ptr*/
+	struct	netiface *ifptr;	/* Network interface pointer	*/
 	intmask	mask;			/* Interrupt mask		*/
 	int32	found;			/* Flag indicating found entry	*/
 	int32	maxlen;			/*				*/
@@ -314,8 +349,10 @@ int32	ip_route (
 			return SYSERR;
 		}
 
-		/* IP source is the interface's link-local address */
-		memcpy(ipsrc, iftab[iface].if_ipucast[0].ipaddr, 16);
+		if(isipunspec(ipsrc)) {
+			/* IP source is the interface's link-local address */
+			memcpy(ipsrc, iftab[iface].if_ipucast[0].ipaddr, 16);
+		}
 
 		if(nxthop) {
 			/* Next hop is the destination itself */
@@ -371,6 +408,29 @@ int32	ip_route (
 		}
 	}
 
+	if(isipunspec(ipsrc)) {
+		#ifdef DEBUG_IP
+		kprintf("ip_route: choosing src\n");
+		#endif
+		ifptr = &iftab[ipfptr->ipfw_iface];
+		for(i = 1; i < ifptr->if_nipucast; i++) {
+			if(!memcmp(ipdst, ifptr->if_ipucast[i].ipaddr,
+						ifptr->if_ipucast[i].prefixlen)) {
+				memcpy(ipsrc, ifptr->if_ipucast[i].ipaddr, 16);
+				break;
+			}
+		}
+		if(i >= ifptr->if_nipucast) {
+			memcpy(ipsrc, ifptr->if_ipucast[1].ipaddr, 16);
+		}
+	}
+
+	#ifdef DEBUG_IP
+	kprintf("ip_route: src ");
+	ip_printaddr(ipsrc);
+	kprintf("\n");
+	#endif
+	restore(mask);
 	return OK;
 }
 
@@ -427,6 +487,12 @@ int32	ip_send (
 		pkt->net_tcpcksum = 0;
 		cksum = tcpcksum(pkt);
 		pkt->net_tcpcksum = htons(cksum);
+		break;
+	case IP_UDP:
+	        udp_hton(pkt);
+		pkt->net_udpcksum = 0;
+		cksum = udp_cksum(pkt);
+		pkt->net_udpcksum = htons(cksum);
 		break;
 	}
 
@@ -560,6 +626,7 @@ int32	ip_send_rpl (
 	struct	netiface *ifptr;	/* Network interface	*/
 	intmask	mask;			/* Interrupt mask	*/
 	int32	iplen;			/* IP length		*/
+	int32	ncindex;		/* Index in nbr. cache	*/
 
 	mask = disable();
 
@@ -617,50 +684,68 @@ int32	ip_send_rpl (
 	}
 	else { /* Off-link IP address */
 
-		/* Next hop must be a link-local IP */
-		if(!isipllu(nxthop)) {
+		if(rpltab[0].root) {
+			ip_send_rpl_lbr(pkt);
 			restore(mask);
-			freebuf((char *)pkt);
-			return SYSERR;
+			return OK;
 		}
 
-		/* Original IP packet will be encapsulated in an IP packet */
+		ncindex = nd_ncfind(pkt->net_ipdst);
+		if(ncindex != SYSERR) {
 
-		/* Outer IP header fields */
-		npkt = (struct netpacket *)rpkt->net_raddata;
-		memset(npkt, 0, 40);
-		npkt->net_ipvtch = 0x60;
-		npkt->net_iplen = 8 + iplen;
-		npkt->net_ipnh = IP_EXT_HBH;
-		npkt->net_iphl = 0xff;
-		memcpy(npkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
-		memcpy(npkt->net_ipdst, nxthop, 16);
-
-		/* Hop-by-hop RPL extension header */
-		exptr = (struct ip_ext_hdr *)npkt->net_ipdata;
-		exptr->ipext_nh = IP_IP;
-		exptr->ipext_len = 0;
-		exptr->ipext_optype = 0x63;
-		exptr->ipext_optlen = 4;
-		exptr->ipext_f = 0;
-		exptr->ipext_r = 0;
-		exptr->ipext_o = 0;
-		exptr->ipext_rplinsid = 0;
-		exptr->ipext_sndrank = 0;
-
-		/* Copy the original IP Packet */
-		memcpy(npkt->net_ipdata+8, pkt, iplen);
-
-		/* Resolve L2 address from nexthop IP address */
-		memcpy(rpkt->net_raddst, nxthop+8, 8);
-		if(rpkt->net_raddst[0] & 0x02) {
-			rpkt->net_raddst[0] &= 0xfd;
+			#ifdef DEBUG_IP
+			kprintf("ip_send_rpl: destination is neighbor\n");
+			#endif
+			memcpy(rpkt->net_raddst, nd_ncache[ncindex].nc_hwaddr, 8);
+			iplen = 40 + ntohs(pkt->net_iplen);
+			memcpy(rpkt->net_raddata, pkt, iplen);
 		}
 		else {
-			rpkt->net_raddst[0] |= 0x02;
-		}
+			/* Next hop must be a link-local IP */
+			if(!isipllu(nxthop)) {
+				restore(mask);
+				freebuf((char *)pkt);
+				return SYSERR;
+			}
 
-		iplen += 48;
+			/* Original IP packet will be encapsulated in an IP packet */
+
+			/* Outer IP header fields */
+			npkt = (struct netpacket *)rpkt->net_raddata;
+			memset(npkt, 0, 40);
+			npkt->net_ipvtch = 0x60;
+			npkt->net_iplen = 8 + iplen;
+			npkt->net_ipnh = IP_EXT_HBH;
+			npkt->net_iphl = 0xff;
+			memcpy(npkt->net_ipsrc, ifptr->if_ipucast[0].ipaddr, 16);
+			memcpy(npkt->net_ipdst, nxthop, 16);
+
+			/* Hop-by-hop RPL extension header */
+			exptr = (struct ip_ext_hdr *)npkt->net_ipdata;
+			exptr->ipext_nh = IP_IP;
+			exptr->ipext_len = 0;
+			exptr->ipext_optype = 0x63;
+			exptr->ipext_optlen = 4;
+			exptr->ipext_f = 0;
+			exptr->ipext_r = 0;
+			exptr->ipext_o = 0;
+			exptr->ipext_rplinsid = 0;
+			exptr->ipext_sndrank = 0;
+
+			/* Copy the original IP Packet */
+			memcpy(npkt->net_ipdata+8, pkt, iplen);
+
+			/* Resolve L2 address from nexthop IP address */
+			memcpy(rpkt->net_raddst, nxthop+8, 8);
+			if(rpkt->net_raddst[0] & 0x02) {
+				rpkt->net_raddst[0] &= 0xfd;
+			}
+			else {
+				rpkt->net_raddst[0] |= 0x02;
+			}
+
+			iplen += 48;
+		}
 	}
 
 	#ifdef DEBUG_IP
@@ -689,7 +774,7 @@ void	ip_hton (
 		struct	netpacket *pkt
 		)
 {
-	pkt->net_iplen = ntohs(pkt->net_iplen);
+	pkt->net_iplen = htons(pkt->net_iplen);
 }
 
 /*------------------------------------------------------------------------
@@ -721,4 +806,53 @@ void	ip_printaddr (
 		ptr16++;
 	}
 	kprintf("%04X", htons(*ptr16));
+}
+
+/*------------------------------------------------------------------------
+ * colon2ip  -  Convert string IP to binary
+ *------------------------------------------------------------------------
+ */
+int32	colon2ip (
+		char	*ipstr,
+		byte	ipaddr[]
+		)
+{
+	char	*p;
+	byte	b;
+	int32	i, j;
+
+	if(strlen(ipstr) !=39) {
+		return SYSERR;
+	}
+
+	p = ipstr;
+	for(i = 0; i < 16; i++) {
+
+		b = 0;
+		for(j = 0; j < 2; j++) {
+			b = b * 16;
+			if(*p >= '0' && *p <= '9') {
+				b += *p - '0';
+			}
+			else if(*p >= 'a' &&  *p <= 'f') {
+				b += 10 + (*p - 'a');
+			}
+			else if(*p >= 'A' && *p <= 'F') {
+				b += 10 + (*p - 'A');
+			}
+			else {
+				return SYSERR;
+			}
+			p++;
+		}
+		ipaddr[i] = b;
+		if(i > 0 && i < 15 && ((i+1) % 2 == 0)) {
+			if(*p != ':') {
+				return SYSERR;
+			}
+			p++;
+		}
+	}
+
+	return OK;
 }

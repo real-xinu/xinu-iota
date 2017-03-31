@@ -32,6 +32,14 @@ status wsserver_assign ( struct netpacket *pkt )
         assign_msg->msg.amcastaddr[i] = topo[nodeid].t_neighbors[i];
         /*DEBUG *///kprintf("%02x:", assign_msg->amcastaddr[i]);
     }
+    
+    for ( i = 0; i < 46; i++)
+    {
+       assign_msg->msg.link_info[i].lqi_high = topo[nodeid].link_info[i].lqi_high;
+       assign_msg->msg.link_info[i].lqi_low = topo[nodeid].link_info[i].lqi_low;
+       assign_msg->msg.link_info[i].probloss = topo[nodeid].link_info[i].probloss;
+    }
+
 
     kprintf ( "\n*** Assigned Nodeid***: %d\n", nodeid );
     memset ( ack_info, 0, sizeof ( ack_info ) );

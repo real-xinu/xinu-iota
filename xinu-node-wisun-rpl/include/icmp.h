@@ -22,6 +22,9 @@ struct	icmp_hdr {
 
 #define	ICENTRY_FREE	0
 #define	ICENTRY_USED	1
+#define	ICENTRY_RECV	2
+
+#define	ICENTRY_PQSIZE	3
 
 /* Structure of ICMP registration table entry */
 struct	icentry {
@@ -31,5 +34,13 @@ struct	icentry {
 	byte	icremip[16];/* Remote IP address	*/
 	byte	iclocip[16];/* Local IP address		*/
 	int32	iciface;/* Interface index		*/
+	struct	netpacket *icpktq[ICENTRY_PQSIZE];
+			/* Waiting packets		*/
+	int32	ichead;	/* Head of packet queue		*/
+	int32	ictail;	/* Tail of packet queue		*/
+	int32	iccount;/* No. of packets in queue	*/
 	pid32	icpid;	/* PID of process waiting	*/
 };
+
+#define	ICMP_TABSIZE	10
+extern	struct	icentry icmptab[];

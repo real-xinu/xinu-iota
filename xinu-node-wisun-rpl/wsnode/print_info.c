@@ -15,6 +15,16 @@ void print_info()
 
         kprintf (" ");
     }
+
+        kprintf("\nLink Info (lqi_low, lqi_high, probloss) : ");
+	for ( i = 0; i < 46; i++)
+	{
+	   kprintf(" %d, %d, %d  ",info.link_info[i].lqi_low ,info.link_info[i].lqi_high ,info.link_info[i].probloss);
+
+	}
+
+	kprintf("\n");
+ 
 }
 
 

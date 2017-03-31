@@ -18,8 +18,8 @@ int32 *seqnum;
  * Network topology data strucutres which are used to keep current
  * and old network topology information in the RAM.
  * --------------------------------------------------------------*/
-struct t_entry topo[MAXNODES];
-struct t_entry old_topo[MAXNODES];
+struct topo_entry topo[MAXNODES];
+struct topo_entry old_topo[MAXNODES];
 
 /*--------------------------------------------------------------------
  * Create an Ethernet packet and allocate memory

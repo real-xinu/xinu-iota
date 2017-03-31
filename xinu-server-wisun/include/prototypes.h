@@ -498,6 +498,9 @@ extern	syscall	semreset(sid32, int32);
 /* in file send.c */
 extern	syscall	send(pid32, umsg32);
 
+/* in file settime.c */
+extern status settime(uint32);
+
 /* in file shell.c */
 extern 	process shell(did32);
 
@@ -611,7 +614,7 @@ extern status pingall();
 extern status cleanup();
 /* in file wstopology.c */
 extern status read_topology(char *, char **, uint32 *);
-extern int32 topo_update(char *, uint32, struct t_entry *);
+extern int32 topo_update(char *, uint32, struct topo_entry *);
 extern status read_topo(char *);
 extern void init_topo();
 
