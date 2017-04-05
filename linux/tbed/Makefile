@@ -21,7 +21,7 @@ dir:
 
 
 $(BUILDDIR)/$(EXE):$(OBJECTS)
-	$(CC) -o  $@  $^   -I   $(TOOLS_P) $(TOOLS_C)
+	$(CC) -ggdb -o  $@  $^   -I   $(TOOLS_P) $(TOOLS_C)
 
 
 $(OBJECTS): $(BUILDDIR)/%.o : $(SOURCE)/%.c  $(MACROS) $(GLOBAL) $(HEADER)

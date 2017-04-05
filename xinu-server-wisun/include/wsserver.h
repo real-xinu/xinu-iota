@@ -178,7 +178,6 @@ struct	p_entry {		/* Entry in a ping reply		*/
     int32	pstatus;	/* Status of the node			*/
 };
 
-
 struct	c_msg {
     int32	clength;	/* The length of the message measured	*/
     /* in octets from the start of c_msg.	*/
@@ -237,25 +236,22 @@ struct	c_msg {
  * TIME_OUT value
  * ping status
  * ------------*/
-#define PORT 55000
-#define TIME_OUT 600000
-#define NOTACTIV 0
-#define ALIVE    1
-#define NOTRESP  -1
-#define XOFF     0
-#define XON      1
+#define WS_PORT		55000
+#define WS_TIMEOUT	600000
+#define WS_NOTACTIV	0
+#define WS_ALIVE	1
+#define WS_NOTRESP	-1
+#define XOFF		0
+#define XON		1
 
-
-
-
-extern int32 nnodes;
-extern int32 nodeid;
-extern int32 online;
-extern int32 *seqnum;
-extern int32 ping_ack_flag[MAXNODES];
-extern byte ack_info[16];
-extern char map_list[MAXNODES][NAMELEN];
-extern struct topo_entry topo[MAXNODES];
-extern struct topo_entry old_topo[MAXNODES];
-extern int32  bbb_stat[MAX_BBB];
-extern byte   bbb_macs[MAX_BBB][6];
+extern	int32 nnodes;
+extern	int32 nodeid;
+extern	int32 online;
+extern	int32 *seqnum;
+extern	int32 ping_ack_flag[MAXNODES];
+extern	byte ack_info[16];
+extern	char map_list[MAXNODES][NAMELEN];
+extern	struct topo_entry topo[MAXNODES];
+extern	struct topo_entry old_topo[MAXNODES];
+extern	int32  bbb_stat[MAX_BBB];
+extern	byte   bbb_macs[MAX_BBB][6];

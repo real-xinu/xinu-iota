@@ -2,6 +2,8 @@
 
 #include <xinu.h>
 
+uint32	clktimems;
+
 /*-----------------------------------------------------------------------
  * clkhandler - high level clock interrupt handler
  *-----------------------------------------------------------------------
@@ -19,6 +21,8 @@ void	clkhandler()
 	if((csrptr->tisr & AM335X_TIMER1MS_TISR_OVF_IT_FLAG) == 0) {
 		return;
 	}
+
+	clktimems++;
 
 	/* Acknowledge the interrupt */
 

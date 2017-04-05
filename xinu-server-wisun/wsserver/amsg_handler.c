@@ -4,7 +4,7 @@
  * message handler is used to call appropiate function based
  * on a message which is received from a node.
  * ----------------------------------------------------------------*/
-
+#if 0
 void  amsg_handler ( struct netpacket *pkt )
 {
     struct etherPkt *node_msg;
@@ -49,5 +49,5 @@ void  amsg_handler ( struct netpacket *pkt )
 
     return;
 }
-
+#endif
 

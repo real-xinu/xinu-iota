@@ -15,7 +15,7 @@ SRCDIRS := $(TOP)/lib $(TOP)/programs $(TOP)/cserver $(SRCDIRS)
 INCOPTS := $(patsubst %,-I%,$(INCDIRS))
 
 CPPFLAGS := $(DEFINES) $(INCOPTS) $(CPPFLAGS)
-CFLAGS := -g $(CFLAGS)
+CFLAGS := -g -ggdb $(CFLAGS)
 LDFLAGS := $(LDFLAGS)
 
 VPATH := $(SRCDIRS)

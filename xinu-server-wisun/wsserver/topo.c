@@ -57,6 +57,8 @@ status topo_compr()
         //kprintf("nodeid , i: %d, %d\n", nodeid, i);
         flag = 0;
 
+	memcpy(topo[i].t_macaddr, old_topo[i].t_macaddr, 6);
+
         for ( j = 0; j < 6; j++ )
             if ( old_topo[i].t_neighbors[j] == topo[i].t_neighbors[j] )
                 flag++;
@@ -92,7 +94,7 @@ status topo_compr()
 
             //kprintf("\n");
             //memcpy(&pkt->net_ethsrc, topo[i].t_macaddr, ETH_ADDR_LEN);
-            if ( wsserver_assign ( pkt ) == OK ) {
+            if ( testbed_assign ( topo[i].t_macaddr ) == OK ) {
                 sleepms (20);
 
             } else {
@@ -112,6 +114,9 @@ status topo_compr()
     freebuf ( ( char * ) pkt );
     return OK;
 }
+
+
+#if 0
 /*----------------------------------------------------------
 * This function is used to update the network topology
  * information.
@@ -156,6 +161,7 @@ struct c_msg *newtop ( struct c_msg *ctlpkt )
 
     return cmsg_reply;
 }
+#endif
 
 
 
