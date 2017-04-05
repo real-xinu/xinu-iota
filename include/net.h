@@ -3,11 +3,17 @@
 struct	a_msg {
 	int32	amsgtyp;
 	int32	anodeid;
+	int32	aseq;
+	int32	aacktyp;
 	union {
-		byte	amcastaddr[6];
-		byte	apingdata[8];
-		byte	aacking[16];
-		byte	aerrmsg[16];
+	  struct {
+	    byte	amcastaddr[6];
+	  };
+	  struct {
+	    byte lqi_low;
+	    byte lqi_high;
+	    byte probloss;
+	  } link_info[46];
 	};
 };
 

@@ -800,7 +800,7 @@ extern	int32	srbit(byte [], int32, int32);
 extern	status	wsnode_join(void);
 extern	void	process_typb(struct netpacket_e *);
 extern	struct	netpacket_e *create_etherPkt(struct netpacket_e *);
-extern	status	wsnode_sendack(struct netpacket_e *);
+extern	status	wsnode_sendack(struct netpacket_e *, int32);
 
 /* in file xdone.c */
 extern	void	xdone(void);

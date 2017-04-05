@@ -4,14 +4,16 @@
 /*-------------------------------------------------------------
  * Send ack message as a repsonse of assign and ping messages
  * ----------------------------------------------------------*/
-status wsnode_sendack ( struct netpacket_e *node_msg )
+status wsnode_sendack ( struct netpacket_e *node_msg, int32 type )
 {
     struct netpacket_e *ack_msg;
     ack_msg = (struct netpacket_e *)create_etherPkt (node_msg);
     int32 retval;
     ack_msg->msg.amsgtyp = htonl ( A_ACK );
+    ack_msg->msg.aacktyp = htonl(type);
+    ack_msg->msg.aseq = node_msg->msg.aseq;
     //ack_msg->msg.anodeid = htonl ( info.nodeid );
-    memcpy ( ack_msg->msg.aacking, ( char * ) ( node_msg ) + 14, 16 );
+    //memcpy ( ack_msg->msg.aacking, ( char * ) ( node_msg ) + 14, 16 );
     ack_msg->msg.anodeid = htonl (info.nodeid);
 
     /*DEBUG */

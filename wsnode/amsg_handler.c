@@ -19,7 +19,7 @@ void amsg_handler ( struct netpacket_e *node_msg )
         case A_ASSIGN:
             info.nodeid = ntohl ( node_msg->msg.anodeid );
 
-            if ( wsnode_sendack (node_msg) == OK ) {
+            if ( wsnode_sendack (node_msg, A_ASSIGN) == OK ) {
                 for ( i = 0; i < 6; i++ ) {
                     info.mcastaddr[i] = node_msg->msg.amcastaddr[i];
                     kprintf ("%02x:", node_msg->msg.amcastaddr[i]);
@@ -52,7 +52,7 @@ void amsg_handler ( struct netpacket_e *node_msg )
         case A_PING:
             kprintf ( "<==== PING message is received\n" );
 
-            if ( wsnode_sendack (node_msg) == OK ) {
+            if ( wsnode_sendack (node_msg, A_PING) == OK ) {
                 kprintf ( "====> ACK message is sent\n" );
             }
 
@@ -63,7 +63,7 @@ void amsg_handler ( struct netpacket_e *node_msg )
             sleep ( delay );
             kprintf ( "<==== PINGALL ALL message is received\n" );
 
-            if ( wsnode_sendack (node_msg ) == OK ) {
+            if ( wsnode_sendack (node_msg, A_PINGALL ) == OK ) {
                 kprintf ( "====> ACK message is sent\n" );
             }
 
@@ -74,7 +74,7 @@ void amsg_handler ( struct netpacket_e *node_msg )
             sleep ( delay );
             kprintf ( "<==== PINGALL message is received\n" );
 
-            if ( wsnode_sendack (node_msg ) == OK ) {
+            if ( wsnode_sendack (node_msg, A_PING_ALL ) == OK ) {
                 kprintf ( "====> ACK message is sent\n" );
             }
 
