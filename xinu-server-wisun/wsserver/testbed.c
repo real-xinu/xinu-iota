@@ -84,8 +84,13 @@ process	testbed_proc (void) {
 			kprintf("testbed_proc: ASSIGN\n");
 			pkt->amsg.amsgtyp = htonl(A_ASSIGN);
 			pkt->amsg.anodeid = htonl(req.nodeid);
-			kprintf("\tnodeid: %d\n", req.nodeid);
+			kprintf("\tnodeid: %d\n", pkt->amsg.anodeid);
 			memcpy(pkt->amsg.amcastaddr, req.mcast, 6);
+			for(i = 0; i < 46; i++) {
+				pkt->amsg.link_info[i].lqi_low = req.link_info[i].lqi_low;
+				pkt->amsg.link_info[i].lqi_high = req.link_info[i].lqi_high;
+				pkt->amsg.link_info[i].probloss = req.link_info[i].probloss;
+			}
 			break;
 
 		case TBR_TYPE_NPING:
@@ -239,7 +244,7 @@ void	testbed_in (
 
 		if(online) {
 			kprintf("====> Incoming Join message\n");
-			testbed_assign(pkt->ethsrc);
+			testbed_assign(-1, pkt->ethsrc);
 		}
 
 		freebuf((char *)pkt);

@@ -7,40 +7,47 @@
  *------------------------------------------------------------------------
  */
 status	testbed_assign (
-		byte	ethaddr[]	/* Ethernet address of node	*/
+		int32	index,		/* Index in the topo	*/
+		byte	ethaddr[]	/* Ethernet address	*/
 		)
 {
 	struct	tbreq *rqptr;	/* Testbed request	*/
 	intmask	mask;		/* Saved interrupt mask	*/
+	int32	nodeid;		/* Node ID		*/
 	int32	free = -1;	/* Free slot in topo	*/
 	int32	i;		/* For loop indexes	*/
 
+	kprintf("testbed_assign: %d %d\n", index, ethaddr);
+
 	mask = disable();
 
-	/* See, if we already have a mapping */
+	if(index == -1) {
 
-	for(i = 0; i < MAXNODES; i++) {
-		if(topo[i].t_status == 0) {
-			free = (free == -1) ? i : free;
-			continue;
+		/* See, if we already have a mapping */
+
+		for(i = 0; i < MAXNODES; i++) {
+			if(topo[i].t_status == 0) {
+				free = (free == -1) ? i : free;
+				continue;
+			}
+			if(!memcmp(topo[i].t_macaddr, ethaddr, 6)) {
+				break;
+			}
 		}
-		if(!memcmp(topo[i].t_macaddr, ethaddr, 6)) {
-			break;
+		if(i < MAXNODES) {
+			index = i;
 		}
-	}
-	if(i < MAXNODES) {
-		nodeid = topo[i].t_nodeid;
-	}
-	else {
-		if(free == -1) {
-			kprintf("testbed_assign: no free slot in map\n");
-			restore(mask);
-			return SYSERR;
+		else {
+			if(free == -1) {
+				kprintf("testbed_assign: no free slot in map\n");
+				restore(mask);
+				return SYSERR;
+			}
+			index = free;
+			topo[free].t_nodeid = testbed.nextid++;
+			memcpy(topo[free].t_macaddr, ethaddr, 6);
+			topo[free].t_status = 1;
 		}
-		nodeid = testbed.nextid++;
-		topo[free].t_nodeid = nodeid;
-		memcpy(topo[free].t_macaddr, ethaddr, 6);
-		topo[free].t_status = 1;
 	}
 
 	/* If no more space in testbed queue, fail */
@@ -58,10 +65,19 @@ status	testbed_assign (
 		testbed.ttail = 0;
 	}
 
+	kprintf("testbed_assign: initializing request...\n");
 	rqptr->type = TBR_TYPE_ASSIGN;
-	memcpy(rqptr->dst, ethaddr, 6);
-	rqptr->nodeid = nodeid;
-	memcpy(rqptr->mcast, topo[nodeid].t_neighbors, 6);
+	kprintf("\tcopying dst %08x %08x\n", rqptr->dst, ethaddr);
+	memcpy(rqptr->dst, topo[index].t_macaddr, 6);
+	rqptr->nodeid = topo[index].t_nodeid;
+	kprintf("\tcopying mcast\n");
+	memcpy(rqptr->mcast, topo[index].t_neighbors, 6);
+	for(i = 0; i < 46; i++) {
+		kprintf("\tcopying link_info %d\n", i);
+		rqptr->link_info[i].lqi_low = topo[index].link_info[i].lqi_low;
+		rqptr->link_info[i].lqi_high = topo[index].link_info[i].lqi_high;
+		rqptr->link_info[i].probloss = topo[index].link_info[i].probloss;
+	}
 	rqptr->waiting = FALSE;
 
 	restore(mask);

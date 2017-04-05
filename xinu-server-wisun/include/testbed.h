@@ -11,11 +11,16 @@ struct	tbreq {
 	bool8	waiting;
 	pid32	waitpid;
 	uint32	nodeid;
-	union {
+	//union {
 	  struct {
 	    byte	mcast[6];
+	    struct {
+	      byte	lqi_low;
+	      byte	lqi_high;
+	      byte	probloss;
+	    } link_info[46];
 	  };
-	};
+	//};
 };
 
 #define	TB_STATE_WAIT	1

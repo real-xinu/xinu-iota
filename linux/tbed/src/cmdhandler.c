@@ -73,7 +73,7 @@ struct c_msg  command_handler (char command[BUFLEN])
          message.cmsgtyp = htonl(C_SETTIME);
 	 struct timeval tv1;
 	 gettimeofday (&tv1, NULL);
-	 message.ctime = (tv1.tv_usec/1000000) + tv1.tv_sec;
+	 message.ctime = htonl(tv1.tv_sec);
 
     
 

@@ -3,6 +3,7 @@
 #include <xinu.h>
 
 char	node2name[MAXNODES][NAMELEN];
+char	map_list[MAXNODES][NAMELEN];
 
 /*------------------------------------------------------------------------
  * topo_read  -  Read the topology from a remote file
@@ -182,7 +183,8 @@ struct	c_msg *newtop (
 
 			/* Send an Assign message to this node */
 
-			retval = testbed_assign(topo[i].t_macaddr);
+			kprintf("newtop: calling assign on %d\n", i);
+			retval = testbed_assign(i, NULL);
 			if(retval == SYSERR) {
 				reply->cmsgtyp = htonl(C_ERR);
 				return reply;
@@ -191,6 +193,30 @@ struct	c_msg *newtop (
 	}
 
 	reply->cmsgtyp = htonl(C_OK);
+
+	return reply;
+}
+
+/*------------------------------------------------------------------------
+ * toporeply  -  Send a response to topology request
+ *------------------------------------------------------------------------
+ */
+struct	c_msg *toporeply (void) {
+
+	struct	c_msg *reply;	/* Reply message	*/
+	int32	i;
+
+	reply = getmem(sizeof(struct c_msg));
+
+	reply->cmsgtyp = htonl(C_TOP_REPLY);
+	reply->topnum = htonl(nnodes);
+
+	for(i = 0; i < nnodes; i++) {
+
+		reply->topdata[i].t_nodeid = htonl(topo[i].t_nodeid);
+		reply->topdata[i].t_status = htonl(topo[i].t_status);
+		memcpy(reply->topdata[i].t_neighbors, topo[i].t_neighbors, 6);
+	}
 
 	return reply;
 }
