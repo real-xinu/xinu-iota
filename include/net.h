@@ -7,13 +7,16 @@ struct	a_msg {
 	int32	aacktyp;
 	union {
 	  struct {
-	    byte	amcastaddr[6];
+	    struct {
+	      byte	amcastaddr[6];
+	    };
+	    struct {
+	      byte lqi_low;
+	      byte lqi_high;
+	      byte probloss;
+	    } link_info[46];
 	  };
-	  struct {
-	    byte lqi_low;
-	    byte lqi_high;
-	    byte probloss;
-	  } link_info[46];
+	  uint32	ctime;
 	};
 };
 

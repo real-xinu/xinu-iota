@@ -15,6 +15,9 @@ void print_info()
 
         kprintf (" ");
     }
+    //for(i = 0; i < 46; i++) {
+    //	    kprintf("%d %d %d\n", info.link_info[i].lqi_low, info.link_info[i].lqi_high, info.link_info[i].probloss);
+    //}
 }
 
 
