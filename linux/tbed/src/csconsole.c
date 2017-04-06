@@ -65,7 +65,8 @@ int powercycle_bgnd (char * class, char * connection, char * host)
 
 	int	child;
 	int	child1, child2;
-	int	pipefd[2];
+	int	pipefd1[2];
+	int	pipefd2[2];
 	int	fork_child1;
 	char	conn[128];
 	char	*str;
@@ -82,10 +83,16 @@ int powercycle_bgnd (char * class, char * connection, char * host)
 
 		if(fork_child1) {
 
-			rv = pipe2(pipefd, 0);
+			rv = pipe2(pipefd1, 0);
 			if(rv == -1) {
 				perror("pipe2(): ");
-				exit(1);
+				return -1;
+			}
+
+			rv = pipe2(pipefd2, 0);
+			if(rv == -1) {
+				perror("pipe2(): ");
+				return -1;
 			}
 
 			child1 = fork();
@@ -95,14 +102,20 @@ int powercycle_bgnd (char * class, char * connection, char * host)
 
 		if(child1 == 0) { /* Child */
 
-			close(pipefd[0]);
-			rv = dup2(pipefd[1], fileno(stdout));
+			close(pipefd1[0]);
+			rv = dup2(pipefd1[1], fileno(stdout));
 			if(rv == -1) {
 				perror("dup2(): ");
 				exit(1);
 			}
 
-			rv = dup2(pipefd[1], fileno(stderr));
+			rv = dup2(pipefd1[1], fileno(stderr));
+			if(rv == -1) {
+				perror("dup2(): ");
+				exit(1);
+			}
+
+			rv = dup2(pipefd2[0], fileno(stdin));
 			if(rv == -1) {
 				perror("dup2(): ");
 				exit(1);
@@ -132,7 +145,7 @@ int powercycle_bgnd (char * class, char * connection, char * host)
 			}
 
 			if(!pfile) {
-				pfile = fdopen(pipefd[0], "r");
+				pfile = fdopen(pipefd1[0], "r");
 			}
 
 			err = 1;
@@ -154,8 +167,8 @@ int powercycle_bgnd (char * class, char * connection, char * host)
 					kill(child1, 9);
 					waitpid(child1, NULL, 0);
 					fork_child1 = 1;
-					close(pipefd[0]);
-					close(pipefd[1]);
+					close(pipefd1[0]);
+					close(pipefd1[1]);
 					fclose(pfile);
 					pfile = NULL;
 					break;
@@ -168,11 +181,22 @@ int powercycle_bgnd (char * class, char * connection, char * host)
 			}
 
 			if(err == 0) {
-				close(pipefd[0]);
-				close(pipefd[1]);
+				char	c;
+
+				c = '\0';
+				write(pipefd2[1], &c, 1);
+				usleep(10000);
+				c = 'q';
+				write(pipefd2[1], &c, 1);
+				usleep(10000);
+
+				close(pipefd2[0]);
+				close(pipefd2[1]);
+				close(pipefd1[0]);
+				close(pipefd1[1]);
 				fclose(pfile);
 				//kill(child1, SIGKILL);
-				//waitpid(child1, NULL, 0);
+				waitpid(child1, NULL, 0);
 				//printf("child1 process ended. connection: %s\n", connection);
 				sleep(1);
 				break;
