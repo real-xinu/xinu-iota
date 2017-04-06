@@ -627,6 +627,8 @@ int32	ip_send_rpl (
 	intmask	mask;			/* Interrupt mask	*/
 	int32	iplen;			/* IP length		*/
 	int32	ncindex;		/* Index in nbr. cache	*/
+	int32	i, j;
+	byte	bmask;
 
 	mask = disable();
 
@@ -756,6 +758,48 @@ int32	ip_send_rpl (
 	}
 	kprintf("\n");
 	#endif
+
+	int32	k = 0;
+	k = 0;
+	j = 5;
+	bmask = 0x01;
+
+	for(i = 0; i < 46; i++) {
+
+		if(rpkt->net_ethdst[j] & bmask) {
+			//kprintf("%d -> %d : ", info.nodeid, k);
+			if((rand() % 100) < info.link_info[i].probloss) {
+				rpkt->net_ethdst[j] &= ~bmask;
+				//kprintf("DROP: %02x, %d\n", rpkt->net_ethdst[j], j);
+			}
+			else {
+				//kprintf("NODROP\n");
+			}
+		}
+
+		if(j > 1) {
+			if(bmask == 0x80) {
+				j--;
+				bmask = 0x01;
+			}
+			else {
+				bmask <<= 1;
+			}
+		}
+		else if(j == 1) {
+			if(bmask == 0x80) {
+				j--;
+				bmask = 0x04;
+			}
+			else {
+				bmask <<= 1;
+			}
+		}
+		else {
+			bmask <<= 1;
+		}
+		k++;
+	}
 
 	write(RADIO0, (char *)rpkt, 14 + 24 + iplen);
 
