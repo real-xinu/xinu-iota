@@ -126,7 +126,7 @@ void udp_process (const char *SRV_IP, char *file)
                     fprintf (fp, "Timeout, Please try again\n");
                 }
 
-                buf = malloc (sizeof (struct c_msg));
+                //buf = malloc (sizeof (struct c_msg));
                 buf = (struct c_msg*)recvbuf;
                 response_handler (buf);
                 free (buf);
@@ -166,6 +166,7 @@ void udp_process (const char *SRV_IP, char *file)
                         strcpy (temp_path, scripts_path);
                         strcat (temp_path, array_token[1]);
                         inc2 = fopen (temp_path, "r");
+                        free (temp_path);
 
                         while (fgets (command, sizeof (command), inc2) != NULL) {
                             command[strcspn (command, "\r\n")] = 0;

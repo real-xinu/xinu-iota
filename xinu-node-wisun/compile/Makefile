@@ -16,9 +16,9 @@ TOPDIR		=	..
 CC		=	${COMPILER_ROOT}gcc
 LD		=	${COMPILER_ROOT}ld
 OBJCOPY		=	${COMPILER_ROOT}objcopy
-XINU		=	$(TOPDIR)/compile/xinu
+XINU		=	$(TOPDIR)/compile/xinu.elf
 XINUBIN		=	$(TOPDIR)/compile/xinu.bin
-XINUBOOT	=	$(TOPDIR)/compile/xinu.boot
+XINUBOOT	=	$(TOPDIR)/compile/xinu
 BUILDMAKE	=	$(TOPDIR)/compile/bin/build-make
 MKVERS		=	$(TOPDIR)/compile/bin/mkvers
 
@@ -34,10 +34,12 @@ REBUILDFLAGS	=	-s $(TOPDIR)/system  debug.c getutime.c gettime.c 	\
 			-s $(TOPDIR)/device/tty			\
 			-s $(TOPDIR)/device/nam			\
 			-s $(TOPDIR)/device/eth			\
-			-s $(TOPDIR)/net udp.c			\
+			-s $(TOPDIR)/device/rad radread.c _6lowpan.c \
+			-s $(TOPDIR)/net			\
 					pdump.c 'xinu_*'	\
-			-s $(TOPDIR)/shell  'xsh_rdstest*' 'xsh_arp*' 'xsh_date*' 'xsh_ipaddr*' 'xsh_ping*' 'xsh_udp*'\
-			-s $(TOPDIR)/wsnode 
+			-s $(TOPDIR)/net/tcp			\
+			-s $(TOPDIR)/shell  'xsh_rdstest*' 'xsh_arp*' 'xsh_date*' 'xsh_udp*' \
+			-s $(TOPDIR)/wsnode
 
 INCLUDE		=	-I$(TOPDIR)/include
 DEFS		= 	-DBSDURG -DVERSION=\""`cat $(VERSIONFILE)`"\"
@@ -50,8 +52,13 @@ SFLAGS  = ${INCLUDE}
 
 LDFLAGS = -dn -m armelf -Map xinu.map -T ld.script
 
-all:	xinu
+all:	_rmrpl xinu
 
+root: CFLAGS = -DROOT -mcpu=cortex-a8 -mno-unaligned-access -marm -fno-builtin -fno-stack-protector -nostdlib -c -Wall -O ${DEFS} ${INCLUDE}
+root: _rmrpl xinu
+
+_rmrpl:
+	@rm -f binaries/rpl*.o
 #--------------------------------------------------------------------------------
 # Handle generation of a new version string when initialize is recompiled
 #--------------------------------------------------------------------------------

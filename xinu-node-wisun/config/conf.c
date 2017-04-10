@@ -45,5 +45,12 @@ struct	dentry	devtab[NDEVS] =
 	  (void *)naminit, (void *)namopen, (void *)ioerr,
 	  (void *)ioerr, (void *)ioerr, (void *)ioerr,
 	  (void *)ioerr, (void *)ioerr, (void *)ioerr,
+	  (void *)0x0, (void *)ioerr, 0 },
+
+/* RADIO0 is rad */
+	{ 4, 0, "RADIO0",
+	  (void *)radinit, (void *)ioerr, (void *)ioerr,
+	  (void *)ionull, (void *)radwrite, (void *)ioerr,
+	  (void *)ioerr, (void *)ioerr, (void *)radcontrol,
 	  (void *)0x0, (void *)ioerr, 0 }
 };

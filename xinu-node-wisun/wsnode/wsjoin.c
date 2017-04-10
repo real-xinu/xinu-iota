@@ -10,8 +10,8 @@ status wsnode_join()
     join_msg = ( struct netpacket_e * ) getmem ( sizeof ( struct netpacket_e) );
     /*fill out Ethernet packet header fields */
     memset ( join_msg, 0, sizeof ( join_msg ) );
-    memcpy ( join_msg->net_ethsrc, NetData.ethucast, ETH_ADDR_LEN );
-    memcpy ( join_msg->net_ethdst, NetData.ethbcast, ETH_ADDR_LEN );
+    memcpy ( join_msg->net_ethsrc, iftab[0].if_hwucast, ETH_ADDR_LEN );
+    memcpy ( join_msg->net_ethdst, iftab[0].if_hwbcast, ETH_ADDR_LEN );
     join_msg->net_ethtype = htons ( ETH_TYPE_A );
     /*fill out Ethernet packet data fields */
     join_msg->msg.amsgtyp = htonl ( A_JOIN );

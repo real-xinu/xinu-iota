@@ -17,6 +17,7 @@ void	tcpack(
 
 	if (!force) {
 		if (!(tcbptr->tcb_flags & TCBF_NEEDACK)) {
+			//kprintf("tcpack: no need\n");
 			return;
 		}
 		if (!(tcbptr->tcb_flags & TCBF_ACKPEND)) {
@@ -43,6 +44,9 @@ void	tcpack(
 
 	tcbptr->tcb_flags &= ~(TCBF_NEEDACK | TCBF_ACKPEND);
 
-	ip_enqueue(pkt);
+	//kprintf("OUT: seq %x ackseq %x\n", pkt->net_tcpseq, pkt->net_tcpack);
+	//pdumph(pkt);
+	//ip_enqueue(pkt);
+	ip_send(pkt);
 	return;
 }

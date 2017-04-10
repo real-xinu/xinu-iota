@@ -25,6 +25,7 @@
 #include <net.h>
 #include <wsserver.h>
 #include <stonode.h>
+#include <testbed.h>
 #include <ip.h>
 #include <arp.h>
 #include <udp.h>

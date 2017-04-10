@@ -11,8 +11,8 @@ void	tcbclear(
 	)
 {
 	ptcb->tcb_readers = 0;
-	memset((char *)ptcb->tcb_lip, 0, 16);
-	memset((char *)ptcb->tcb_rip, 0, 16);
+	memset(ptcb->tcb_lip, 0, 16);
+	memset(ptcb->tcb_rip, 0, 16);
 	ptcb->tcb_lport = 0;
 	ptcb->tcb_rport = 0;
 	ptcb->tcb_flags = 0;
@@ -22,7 +22,8 @@ void	tcbclear(
 	ptcb->tcb_rwnd = 0;
 	ptcb->tcb_rfin = 0;
 	ptcb->tcb_rbsize = 0;
-	ptcb->tcb_rbdata = 0;
+	ptcb->tcb_rbdata = NULL;
+	ptcb->tcb_rbend = NULL;
 	ptcb->tcb_rbseq = 0;
 	ptcb->tcb_rblen = 0;
 	ptcb->tcb_rbuf = NULL;
@@ -32,7 +33,7 @@ void	tcbclear(
 	ptcb->tcb_ssyn = 0;
 	ptcb->tcb_sfin = 0;
 	ptcb->tcb_spush = 0;
-	ptcb->tcb_cwnd = ptcb->tcb_mss << 1;
+	ptcb->tcb_cwnd = ptcb->tcb_mss * 3;
 	ptcb->tcb_ssthresh = 0;
 	ptcb->tcb_dupacks = 0;
 	ptcb->tcb_srtt = 0;

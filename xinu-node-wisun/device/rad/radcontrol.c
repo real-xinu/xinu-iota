@@ -3,28 +3,26 @@
 #include <xinu.h>
 
 /*------------------------------------------------------------------------
- * radcontrol  -  Implements control functions for Radio device
+ * radcontrol  -  Control functions for radio device
  *------------------------------------------------------------------------
  */
 devcall	radcontrol (
-	struct	dentry *devptr,	/* Entry in device switch table	*/
-	int32	func,		/* Control function		*/
-	int32	arg1,		/* Argument1 if needed		*/
-	int32	arg2		/* Argument2 if needed		*/
-	)
+		struct	dentry *devptr,
+		int32	func,
+		int32	arg1,
+		int32	arg2
+		)
 {
-	struct	radcblk *radptr;	/* Radio table entry pointer	*/
+	struct	radcblk *radptr;
 
 	radptr = &radtab[devptr->dvminor];
 
 	switch(func) {
 
-		/* Get EUI64 address */
-
-		case RAD_CTRL_GET_EUI64:
-			memcpy((char *)arg1, radptr->devAddress,
-						RAD_ADDR_LEN);
-			return OK;
+		case RAD_CTRL_GET_HWADDR:
+			memcpy((byte *)arg1, radptr->devAddress,
+					RAD_ADDR_LEN);
+			break;
 
 		default:
 			return SYSERR;

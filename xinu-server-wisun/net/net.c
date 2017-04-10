@@ -65,6 +65,8 @@ void	net_init (void)
 	/* Create a network input process */
 
 	resume(create(netin, NETSTK, NETPRIO, "netin", 0, NULL));
+
+	testbed_init();
 }
 
 
@@ -112,11 +114,9 @@ process	netin ()
 		    case ETH_IPv6:			/* Handle IPv6	*/
 			freebuf((char *)pkt);
 			continue;
+
 		    case ETH_TYPE_A:
-			amsg_handler(pkt);
-			continue;
-		    case ETH_TYPE_B:
-			freebuf((char *)pkt);
+			testbed_in(pkt);
 			continue;
 
 		    default:	/* Ignore all other incoming packets	*/

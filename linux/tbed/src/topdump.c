@@ -25,6 +25,7 @@ void topodump (struct c_msg *buf)
     byte mcaddr[6];
 
     for (int i = 0; i < entries; i++) {
+        fprintf (fp, "%d ,", ntohl (buf->topdata[i].t_bbbid));
         fprintf (fp, "%d ,", ntohl (buf->topdata[i].t_nodeid));
         fprintf (fp, "%d ,", ntohl (buf->topdata[i].t_status));
 

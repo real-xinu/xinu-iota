@@ -30,7 +30,7 @@
 
 /* Parameters */
 /* maximum reservation time in minutes (optional) */
-#define RESERVETIME		10
+#define RESERVETIME		0
 
 /* maximum number of servers */
 #define MAXSERVERS		256

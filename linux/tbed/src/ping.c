@@ -16,6 +16,7 @@ void ping_reply_handler (struct c_msg *buf)
     int i, counter, status;
     counter = ntohl (buf->pingnum);
 
+    fprintf(fp, "ping_reply_handler: pingnum: %d\n", counter);
     for (i = 0; i < counter; i++) {
         status = ntohl (buf->pingdata[i].pstatus);
 

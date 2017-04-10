@@ -45,6 +45,8 @@
 /* Format of a TCP Control Block */
 
 struct tcb {
+	/* Device information */
+	did32		tcb_dvnum;	/* Xinu device number		*/
 
 	/* Allocated resources and precious state */
 	int32		tcb_state;	/* Connection state in the FSM	*/
@@ -55,7 +57,6 @@ struct tcb {
 	int32		tcb_ref;	/* Reference count		*/
 
 	/* Connection identifying information */
-	int32		tcb_iface;	/* Interface index		*/
 	byte		tcb_lip[16];	/* Local IP address		*/
 	byte		tcb_rip[16];	/* Remote host IP address	*/
 	uint16		tcb_lport;	/* Local port number		*/
@@ -65,6 +66,7 @@ struct tcb {
 	int32		tcb_flags;	/* Flags			*/
 	int32		tcb_qlen;	/* # of tcbs in the listen queue*/
 	int32		tcb_mss;	/* Maximum segment size		*/
+	int32		tcb_iface;	/* Interface index		*/
 
 	/* Receiver-side state */
 	tcpseq		tcb_rnext;	/* RCV.NXT from RFC793		*/
@@ -72,7 +74,8 @@ struct tcb {
 	tcpseq		tcb_rfin;	/* Receiver-side FIN seqno	*/
 	tcpseq		tcb_rpush;	/* Received PSH seqno		*/
 	int32		tcb_rbsize;	/* Receive buffer size		*/
-	int32		tcb_rbdata;	/* First data byte in buffer	*/
+	char *		tcb_rbdata;	/* First data byte in buffer	*/
+	char *		tcb_rbend;	/* End of the buffer	*/
 	tcpseq		tcb_rbseq;	/* Receive buffer 1st seqno	*/
 	int32		tcb_rblen;	/* Length of data in buffer	*/
 	char *		tcb_rbuf;	/* Receive buffer		*/
@@ -85,7 +88,7 @@ struct tcb {
 	tcpseq		tcb_sfin;	/* Outgoing FIN seqno		*/
 	tcpseq		tcb_spush;	/* Send PSH seqno		*/
 	tcpseq		tcb_rttseq;	/* Seqno of RTT measurement	*/
-	int32		tcb_rtttime;	/* Time of RTT measurement	*/
+	uint32		tcb_rtttime;	/* Time of RTT measurement	*/
 	int32		tcb_cwnd;	/* JK88 cwnd			*/
 	int32		tcb_ssthresh;	/* JK88 ssthresh		*/
 	int32		tcb_dupacks;	/* Duplicate acks for suna	*/

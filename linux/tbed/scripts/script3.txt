@@ -1,0 +1,15 @@
+inc setup3.txt
+ts_find
+ts_check
+nping -all 
+newtop top1.txt.0
+names
+topdump
+nping -all
+nping a_0
+offline
+nping -all
+online 
+nping 0
+nping 2
+settime

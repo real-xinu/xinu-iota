@@ -96,16 +96,23 @@
 				 to the nodes and each of the nodes call panic
 				 function*/
 
+#define	A_SETTIME	11
+
 /*------------------------------------------------------------------
  a data strucure to keep assigned multicast address and the node ID.
 *------------------------------------------------------------------*/
 struct node_info {
-    int32 nodeid;
-    byte mcastaddr[6];
+	int32	nodeid;
+	int32   xonoff;
+	byte	mcastaddr[6];
+	struct {
+	  byte	lqi_low;
+	  byte	lqi_high;
+	  byte	probloss;
+	} link_info[46];
 };
 
 extern struct node_info info;
-extern int32 xon;
 
 
 

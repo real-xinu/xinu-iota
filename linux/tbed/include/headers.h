@@ -11,4 +11,4 @@
 #include <time.h>
 #include <fcntl.h>
 #include "console_connect.h"
-
+#include <signal.h>

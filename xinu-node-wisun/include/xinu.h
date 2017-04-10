@@ -21,6 +21,7 @@
 #include <lfilesys.h>
 #include <spi.h>
 #include <ticc1200.h>
+#include <stonode.h>
 #include <ether.h>
 #include <radio.h>
 #include <gpio.h>
@@ -36,6 +37,8 @@
 #include <dhcp.h>
 #include <icmp.h>
 #include <nd.h>
+#include <rpl.h>
+#include <rpl_lbr.h>
 #include <tftp.h>
 #include <name.h>
 #include <shell.h>
@@ -49,5 +52,3 @@
 #include <am335x_watchdog.h>
 #include <armv7a.h>
 #include <_6lowpan.h>
-#include <stonode.h>
-

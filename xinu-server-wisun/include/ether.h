@@ -12,30 +12,41 @@ typedef	unsigned char	Eaddr[ETH_ADDR_LEN];/* a physical Ethernet address*/
 
 /* TYPE A frame */
 
-struct a_msg
-{
-	int32 amsgtyp;                 /* message type */
-	int32 anodeid;                /*node id */
-
-	union
-	{
-           struct {
-		    byte	amcastaddr[6];
-		    struct {
-		           byte  lqi_low;
-			   byte  lqi_high;
-			   byte  probloss;
-	            }link_info[46];
+#pragma pack(1)
+struct a_msg {
+	int32	amsgtyp;	/* Message Type	*/
+	int32	anodeid;	/* Node ID	*/
+	int32	aseq;		/* Message seq.	*/
+	int32	aacktyp;	/* Type of ACK	*/
+	union {
+          struct { /* Join messge */
+	    byte	amcastaddr[6];
+	    struct {
+	      byte  lqi_low;
+	      byte  lqi_high;
+	      byte  probloss;
+	      } link_info[46];
 	   };
-	   byte apingdata[8];
-	   byte aacking[16];
-	   byte aerrmsg[16];
+	  struct { /* Ack message */
+	    uint32	acktype;
+	  };
+	   byte	apingdata[8];
+	   byte	aacking[16];
+	   byte	aerrmsg[16];
 	   uint32 ctime;
-
 	};
-
 };
+#pragma pack()
 
+/* Structure of A-Type Message */
+#pragma pack(1)
+struct	tbedpacket {
+	byte	ethdst[6];	/* Ethernet Destination	*/
+	byte	ethsrc[6];	/* Ethernet Source	*/
+	uint16	ethtype;	/* Ethernet Type	*/
+	struct	a_msg amsg;	/* A-Type Message data	*/
+};
+#pragma pack()
 
 /* Ethernet packet header */
 #pragma pack(1)
@@ -43,14 +54,7 @@ struct	etherPkt {
 	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
 	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
 	uint16	type;			/* Ether type field		*/
-	//byte	data[1];		/* Packet payload		*/
-	union
-	{
-
-	byte net_ethdata[1500];	
-	struct a_msg msg;               /* Struct of a_msg */
-        
-	};
+	struct 	a_msg msg;		/* Type-A Message		*/
 };
 #pragma pack()
 

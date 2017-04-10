@@ -1,5 +1,170 @@
+/* nping.c - nping_reply */
+
 #include <xinu.h>
 
+/*------------------------------------------------------------------------
+ * nping_in  -  Handle an incoming NPING request
+ *------------------------------------------------------------------------
+ */
+struct	c_msg *nping_in (
+		struct	c_msg *cpkt	/* Incoming control packet 	*/
+		)
+{
+	struct	c_msg *reply;	/* Reply packet			*/
+	struct	tbreq *rqptr;	/* Testbed request pointer	*/
+	int32	nodeid;		/* Node ID to be pinged		*/
+	intmask	mask;		/* Saved interrupt mask		*/
+	umsg32	msg;		/* Received message		*/
+
+	/* Allocate memory for reply message */
+
+	reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+	if((int32)reply == SYSERR) {
+		return SYSERR;
+	}
+
+	/* Get the node id */
+
+	nodeid = ntohl(cpkt->pingnodeid);
+
+	/* Initialize common fields */
+
+	reply->cmsgtyp = htonl(C_PING_REPLY);
+	reply->pingnum = htonl(1);
+	reply->pingdata[0].pnodeid = htonl(nodeid);
+
+	/* If the node is not active, return that status */
+
+	if(topo[nodeid].t_status == 0) {
+		reply->pingdata[0].pstatus = htonl(WS_NOTACTIV);
+		return reply;
+	}
+
+	/* If the queue is full, fail */
+
+	if(semcount(testbed.tsem) >= TB_QSIZE) {
+		freebuf((char *)reply);
+		return SYSERR;
+	}
+
+	/* Insert the request in the testbed queue */
+
+	mask = disable();
+	rqptr = &testbed.reqq[testbed.ttail++];
+	if(testbed.ttail >= TB_QSIZE) {
+		testbed.ttail = 0;
+	}
+
+	rqptr->type = TBR_TYPE_NPING;
+	memcpy(rqptr->dst, topo[nodeid].t_macaddr, 6);
+	rqptr->waiting = TRUE;
+	rqptr->waitpid = getpid();
+	recvclr();
+	restore(mask);
+
+	signal(testbed.tsem);
+
+	/* Wait for a response */
+
+	msg = receive();
+
+	if((int32)msg == SYSERR) {
+		reply->pingdata[0].pstatus = htonl(WS_NOTRESP);
+	}
+	else {
+		reply->pingdata[0].pstatus = htonl(WS_ALIVE);
+	}
+
+	return reply;
+}
+
+/*------------------------------------------------------------------------
+ * nping_all_in  -  Handle incoming PING_ALL and PINGALL request
+ *------------------------------------------------------------------------
+ */
+struct	c_msg *nping_all_in (
+		struct	c_msg *cpkt,	/* Incoming control packet	*/
+		bool8	intopo		/* PING_ALL or PINGALL		*/
+		)
+{
+	struct	c_msg *reply;	/* Reply packet		*/
+	struct	tbreq *rqptr;	/* Testbed request	*/
+	umsg32	msg;		/* Received message	*/
+	intmask	mask;		/* Saved interrupt mask	*/
+	int32	i;		/* Loop index		*/
+
+	reply = (struct tbedpacket *)getmem(sizeof(struct c_msg));
+	if((int32)reply == SYSERR) {
+		return SYSERR;
+	}
+
+	if(intopo) {
+		reply->cmsgtyp = htonl(C_PING_ALL);
+		for(i = 0; i < nnodes; i++) {
+			reply->pingdata[i].pnodeid = htonl(i);
+			reply->pingdata[i].pstatus = htonl(WS_NOTRESP);
+		}
+		reply->pingnum = htonl(nnodes);
+	}
+	else {
+		reply->cmsgtyp = htonl(C_PINGALL_REPLY);
+		for(i = 0; i < MAX_BBB; i++) {
+			reply->bbb_stat[i] = 0;
+		}
+		reply->nbbb = htonl(0);
+	}
+
+	mask = disable();
+	if(semcount(testbed.tsem) >= TB_QSIZE) {
+		restore(mask);
+		return SYSERR;
+	}
+
+	rqptr = &testbed.reqq[testbed.ttail++];
+	if(testbed.ttail >= TB_QSIZE) {
+		testbed.ttail = 0;
+	}
+
+	if(intopo) {
+		rqptr->type = TBR_TYPE_NPING_ALL;
+	}
+	else {
+		rqptr->type = TBR_TYPE_NPINGALL;
+	}
+
+	rqptr->waiting = TRUE;
+	rqptr->waitpid = getpid();
+	recvclr();
+
+	restore(mask);
+
+	signal(testbed.tsem);
+
+	while(1) {
+		msg = receive();
+
+		kprintf("nping_all_in: msg = %d\n", msg);
+		if((int32)msg == SYSERR) {
+			break;
+		}
+
+		mask = disable();
+		if(intopo && topo[msg].t_status) {
+			reply->pingdata[msg].pnodeid = htonl(msg);
+			reply->pingdata[msg].pstatus = htonl(WS_ALIVE);
+		}
+
+		if(!intopo) {
+			reply->bbb_stat[msg] = 1;
+			reply->nbbb = ntohl(ntohl(reply->nbbb) + 1);
+		}
+		restore(mask);
+	}
+
+	return reply;
+}
+
+#if 0
 /*-----------------------------------------------------------------
  *  Make the PING REPLY message
  *  -------------------------------------------------------------*/
@@ -18,17 +183,17 @@ struct c_msg * nping_reply ( struct c_msg *ctlpkt )
 
         if ( ping_ack_flag[i] == 1 && stat == OK ) {
             cmsg_reply->pingdata[ping_num].pnodeid = htonl ( i );
-            cmsg_reply->pingdata[ping_num].pstatus = htonl ( ALIVE );
+            cmsg_reply->pingdata[ping_num].pstatus = htonl ( WS_ALIVE );
             ping_ack_flag[i] = 0;
 
         } else if ( ping_ack_flag[i] == 0 && stat == OK ) {
             cmsg_reply->pingdata[ping_num].pnodeid = htonl ( i );
-            cmsg_reply->pingdata[ping_num].pstatus = htonl ( NOTRESP );
+            cmsg_reply->pingdata[ping_num].pstatus = htonl ( WS_NOTRESP );
         }
 
     } else {
         cmsg_reply->pingdata[ping_num].pnodeid = htonl ( i );
-        cmsg_reply->pingdata[ping_num].pstatus = htonl ( NOTACTIV );
+        cmsg_reply->pingdata[ping_num].pstatus = htonl ( WS_NOTACTIV );
     }
 
     ping_num = 1;
@@ -36,6 +201,7 @@ struct c_msg * nping_reply ( struct c_msg *ctlpkt )
     cmsg_reply->pingnum = htonl ( ping_num );
     return cmsg_reply;
 }
+#endif
 /*------------------------------------------------------------------
  * This function is used to ping a speceifc node
  * which is determined by the mgmt app
@@ -101,12 +267,12 @@ struct c_msg * nping_all_reply ( struct c_msg *ctlpkt )
                 /*DEBUG */  //kprintf("i:ping ack flag  %d:%d\n", i,  ping_ack_flag[i]);
                 if ( ping_ack_flag[i] == 1 ) {
                     cmsg_reply->pingdata[ping_num].pnodeid = htonl ( i );
-                    cmsg_reply->pingdata[ping_num].pstatus = htonl ( ALIVE );
+                    cmsg_reply->pingdata[ping_num].pstatus = htonl ( WS_ALIVE );
                     ping_ack_flag[i] = 0;
 
                 } else if ( ping_ack_flag[i] == 0 ) {
                     cmsg_reply->pingdata[ping_num].pnodeid = htonl ( i );
-                    cmsg_reply->pingdata[ping_num].pstatus = htonl ( NOTRESP );
+                    cmsg_reply->pingdata[ping_num].pstatus = htonl ( WS_NOTRESP );
                 }
             }
 

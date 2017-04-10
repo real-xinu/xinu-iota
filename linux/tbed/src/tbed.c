@@ -9,8 +9,9 @@ int s;
 struct sockaddr_in si_other;
 char map_list[46][20];
 char map_serv[15];
-
-
+char brouter1[15];
+char brouter2[15];
+char ip_serv[15];
 char *log_file_path = "../log/log.manage";
 
 
