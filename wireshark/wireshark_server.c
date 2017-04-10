@@ -102,6 +102,8 @@ int	main (void) {
 	pcaphdr.snaplen = 65535;
 	pcaphdr.network = PCAP_NETWORK;
 
+	write(wfd, &pcaphdr, sizeof pcaphdr);
+
 	pcapphdr.ts_sec = 0;
 	pcapphdr.ts_usec = 0;
 
