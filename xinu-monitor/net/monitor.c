@@ -40,14 +40,12 @@ void	monitor_in (
 		}
 	}
 
-	kprintf("monitor_in: sending a UDP message of packet length: %d\n", totallen-14);
-	mmsg->pktlen = htonl(totallen-14);
-	kprintf("monitor_in: copying to %x, totallen: %d\n", mmsg, totallen);
-	memcpy(mmsg->pktdata, &pkt->net_ipvh, totallen-14);
+	//TODO Filter packet here
 
-	int32	err;
-	err = udp_send(udp_slot, (char *)mmsg, 4+totallen-14);
-	kprintf("err = %d\n", err);
+	mmsg->pktlen = htonl(totallen-14);
+	memcpy(mmsg->pktdata, (char *)&pkt->net_ipvh+1, totallen-14);
+
+	udp_send(udp_slot, (char *)mmsg, 4+totallen-14);
 
 	freebuf((char *)pkt);
 }
