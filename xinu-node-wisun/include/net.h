@@ -1,28 +1,24 @@
 /* net.h */
 
-
-
-/* Structure of TYPE A frames */
-struct a_msg {
-	        int32 amsgtyp;
-	        int32 anodeid;
-
-		union
-		{
-			byte amcastaddr[6];
-			byte apingdata[8];
-			byte aacking[16];
-		        byte aerrmsg[16];
-
-
-		};
-
-
+struct	a_msg {
+	int32	amsgtyp;
+	int32	anodeid;
+	int32	aseq;
+	int32	aacktyp;
+	union {
+	  struct {
+	    struct {
+	      byte	amcastaddr[6];
+	    };
+	    struct {
+	      byte lqi_low;
+	      byte lqi_high;
+	      byte probloss;
+	    } link_info[46];
+	  };
+	  uint32	ctime;
+	};
 };
-
-
-
-
 
 /* Structure of an Ethernet packet */
 #pragma pack(1)
@@ -30,15 +26,14 @@ struct	netpacket_e {
 	byte	net_ethdst[ETH_ADDR_LEN];/* Ethernet destination	*/
 	byte	net_ethsrc[ETH_ADDR_LEN];/* Ethernet source		*/
 	uint16	net_ethtype;		 /* Ethernet type		*/
-	union
-	{
-	byte	net_ethdata[1500];	 /* Ethernet payload		*/
-        struct a_msg msg;                /* TYPE A frames */
-
+	union {
+	  byte	net_ethdata[1500];	 /* Ethernet payload		*/
+	  struct a_msg msg;
 	};
 };
 #pragma pack()
 
+#define	RAD_FC_FT	0x0007
 #define	RAD_FC_FT_BCN	0x0000
 #define	RAD_FC_FT_DAT	0x0001
 #define	RAD_FC_FT_ACK	0x0002
@@ -67,6 +62,10 @@ struct	netpacket_e {
 /* Structure of a Radio packet */
 #pragma pack(1)
 struct	netpacket_r {
+	byte	net_ethdst[6];
+	byte	net_ethsrc[6];
+	uint16	net_ethtype;
+	byte	net_pad;
 	uint16	net_radfc;		/* Frame Control		*/
 	byte	net_radseq;		/* Sequence number		*/
 	byte	net_raddstpan[2];	/* Destination PAN ID		*/
@@ -102,32 +101,25 @@ struct	netpacket {
 	    uint16	net_iccksum;	/* ICMP checksum		*/
 	    byte	net_icdata[1500-44];/* ICMP payload		*/
 	  };
-  
-
+	  struct {
+	    uint16	net_tcpsport;	/* TCP source port		*/
+	    uint16	net_tcpdport;	/* TCP destination port		*/
+	    uint32	net_tcpseq;	/* TCP sequence number		*/
+	    uint32	net_tcpack;	/* TCP acknowledgement number	*/
+	    uint16	net_tcpcode;	/* Segment type			*/
+	    uint16	net_tcpwindow;	/* Advertised window size	*/
+	    uint16	net_tcpcksum;	/* TCP checksum			*/
+	    uint16	net_tcpurgptr;	/* Urgent pointer		*/
+	    byte	net_tcpdata[1500-60];/* TCP payload		*/
+	  };
 	};
 	int32	net_iface;	/* Network interface index		*/
 };
 #pragma pack()
 
-#define	PACKLEN	(sizeof(struct netpacket_e)+16)
+#define	PACKLEN	(sizeof(struct netpacket_e)+32)
 
 #define	NETPRIO	500
-
-struct network {
-		uint32  ipucast;
-	        uint32  ipbcast;
-		uint32  ipmask;
-		uint32  ipprefix;
-		uint32  iprouter;
-		uint32  bootserver;
-	        bool8   ipvalid;
-	        byte    ethucast[ETH_ADDR_LEN];
-		byte    ethbcast[ETH_ADDR_LEN];
-	        //char    bootfile[NETBOOTFILE];
-};
-
-extern struct  network NetData;        /* Local Network Interface      */
-
 
 /* Buffer pool for network packets	*/
 extern	bpid32	netbufpool;

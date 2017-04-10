@@ -17,20 +17,19 @@ struct netpacket *tcpalloc(
 
 	pkt = (struct netpacket *) getbuf(netbufpool);
 
+	pkt->net_iface = tcbptr->tcb_iface;
+
 	/* Fill in IP header */
 
-	pkt->net_ipvtch = 0x60;		/* IP version and traffic class	*/
-	pkt->net_iptclflh = 0;		/* IP traffic class and flow	*/
-	pkt->net_iplen= TCP_HDR_LEN + len;
-					/* Total datagram length	*/
-	pkt->net_iphl = 0xff;		/* IP time-to-live		*/
-	pkt->net_ipnh = IP_TCP;		/* datagram carries TCP		*/
-	memcpy(pkt->net_ipsrc, tcbptr->tcb_lip, 16);
-					/* IP source address		*/
-	memcpy(pkt->net_ipdst, tcbptr->tcb_rip, 16);
-					/* IP destination address	*/
+	pkt->net_ipvtch = 0x60;
+	pkt->net_iptclflh = 0;
+	pkt->net_ipfll = 0;
+	pkt->net_iplen = TCP_HDR_LEN + len;
+	pkt->net_ipnh = IP_TCP;
+	pkt->net_iphl = 255;
 
-	pkt->net_iface = tcbptr->tcb_iface;
+	memcpy(pkt->net_ipsrc, tcbptr->tcb_lip, 16);
+	memcpy(pkt->net_ipdst, tcbptr->tcb_rip, 16);
 
 	/* Set the TCP port fields in the segment */
 

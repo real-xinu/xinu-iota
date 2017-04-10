@@ -6,7 +6,6 @@
 
 
 
-int xon = 1;
 int32 slot;
 struct node_info info;
 
@@ -15,32 +14,27 @@ struct node_info info;
  * ------------------------------------------------------*/
 void process_typb (struct netpacket_e *pkt)
 {
-    int i;
-    if (xon) {
-
-	
-      if (srbit (pkt->net_ethdst, info.nodeid, 1 )) {
-            uint32 t1 = clktime;
-	    printf("t1:%d\n", t1);
+    //int i;
+    if (info.xonoff) {
+        /*if (srbit (pkt->dst, info.nodeid, 1 )) {
             for (i = 0; i < 6; i++) {
-                kprintf ("%02x:", pkt->net_ethsrc[i]);
+                //kprintf ("%02x:", pkt->src[i]);
             }
 
             kprintf ("\n");
 
             for (i = 0; i < 6; i++) {
-                //kprintf ("%02x:", pkt->net_ethdst[i]);
+                kprintf ("%02x:", pkt->dst[i]);
             }
 
-            //kprintf ("\ndata:%s\n", pkt->net_ethdata);
-      } 
+            kprintf ("\ndata:%s\n", pkt->radpkt.rad_data);
+        //udp_send(slot, (char *) pkt, sizeof(struct etherPkt));
+        }*/
         freebuf ((char *)pkt);
 
-    } else if (!xon) {
+    } else if (!info.xonoff) {
         freebuf ((char *)pkt);
     }
-    kprintf("\n*************************\n");
-
 }
 
 /*-------------------------------------------------------------
@@ -49,8 +43,8 @@ void process_typb (struct netpacket_e *pkt)
 
 process wsnodeapp()
 {
-    int32 retval;
-    int j;
+    //int32 retval;
+    //int j;
     /* DEBUG */
     /*
         for (j = 0; j < 6; j++) {
@@ -64,7 +58,7 @@ process wsnodeapp()
 
     kprintf("\n");
     */
-    while (TRUE) {
+    /*while (TRUE) {
         sleepms (200);
         int flag = 0;
         //kprintf ("xon:%d\n", xon);
@@ -82,39 +76,29 @@ process wsnodeapp()
                 flag = 6;
 
             if (flag != 6) {
-                struct netpacket_e *pkt;
-		struct netpacket   *npkt;
-		npkt = (struct netpacket *)getmem(sizeof(struct netpacket));
+                struct etherPkt *pkt;
+                struct radpacket radpkt;
                 char *buf;
-		//memset(npkt, 0 , PACKLEN);
-		//npkt->net_iface = 1;
-		//npkt->net_ipvtch = 0x60;
-		//npkt->net_ipnh = IP_ICMP;
-		//npkt->net_iphl = 255;
-		//npkt->net_iplen = 4 + 50;
-		
                 buf = (char *)getmem (50 * sizeof (char));
                 //buf = info.nodeid;
                 sprintf (buf, "%d", info.nodeid);
-                memcpy (npkt->net_icdata, buf, 50 * sizeof (char) );
-                pkt = ( struct netpacket_e *) getmem ( sizeof ( struct netpacket_e) );
-                memcpy (pkt->net_ethsrc, NetData.ethucast, ETH_ADDR_LEN );
-                memcpy (pkt->net_ethdst, info.mcastaddr, ETH_ADDR_LEN );
-                pkt->net_ethtype = htons (ETH_TYPE_B);
-                memcpy(pkt->net_ethdata, npkt, 1500 - 44);
-                retval = write ( ETHER0, ( char * )pkt, sizeof ( struct netpacket_e) );
+                memcpy (radpkt.rad_data, buf, 50 * sizeof (char) );
+                pkt = ( struct etherPkt * ) getmem ( sizeof ( struct etherPkt) );
+                memcpy (pkt->src, NetData.ethucast, ETH_ADDR_LEN );
+                memcpy (pkt->dst, info.mcastaddr, ETH_ADDR_LEN );
+                pkt->type = htons (ETH_TYPE_B);
+                pkt->radpkt = radpkt;
+                retval = write ( ETHER0, ( char * )pkt, sizeof ( struct etherPkt) );
 
                 if (retval > 0) {
                 }
 
-                freemem ((char *) pkt , sizeof (struct netpacket_e));
+                freemem ((char *) pkt , sizeof (struct etherPkt));
                 freemem ((char *)buf, sizeof (char) * 50);
             }
         }
-    }
-
-
-    
+    }*/
+	return OK;
 }
 
 
@@ -127,7 +111,7 @@ struct netpacket_e *create_etherPkt ( struct netpacket_e *pkt )
     msg = ( struct netpacket_e * ) getmem ( sizeof ( struct netpacket_e) );
     /*fill out Ethernet packet header fields */
     memset ( msg, 0, sizeof ( msg ) );
-    memcpy ( msg->net_ethsrc, NetData.ethucast, ETH_ADDR_LEN );
+    memcpy ( msg->net_ethsrc, iftab[0].if_hwucast, ETH_ADDR_LEN );
     memcpy ( msg->net_ethdst, pkt->net_ethsrc, ETH_ADDR_LEN );
     msg->net_ethtype = htons ( ETH_TYPE_A );
     return msg;

@@ -151,6 +151,7 @@ struct	topo_entry { 		/* Entry in a topology file (also used	*/
     int32	t_status;	/* Status of the node			*/
     byte	t_neighbors[6];	/* The multicast address of neighbors	*/
     byte	t_macaddr[6];	/* The Mac address of a node		*/
+    int32       t_bbbid;
     struct {
 	          byte lqi_low;
 		  byte lqi_high;
@@ -169,6 +170,7 @@ struct	t_entry { 		/* Entry in a topology file (also used	*/
     int32	t_status;	/* Status of the node			*/
     byte	t_neighbors[6];	/* The multicast address of neighbors	*/
     byte	t_macaddr[6];	/* The Mac address of a node		*/
+    int32       t_bbbid;
 };
 
 

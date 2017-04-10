@@ -133,18 +133,21 @@ void	udp_in (
 	}
 
 	if(found == -1) {
-		freebuf((char *)pkt);
+		//freebuf((char *)pkt);
 		return;
 	}
 
 	udptr = &udptab[found];
 
 	if(udptr->udcount >= UDP_QSIZ) {
-		freebuf((char *)pkt);
+		//freebuf((char *)pkt);
 		return;
 	}
 
-	udptr->udqueue[udptr->udtail] = pkt;
+	struct netpacket *udp_pkt = (struct netpacket *)getbuf(netbufpool);
+	memcpy(udp_pkt, pkt, sizeof(struct netpacket));
+
+	udptr->udqueue[udptr->udtail] = udp_pkt;
 	udptr->udtail++;
 	if(udptr->udtail >= UDP_QSIZ) {
 		udptr->udtail = 0;
@@ -291,10 +294,12 @@ int32	udp_recvaddr (
 	}
 
 	memcpy(buf, pkt->net_udpdata, len);
-
+        
+	memcpy(udptr->udremip, pkt->net_ipsrc, 16);
 	memcpy(ipdata->ipsrc, pkt->net_ipsrc, 16);
 	memcpy(ipdata->ipdst, pkt->net_ipdst, 16);
 	ipdata->iphl = pkt->net_iphl;
+	ipdata->port = pkt->net_udpsport;
 
 	freebuf((char *)pkt);
 	restore(mask);
@@ -361,11 +366,74 @@ int32	udp_send (
 	memcpy(pkt->net_udpdata, buf, len);
 
 	kprintf("udp_send: sending\n");
-	ip_enqueue(pkt);
+	ip_send(pkt);
 
 	restore(mask);
 	return len;
 }
+/*------------------------------------------------------------------------
+ * udp_sendto  -  Send a UDP packet to a specified destination
+ *------------------------------------------------------------------------
+ */
+int32	udp_sendto (
+	int32	slot,	/* Slot in UDP table	*/
+	byte	remip[16],	/* Remotr IP address	*/
+	uint16	remport,	/* Remote port		*/
+	char	*buf,	/* User data to send	*/
+	int32	len	/* Size of data to send	*/
+	)
+{
+	struct	udpentry *udptr;	/* Pointer to UDP table entry	*/
+	struct	netpacket *pkt;		/* Pointer to packet buffer	*/
+	intmask	mask;			/* Saved interrupt mask		*/
+
+	if((slot < 0) || (slot >= UDP_SLOTS)) {
+		return SYSERR;
+	}
+
+	mask = disable();
+
+	udptr = &udptab[slot];
+
+	if(udptr->udstate == UDP_FREE) {
+		kprintf("udp_sendto: error1\n");
+		restore(mask);
+		return SYSERR;
+	}
+
+
+	pkt = (struct netpacket *)getbuf(netbufpool);
+	if((int32)pkt == SYSERR) {
+		kprintf("udp_sendto: error2\n");
+		restore(mask);
+		return SYSERR;
+	}
+
+	pkt->net_iface = udptr->udiface;
+
+	pkt->net_ipvtch = 0x60;
+	pkt->net_iptclflh = 0;
+	pkt->net_ipfll = 0;
+	pkt->net_iphl = 255;
+	pkt->net_ipnh = IP_UDP;
+	pkt->net_iplen = len + UDP_HDR_LEN;
+	memcpy(pkt->net_ipsrc, ip_unspec, 16);
+	memcpy(pkt->net_ipdst, remip, 16);
+
+	pkt->net_udpsport = udptr->udlocport;
+	pkt->net_udpdport = remport;
+	pkt->net_udplen = UDP_HDR_LEN + len;
+	pkt->net_udpcksum = 0;
+
+	memcpy(pkt->net_udpdata, buf, len);
+
+	kprintf("udp_sendto: sending\n");
+	ip_send(pkt);
+
+	restore(mask);
+	return len;
+}
+
 
 /*------------------------------------------------------------------------
  * udp_cksum  -  Compute checksum of a UDP packet

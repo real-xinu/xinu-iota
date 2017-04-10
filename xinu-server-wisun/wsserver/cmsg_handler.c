@@ -25,20 +25,23 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
 
         case C_RESTART_NODES:
             kprintf ( "Message type is %d\n", C_RESTART_NODES );
-
+            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
             if ( online ) {
-                cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
                 cmsg_reply->cmsgtyp = htonl ( C_OK );
 	    }
-
+	    else
+                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
             break;
 
         case C_PING_REQ:
             kprintf ( "Message type is %d\n", C_PING_REQ );
-
             if ( online )
                 cmsg_reply = nping_in(ctlpkt, cmsg_reply);
-
+	    else
+	    {
+                    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+            }
             break;
 
         case C_PING_ALL:
@@ -46,7 +49,11 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
 
             if ( online )
                 cmsg_reply = nping_all_in ( ctlpkt, 1 );
-
+	    else
+	    {
+	            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+            }
             break;
 
         case C_XOFF:
@@ -63,7 +70,11 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
                 else
                     cmsg_reply->cmsgtyp = htonl (C_ERR);
             }
-
+	    else
+            {
+	            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+            }
             break;
 
         case C_XON:
@@ -80,7 +91,11 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
                 else
                     cmsg_reply->cmsgtyp = htonl (C_ERR);
             }
-
+	    else
+            {
+	            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+            }
             break;
 
         case C_OFFLINE:

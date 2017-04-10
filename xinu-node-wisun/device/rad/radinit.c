@@ -2,76 +2,50 @@
 
 #include <xinu.h>
 
-struct	radcblk radtab[1];
-struct	rad_fragentry rad_fragtab[RAD_NFRAG];
+struct	radcblk	radtab[1];
+
+extern	process	rad_out(struct radcblk *);
 
 /*------------------------------------------------------------------------
- * radinit  -  Initialize the Radio device
+ * radinit  -  Initialize the radio device
  *------------------------------------------------------------------------
  */
-int32	radinit (
-	struct	dentry *devptr		/* Entry in device switch table	*/
-	)
+devcall	radinit(
+		struct	dentry *devptr
+	       )
 {
-	struct	radcblk *radptr;	/* Ptr to control block	*/
-	int32	i;			/* For loop index	*/
+	struct	radcblk *radptr;	/* Radio control block	*/
+	int32	i;
 
+	/* Get pointer to the radio control block */
 	radptr = &radtab[devptr->dvminor];
 
+	/* Zero-out the control block */
 	memset(radptr, NULLCH, sizeof(struct radcblk));
-	radptr->state = RAD_STATE_DOWN;
 
-	radptr->isem = semcreate(0);
-	radptr->rxRingSize = 32;
-	radptr->rxRing = getmem(sizeof(struct rad_rx_desc) * radptr->rxRingSize);
+	/* Set the underlying device */
+	radptr->dev = devptr;
 
-	radptr->rxHead = radptr->rxTail = 0;
+	/* Set the device address based on Ethernet MAC */
+	memcpy(radptr->devAddress, ethertab[0].devAddress, 3);
+	radptr->devAddress[3] = 0xff;
+	radptr->devAddress[4] = 0xfe;
+	memcpy(&radptr->devAddress[5], &ethertab[0].devAddress[3], 3);
 
-	return OK;
-  /*
-	for(i = 0; i < 96; i++) {
-		if(!memcmp(ethertab[0].devAddress, xinube_macs[i], 6)) {
-			break;
-		}
-	}
-	if(i >= 96) {
-		radptr->state = RAD_STATE_DOWN;
-		return SYSERR;
-	}
-  */
+	/* Initialize the tx ring */
+	radptr->txRing = getmem(sizeof(struct rad_tx_ring_desc) * RAD_TX_RING_SIZE);
+	radptr->txHead = radptr->txTail = 0;
+	radptr->osem = semcreate(RAD_TX_RING_SIZE);
+	radptr->qsem = semcreate(0);
 
-	radptr->devAddress[7] = 101+i;
-
-	radptr->rxRingSize = 32;
-	radptr->isem = semcreate(32);
-	if(radptr->isem == SYSERR) {
-		return SYSERR;
-	}
-	radptr->inPool = mkbufpool(RAD_PKT_SIZE, radptr->rxRingSize);
-	if(radptr->inPool == SYSERR) {
-		return SYSERR;
-	}
-	radptr->rxHead = radptr->rxTail = 0;
-
-	radptr->txRingSize = 32;
-	radptr->osem = semcreate(32);
-	if(radptr->osem == SYSERR) {
-		freemem(radptr->rxBufs, radptr->rxRingSize * RAD_PKT_SIZE);
-		return SYSERR;
-	}
-	radptr->outPool = mkbufpool(RAD_PKT_SIZE, radptr->txRingSize);
-	if((int32)radptr->outPool == SYSERR) {
-		freemem((char *)radptr->rxBufs, radptr->rxRingSize * RAD_PKT_SIZE);
-		return SYSERR;
+	for(i = 0; i < NBRTAB_SIZE; i++) {
+		memset(&radptr->nbrtab[i], NULLCH, sizeof(struct nbrentry));
+		radptr->nbrtab[i].state = NBR_STATE_FREE;
 	}
 
-	for(i = 0; i < RAD_NFRAG; i++) {
-		rad_fragtab[i].state = RAD_FRAG_FREE;
-	}
+	/* Create a radio output process */
+	radptr->ro_process = create(rad_out, 8192, 5000, "rad_out", 1, radptr);
 
-	radptr->_6lowpan = TRUE;
-
-	radptr->state = RAD_STATE_UP;
-
+	kprintf("rad_init: done\n");
 	return OK;
 }

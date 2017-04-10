@@ -14,7 +14,7 @@ int32	tcpnull(
 	return OK;
 }
 
-extern int32 *tcplisten(struct tcb *, struct netpacket *);
+/*extern int32 *tcplisten(struct tcb *, struct netpacket *);
 extern int32 *tcpsynsent(struct tcb *, struct netpacket *);
 extern int32 *tcpsynrcvd(struct tcb *, struct netpacket *);
 extern int32 *tcpestd(struct tcb *, struct netpacket *);
@@ -23,7 +23,7 @@ extern int32 *tcpfin2(struct tcb *, struct netpacket *);
 extern int32 *tcpcwait(struct tcb *, struct netpacket *);
 extern int32 *tcpclosing(struct tcb *, struct netpacket *);
 extern int32 *tcplastack(struct tcb *, struct netpacket *);
-extern int32 *tcptwait(struct tcb *, struct netpacket *);
+extern int32 *tcptwait(struct tcb *, struct netpacket *);*/
 int32 (*tcpstatesw[]) (struct tcb *tcbptr,struct netpacket *pkt)
   = {
 	tcpnull,			/* CLOSED			*/
@@ -51,11 +51,9 @@ void	tcpdisp(
 	)
 {
 	int32		state;		/* state of the TCB		*/
-/*DEBUG*/ char *dnames[] = {"tcpnull","tcplisten","tcpsynsent","tcpsynrcvd",
-/*DEBUG*/	"tcpestd","tcpfin1","tcpfin2","tcpcwait","tcpclosing",
-/*DEBUG*/	"tcplastack","tcptwait"};
-
-	//kprintf("tcpdisp..\n");
+/*DEBUG*///char *dnames[] = {"tcpnull","tcplisten","tcpsynsent","tcpsynrcvd",
+/*DEBUG*///	"tcpestd","tcpfin1","tcpfin2","tcpcwait","tcpclosing",
+/*DEBUG*///	"tcplastack","tcptwait"};
 
 	/* Obtain the state from the TCB */
 
@@ -77,16 +75,16 @@ void	tcpdisp(
 	}
 
 	/* Handle an incoming ACK */
-	if(pkt->net_tcpcode & TCPF_ACK) {
-		if (pkt->net_tcpack < tcbptr->tcb_suna
-	    	|| pkt->net_tcpack > tcbptr->tcb_snext) {
-			if (state <= TCB_SYNRCVD) {
-				tcpreset (pkt);
-			} else {
-				tcpack (tcbptr, TRUE);
-			}
-			return; 
+
+	if ((pkt->net_tcpcode & TCPF_ACK) &&
+	    (pkt->net_tcpack < tcbptr->tcb_suna
+	    || pkt->net_tcpack > tcbptr->tcb_snext)) {
+		if (state <= TCB_SYNRCVD) {
+			tcpreset (pkt);
+		} else {
+			tcpack (tcbptr, TRUE);
 		}
+		return;
 	}
 
 	/* Handle SYN */

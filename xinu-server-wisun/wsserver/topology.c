@@ -215,6 +215,7 @@ struct	c_msg *toporeply (void) {
 
 		reply->topdata[i].t_nodeid = htonl(topo[i].t_nodeid);
 		reply->topdata[i].t_status = htonl(topo[i].t_status);
+		reply->topdata[i].t_bbbid = htonl(topo[i].t_bbbid);
 		memcpy(reply->topdata[i].t_neighbors, topo[i].t_neighbors, 6);
 	}
 

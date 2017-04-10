@@ -1,0 +1,14 @@
+download n 110 xinu.boot.r
+download n 111 xinu.boot.n
+download n 112 xinu.boot.n
+download n 113 xinu.boot.n
+download t 183 xinu.boot.s
+pcycle t
+delay 12000
+cleanup
+ts_find
+pcycle 110
+pcycle 111
+pcycle 112
+pcycle 113
+delay 15000

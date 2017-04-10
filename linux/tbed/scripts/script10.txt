@@ -1,0 +1,13 @@
+inc setup10.txt
+ts_find
+ts_check
+nping -all
+newtop NTop10.txt.0
+topdump
+nping -all
+nping a_0
+offline
+nping -all
+online 
+nping 0
+nping 3

@@ -1,0 +1,22 @@
+inc setup5.txt
+ts_find
+ts_check
+newtop bTop5.txt.0
+getmap
+names
+topdump
+nping -all
+nping a_0
+nping a
+offline
+nping -all
+nping c
+xoff 2
+online
+nping 2
+xoff f
+nping 5
+xon 5
+nping 0
+nping 3
+pingall

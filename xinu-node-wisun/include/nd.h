@@ -38,6 +38,7 @@ struct	nd_nbradv {
 
 #define	NDOPT_TYPE_SLLA	1
 #define	NDOPT_TYPE_TLLA	2
+#define	NDOPT_TYPE_AR	33
 
 /* Structure of a neighbor discovery option */
 #pragma pack(1)
@@ -57,12 +58,23 @@ struct	nd_opt {
 	    uint32	ndopt_resvd;
 	    byte	ndopt_prefix[16];
 	  };
+	  struct {
+	    byte	ndopt_status;
+	    byte	ndopt_res[3];
+	    uint16	ndopt_reglife;
+	    byte	ndopt_eui64[8];
+	  };
 	};
 };
 #pragma pack()
 
 #define	NC_STATE_FREE	0
 #define	NC_STATE_USED	1
+
+#define	NC_TYPE_GC	0
+#define	NC_TYPE_TEN	1
+#define	NC_TYPE_REG1	2
+#define	NC_TYPE_REG2	3
 
 #define	NC_RSTATE_INC	0
 #define	NC_RSTATE_RCH	1
@@ -83,6 +95,7 @@ struct	nd_opt {
 /* Structure of a neighbr cache entry */
 struct	nd_ncentry {
 	int32	nc_state;
+	int32	nc_type;
 	int32	nc_iface;
 	int32	nc_rstate;
 	byte	nc_ipaddr[16];

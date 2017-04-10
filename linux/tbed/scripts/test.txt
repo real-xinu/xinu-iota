@@ -1,0 +1,4 @@
+download b1 102 xinu.boot.r
+download t  183 xinu.boot.s
+pcycle t
+pcycle b1

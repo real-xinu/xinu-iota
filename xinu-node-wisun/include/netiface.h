@@ -18,6 +18,8 @@
 #define	IF_MAX_NIPMCAST	5
 #define	IF_MAX_NIPPREF	5
 
+#define IFQSIZ          10
+
 /* Structure of an IPv6 address */
 struct	ifipaddr {
 	byte	ipaddr[16];
@@ -47,15 +49,18 @@ struct	netiface {
 	struct	ifipaddr if_ipucast[IF_MAX_NIPUCAST];
 	struct	ifipaddr if_ipmcast[IF_MAX_NIPMCAST];
 
+	/* Sequence number for radio interface */
+	byte	if_seq;
+
 	/* Neighbor Discovery related fields */
 	int32	if_nd_reachtime;
 	int32	if_nd_retranstime;
 
 	/* Device entry in the device table */
-	struct	dentry *if_dev;
+	did32	if_dev;
 
 	/* Input queue for this interface */
-	void	*if_inputq[10];
+	void	*if_inputq[IFQSIZ];
 	int32	if_iqhead;
 	int32	if_iqtail;
 	sid32	if_iqsem;

@@ -13,9 +13,7 @@
 #include "../include/global.h"
 
 const char *SRV_IP;
-char map_serv[15];
-char ip_serv[15];
-char map_brouter[15];
+//char map_serv[10];
 char path_incfile[30] = "../scripts/";
 char array_token[2][20];
 FILE *fp;
@@ -115,7 +113,7 @@ struct c_msg  command_handler (char command[BUFLEN])
         }
 
     } else if (!strcmp (array_token[0], "xoff")) {
-        //cmd_print (command_print);
+        cmd_print (command_print);
         if (!strcmp (array_token[1], "-all")) {
             message.cmsgtyp = htonl (C_XOFF);
             message.xonoffid = htonl (ALL);
@@ -199,9 +197,16 @@ struct c_msg  command_handler (char command[BUFLEN])
     } else if (!strcmp (array_token[0], "names")) {
         cmd_print (command_print);
 
+        if (nnodes <= 0)
+	{
+	  //fprintf (fp, "Please insert a getmap command.");
+	}
+	else
+	{
         for (i = 0; i < nnodes; i++) {
             fprintf (fp, "%s ", map_list[i]);
         }
+	}
 
         fprintf (fp, "%s", "\n");
         message.cmsgtyp = htonl (C_ERR);
@@ -277,16 +282,25 @@ struct c_msg  command_handler (char command[BUFLEN])
             download_img (array_token[3], "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
 
-        } else if (!strcmp (array_token[1], "b")) {
+        } else if (!strcmp (array_token[1], "b1")) {
             memset (beagle, 0, sizeof (beagle));
             strcpy (beagle, "beagle");
             strcat (beagle, array_token[2]);
-            strcpy (map_brouter, beagle);
+            strcpy (brouter1, beagle);
+            download_img (array_token[3], "cortex", beagle, XINUSERVER);
+            message.cmsgtyp = htonl (C_ERR);
+        
+        } else if (!strcmp (array_token[1], "b2")) {
+            memset (beagle, 0, sizeof (beagle));
+            strcpy (beagle, "beagle");
+            strcat (beagle, array_token[2]);
+            strcpy (brouter2, beagle);
             download_img (array_token[3], "cortex", beagle, XINUSERVER);
             message.cmsgtyp = htonl (C_ERR);
 
+
         } else if (!strcmp (array_token[1], "n")) {
-            memset (beagle, 0, sizeof (beagle));
+	    memset (beagle, 0, sizeof (beagle));
             strcpy (beagle, "beagle");
             strcat (beagle, array_token[2]);
             download_img (array_token[3], "cortex", beagle, XINUSERVER);
@@ -306,7 +320,18 @@ struct c_msg  command_handler (char command[BUFLEN])
             }
 
             message.cmsgtyp = htonl (C_ERR);
+        } else if (!strcmp (array_token[1], "b1")) {
+	    powercycle_bgnd ("cortex", brouter1, XINUSERVER);
+            fprintf (log_f, "%s", brouter1);
+            fprintf (log_f, " is pcycled as a border router #1.\n");
 
+            message.cmsgtyp = htonl (C_ERR);
+        } else if (!strcmp (array_token[1], "b2")) {
+            powercycle_bgnd ("cortex", brouter2, XINUSERVER);
+            fprintf (log_f, "%s", brouter2);
+            fprintf (log_f, " is pcycled as a border router #2.\n");
+
+            message.cmsgtyp = htonl (C_ERR);
         } else if (atoi (array_token[1]) > 101 && atoi (array_token[1]) < 184) {
             memset (beagle, 0, sizeof (beagle));
             strcpy (beagle, "beagle");

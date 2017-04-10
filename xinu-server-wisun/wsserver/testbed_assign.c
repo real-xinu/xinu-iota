@@ -6,6 +6,28 @@
  * testbed_assign  -  Send an Assign message to a node
  *------------------------------------------------------------------------
  */
+
+int32 get_bbbid(byte macaddr[6])
+{
+    
+    int i;
+
+    for (i = 0; i < MAX_BBB; i++)
+    {
+       if (!memcmp(macaddr, bbb_macs[i], 6))
+          break;
+    }
+
+    if ( i >= MAX_BBB)
+      return SYSERR;
+    else
+      return ( i + 101 );
+}
+
+/*--------------------------------------------------------
+ * -----------------------------------------------------*/
+
+
 status	testbed_assign (
 		int32	index,		/* Index in the topo	*/
 		byte	ethaddr[]	/* Ethernet address	*/
@@ -46,6 +68,7 @@ status	testbed_assign (
 			index = free;
 			topo[free].t_nodeid = testbed.nextid++;
 			memcpy(topo[free].t_macaddr, ethaddr, 6);
+			topo[free].t_bbbid = get_bbbid(topo[free].t_macaddr);
 			topo[free].t_status = 1;
 		}
 	}

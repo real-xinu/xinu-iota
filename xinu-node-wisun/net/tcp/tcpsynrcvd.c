@@ -15,6 +15,7 @@ int32	tcpsynrcvd(
 
 	if (!(pkt->net_tcpcode & TCPF_ACK)
 	    || pkt->net_tcpseq != tcbptr->tcb_rnext) {
+	    	//kprintf("tcpsynrcvd: no ack or bad seq\n");
 		return SYSERR;
 	}
 
@@ -22,8 +23,6 @@ int32	tcpsynrcvd(
 	/*    the system because the TCB is now synchronized	*/
 
 	tcbref (tcbptr);
-
-	signal(tcbptr->tcb_rblock);
 
 	/* Change state to ESTABLISHED */
 
@@ -33,12 +32,12 @@ int32	tcpsynrcvd(
 
 	tcbptr->tcb_suna++;
 	if (tcpdata (tcbptr, pkt)) {
-		tcpxmit (tcbptr);
+		tcpxmit (tcbptr, tcbptr->tcb_snext);
 	}
 
 	/* Permit reading */
 
-	if (tcbptr->tcb_readers) {
+	if (tcbptr->tcb_readers > 0) {
 		tcbptr->tcb_readers--;
 		signal (tcbptr->tcb_rblock);
 	}

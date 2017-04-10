@@ -1,0 +1,17 @@
+download b1 102 xinu.boot.r
+download n 103 xinu.boot.n
+download n 104 xinu.boot.n
+download n 105 xinu.boot.n
+download n 106 xinu.boot.n
+download n 107 xinu.boot.n
+download t 183 xinu.boot.s
+pcycle t
+delay 12000
+ts_find
+pcycle b1
+pcycle 103
+pcycle 104
+pcycle 105
+pcycle 106
+pcycle 107
+delay 20000
