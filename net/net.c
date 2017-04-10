@@ -130,6 +130,12 @@ process	rawin(void) {
 
 		case ETH_TYPE_B:
 
+                        if (info.xonoff == 0)
+			{
+			  freebuf((char *)epkt);
+			  break;
+			}
+
 			#ifdef DEBUG_RAWIN
 			kprintf("rawin: incoming TYPE_B\n");
 			#endif

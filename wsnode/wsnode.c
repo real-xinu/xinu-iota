@@ -6,7 +6,6 @@
 
 
 
-int xon = 1;
 int32 slot;
 struct node_info info;
 
@@ -16,7 +15,7 @@ struct node_info info;
 void process_typb (struct netpacket_e *pkt)
 {
     //int i;
-    if (xon) {
+    if (info.xonoff) {
         /*if (srbit (pkt->dst, info.nodeid, 1 )) {
             for (i = 0; i < 6; i++) {
                 //kprintf ("%02x:", pkt->src[i]);
@@ -33,7 +32,7 @@ void process_typb (struct netpacket_e *pkt)
         }*/
         freebuf ((char *)pkt);
 
-    } else if (!xon) {
+    } else if (!info.xonoff) {
         freebuf ((char *)pkt);
     }
 }

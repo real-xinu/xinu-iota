@@ -103,6 +103,7 @@
 *------------------------------------------------------------------*/
 struct node_info {
 	int32	nodeid;
+	int32   xonoff;
 	byte	mcastaddr[6];
 	struct {
 	  byte	lqi_low;
@@ -112,7 +113,6 @@ struct node_info {
 };
 
 extern struct node_info info;
-extern int32 xon;
 
 
 

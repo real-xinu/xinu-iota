@@ -20,6 +20,7 @@ void amsg_handler ( struct netpacket_e *node_msg )
     switch ( amsgtyp ) {
         case A_ASSIGN:
             info.nodeid = ntohl ( node_msg->msg.anodeid );
+	    info.xonoff = 1;
 
             if ( wsnode_sendack (node_msg, A_ASSIGN) == OK ) {
                 for ( i = 0; i < 6; i++ ) {
@@ -45,13 +46,13 @@ void amsg_handler ( struct netpacket_e *node_msg )
             break;
 
         case A_XOFF:
-            xon = 0;
+            info.xonoff = 0;
             kprintf ( "<====XOF message is received\n" );
             //freebuf ((char *) node_msg);
             break;
 
         case A_XON:
-            xon = 1;
+            info.xonoff = 1;
             kprintf ( "<==== XON message is received\n" );
             //freebuf ((char *) node_msg);
             break;
