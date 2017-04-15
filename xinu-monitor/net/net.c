@@ -65,6 +65,10 @@ void	net_init (void)
 	/* Create a network input process */
 
 	resume(create(netin, NETSTK, NETPRIO, "netin", 0, NULL));
+
+	/* Initialize the monitoring system */
+
+	monitor_init();
 }
 
 

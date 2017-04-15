@@ -40,7 +40,7 @@ void	amsg_in (
 				}
 				if(mfilter.udpslot == -1) {
 					dot2ip(WIRESHARK_IP, &ipaddr);
-					mfilter.udpslot = udp_register(ipaddr, WIRESHARK_PORT, 0);
+					mfilter.udpslot = udp_register(ipaddr, WIRESHARK_PORT, 30000);
 				}
 				mfilter.state = MFILTER_ACTIVE;
 			}

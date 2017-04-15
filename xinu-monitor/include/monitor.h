@@ -3,7 +3,7 @@
 #define	MGT_SRVPORT	43009
 #define	MGT_CLTPORT	43008
 
-#define	WIRESHARK_IP	"128.10.135.31"
+#define	WIRESHARK_IP	"128.10.137.51"
 #define	WIRESHARK_PORT	43010
 
 #pragma pack(1)
