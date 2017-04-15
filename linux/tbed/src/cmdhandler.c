@@ -342,6 +342,14 @@ struct c_msg  command_handler (char command[BUFLEN])
             fprintf (log_f, " is pcycled as a node.\n");
         }
 
+    } else if(!strcmp(array_token[0], "monitor")) {
+
+	    message.mon_cmd = htonl(1);
+	    printf("Monitoring command: %d\n", ntohl(message.mon_cmd));
+	    message.mon_nodeid = htonl(atoi(array_token[1]));
+	    message.mon_fsrc = 0;
+	    message.mon_fdst = 0;
+	    message.cmsgtyp = htonl(C_MONITOR);
     } else {
         fprintf (fp, "%s is not defined\n", array_token[0]);
         message.cmsgtyp = htonl (C_ERR);

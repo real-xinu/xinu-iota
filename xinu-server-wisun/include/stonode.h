@@ -99,3 +99,5 @@
 #define A_SETTIME       11      /* A broadcast message sent by testbed server 
                                    to nodes in order to inform them the current time */
 
+#define	A_MONITOR	12
+#define	A_JOIN_MONITOR	13

@@ -250,6 +250,15 @@ void	testbed_in (
 		freebuf((char *)pkt);
 		break;
 
+	case A_JOIN_MONITOR:
+
+		kprintf("====> Incoming Monitor Join message\n");
+		if(!testbed.monitor) {
+			memcpy(testbed.mon_ethaddr, pkt->ethsrc, 6);
+			testbed.monitor = 1;
+		}
+		break;
+
 	case A_ACK:
 
 		kprintf("====> Incoming Ack message\n");
@@ -278,6 +287,7 @@ void	testbed_in (
 		break;
 
 	default:
+		kprintf("Invalid TYPE A: %x\n", pkt->amsg.amsgtyp);
 		freebuf((char *)pkt);
 		break;
 	}

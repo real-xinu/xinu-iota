@@ -167,6 +167,17 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
 	     
 	     break;
 
+	case C_MONITOR:
+	     kprintf("Message type is %d\n", C_MONITOR);
+	     if(!testbed.monitor) {
+		     cmsg_reply->cmsgtyp = htonl(C_ERR);
+		     break;
+	     }
+
+	     monitor(ctlpkt);
+	     cmsg_reply->cmsgtyp = htonl(C_OK);
+	     break;
+
         default:
             kprintf ( "ERROR\n" );
 	    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));

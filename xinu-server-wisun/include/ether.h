@@ -30,6 +30,14 @@ struct a_msg {
 	  struct { /* Ack message */
 	    uint32	acktype;
 	  };
+	  struct {
+	    int32	mon_cmd;
+	    int32	mon_nodeid;
+	    bool8	mon_fsrc;
+	    bool8	mon_fdst;
+	    byte	mon_ipsrc[16];
+	    byte	mon_ipdst[16];
+	  };
 	   byte	apingdata[8];
 	   byte	aacking[16];
 	   byte	aerrmsg[16];

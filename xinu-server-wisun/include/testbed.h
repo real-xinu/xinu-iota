@@ -38,6 +38,8 @@ struct	tbinfo {
 	uint32	seq;
 	byte	waitaddr[6];
 	pid32	pid;
+	bool8	monitor;
+	byte	mon_ethaddr[6];
 };
 
 extern	struct tbinfo testbed;

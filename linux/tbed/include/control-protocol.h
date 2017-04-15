@@ -141,6 +141,8 @@
 #define C_SETTIME       22    /* A message sent by manangement app to 
                                  testbed server to set the current time */
 
+#define	C_MONITOR	23
+
 /* The following struct is included here, but should probably go in the	*/
 /*	file that declares items related to the topology database.	*/
 
@@ -204,6 +206,14 @@ struct	c_msg {
 	struct {
 		int32 nbbb;                 
 		int32 bbb_stat[MAX_BBB];   /* As a response of C_PINGALL message */
+	};
+	struct {	/* Monitoring message */
+		int32	mon_cmd;
+		int32	mon_nodeid;
+		char	mon_fsrc;
+		char	mon_fdst;
+		char	mon_ipsrc[16];
+		char	mon_ipdst[16];
 	};
         uint32	uptime;		/* TS_RESP (amount of time the	*/
         /* server has been up (in msec).*/
