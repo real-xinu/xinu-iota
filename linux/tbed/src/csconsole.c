@@ -44,7 +44,9 @@ int download_img (char * filename, char * class, char * connection, char * host)
         fprintf (stderr, "execlp() failes\n");
         return -1;
 
-    } else if (pid_dwnld < 0) {
+    } else if(pid_dwnld > 0) {
+        waitpid(pid_dwnld, NULL, 0);
+    } else {
         fprintf (stdout, "\nfork() Error\n");
         fflush (stdout);
         return -1;
