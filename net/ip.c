@@ -505,6 +505,9 @@ int32	ip_send (
 
 	/* If this is to be sent on radio, RPL rules apply */
 	if(ifptr->if_type == IF_TYPE_RAD) {
+		#ifdef DEBUG_IP
+		kprintf("ip_send: calling ip_send_rpl\n");
+		#endif
 		ip_send_rpl(pkt, nxthop);
 		restore(mask);
 		return OK;
@@ -632,6 +635,10 @@ int32	ip_send_rpl (
 
 	mask = disable();
 
+	#ifdef DEBUG_IP
+	kprintf("ip_send_rpl: ...\n");
+	#endif
+
 	ifptr = &iftab[pkt->net_iface];
 
 	if(ifptr->if_type != IF_TYPE_RAD) {
@@ -653,6 +660,50 @@ int32	ip_send_rpl (
 	memcpy(rpkt->net_ethdst, info.mcastaddr, 6);
 	rpkt->net_ethtype = htons(ETH_TYPE_B);
 
+	/*
+	int32	k = 0;
+	k = 0;
+	j = 5;
+	bmask = 0x01;
+
+	for(i = 0; i < 46; i++) {
+
+		if(rpkt->net_ethdst[j] & bmask) {
+			//kprintf("%d -> %d : ", info.nodeid, k);
+			if((rand() % 100) < info.link_info[i].probloss) {
+				rpkt->net_ethdst[j] &= ~bmask;
+				kprintf("DROP: %02x, %d\n", rpkt->net_ethdst[j], j);
+			}
+			else {
+				//kprintf("NODROP\n");
+			}
+		}
+
+		if(j > 1) {
+			if(bmask == 0x80) {
+				j--;
+				bmask = 0x01;
+			}
+			else {
+				bmask <<= 1;
+			}
+		}
+		else if(j == 1) {
+			if(bmask == 0x80) {
+				j--;
+				bmask = 0x04;
+			}
+			else {
+				bmask <<= 1;
+			}
+		}
+		else {
+			bmask <<= 1;
+		}
+		k++;
+	}
+	*/
+
 	/* Initialize the radio header fields */
 	rpkt->net_radfc = (RAD_FC_FT_DAT |
 			   RAD_FC_AR |
@@ -669,6 +720,7 @@ int32	ip_send_rpl (
 	/* Check the IP destination to determine next step */
 
 	if(isipmc(pkt->net_ipdst)) { /* Multicast IP */
+		rpkt->net_radfc &= ~RAD_FC_AR;
 		memset(rpkt->net_raddst, 0xff, 8);
 		memcpy(rpkt->net_raddata, pkt, iplen);
 	}
@@ -687,7 +739,10 @@ int32	ip_send_rpl (
 	else { /* Off-link IP address */
 
 		if(rpltab[0].root) {
-			ip_send_rpl_lbr(pkt);
+			#ifdef DEBUG_IP
+			kprintf("ip_send_rpl: calling ip_send_rpl_lbr\n");
+			#endif
+			ip_send_rpl_lbr(pkt, rpkt);
 			restore(mask);
 			return OK;
 		}
@@ -703,6 +758,17 @@ int32	ip_send_rpl (
 			memcpy(rpkt->net_raddata, pkt, iplen);
 		}
 		else {
+			/* If source routed, this will result in a loop! */
+
+			if(pkt->net_ipnh == IP_EXT_RH) {
+				kprintf("ROUGING LOOP. Address :");
+				ip_printaddr(pkt->net_ipdst);
+				kprintf(" must be in our neighbor cache!!\n");
+				freebuf((char *)pkt);
+				freebuf((char *)rpkt);
+				return SYSERR;
+			}
+
 			/* Next hop must be a link-local IP */
 			if(!isipllu(nxthop)) {
 				restore(mask);
@@ -751,55 +817,12 @@ int32	ip_send_rpl (
 	}
 
 	#ifdef DEBUG_IP
-	int32	i;
 	kprintf("ip_send_rpl: sending radio packet\n");
-	for(i = 0; i < 14 + 24 + 40 + 8 + 40; i++) {
+	for(i = 0; i < 14 + 24 + 40 + 8 + 40 + 20; i++) {
 		kprintf("%02x ", *((byte *)rpkt + i));
 	}
 	kprintf("\n");
 	#endif
-
-	int32	k = 0;
-	k = 0;
-	j = 5;
-	bmask = 0x01;
-
-	for(i = 0; i < 46; i++) {
-
-		if(rpkt->net_ethdst[j] & bmask) {
-			//kprintf("%d -> %d : ", info.nodeid, k);
-			if((rand() % 100) < info.link_info[i].probloss) {
-				rpkt->net_ethdst[j] &= ~bmask;
-				//kprintf("DROP: %02x, %d\n", rpkt->net_ethdst[j], j);
-			}
-			else {
-				//kprintf("NODROP\n");
-			}
-		}
-
-		if(j > 1) {
-			if(bmask == 0x80) {
-				j--;
-				bmask = 0x01;
-			}
-			else {
-				bmask <<= 1;
-			}
-		}
-		else if(j == 1) {
-			if(bmask == 0x80) {
-				j--;
-				bmask = 0x04;
-			}
-			else {
-				bmask <<= 1;
-			}
-		}
-		else {
-			bmask <<= 1;
-		}
-		k++;
-	}
 
 	write(RADIO0, (char *)rpkt, 14 + 24 + iplen);
 

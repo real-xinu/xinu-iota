@@ -21,6 +21,10 @@ process	main(void)
 	wsnode_join();
 
 	sleep(1);
+
+	//char	c;
+	//read(CONSOLE, &c, 1);
+	//rpl_init(1);
 #if 0
 	byte	prefix[] = {0x20, 0x01, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0};

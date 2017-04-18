@@ -8,6 +8,7 @@ struct	netiface iftab[NIFACES];
 /* Until we have a radio device */
 struct	radcblk radtab[1];
 
+extern	byte bbb_macs[][6];
 /*------------------------------------------------------------------------
  * netiface_init  -  Initialize all the network interfaces
  *------------------------------------------------------------------------
@@ -18,6 +19,7 @@ void	netiface_init(void) {
 	int	ifindex;		/* Index into the table		*/
 	intmask	mask;			/* Saved interrupt mask		*/
 	int32	retval;
+	int32	i;
 
 	mask = disable();
 
@@ -90,12 +92,25 @@ void	netiface_init(void) {
 					IF_HALEN_RAD);
 			memset(ifptr->if_hwbcast, 0xff, IF_HALEN_RAD);
 
+			for(i = 0; i < 84; i++) {
+				if(!memcmp(bbb_macs[i], iftab[0].if_hwucast, 6)) {
+					break;
+				}
+			}
+			if(i >= 84) {
+				panic("BBB Mac not found!\n");
+			}
+
+			memset(ifptr->if_hwucast, 0, 8);
+			ifptr->if_hwucast[0] = 0x02;
+			ifptr->if_hwucast[7] = i;
+
 			/* Genarate a Link-local IPv6 address */
 			ifptr->if_nipucast = 1;
 			memcpy(ifptr->if_ipucast[0].ipaddr, ip_llprefix, 16);
-			memcpy(ifptr->if_ipucast[0].ipaddr+8, ifptr->if_hwucast, 8);
-			if(ifptr->if_hwucast[0] & 0x02) {
-				ifptr->if_ipucast[0].ipaddr[8] &= 0xfd;
+			memcpy(&ifptr->if_ipucast[0].ipaddr[8], ifptr->if_hwucast, 8);
+			if(ifptr->if_ipucast[0].ipaddr[8] & 0x02) {
+				ifptr->if_ipucast[0].ipaddr[8] &= ~0x02;
 			}
 			else {
 				ifptr->if_ipucast[0].ipaddr[8] |= 0x02;

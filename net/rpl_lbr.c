@@ -2,7 +2,7 @@
 
 #include <xinu.h>
 
-//#define	DEBUG_RPL	1
+#define	DEBUG_RPL	1
 
 struct	rplnode rplnodes[NRPLNODES];
 
@@ -108,6 +108,7 @@ void	rpl_in_dao (
 	struct	rplopt_tgt *tgtopt;	/* Target option	*/
 	struct	rplopt_transitinfo *tiopt;
 					/* Transit Info. option	*/
+	struct	rpl_daoack daok;
 	byte	*rplopt;		/* Generic RPL option	*/
 	intmask	mask;			/* Interrupt mask	*/
 	int32	pindex;			/* Parent index		*/
@@ -298,6 +299,16 @@ void	rpl_in_dao (
 		}
 	}
 
+	daok.rpl_insid = daomsg->rpl_insid;
+	daok.rpl_daoseq = daomsg->rpl_daoseq;
+	daok.rpl_status = 0;
+
+	#ifdef DEBUG_RPL
+	kprintf("rpl_in_dao: Sending DAOK seq %d to: ", daok.rpl_daoseq);
+	ip_printaddr(pkt->net_ipsrc); kprintf("\n");
+	#endif
+	icmp_send(ICMP_TYPE_RPL, ICMP_CODE_RPL_DAOK, ip_unspec, pkt->net_ipsrc, &daok, sizeof(daok), rplptr->iface);
+
 	restore(mask);
 }
 
@@ -306,10 +317,10 @@ void	rpl_in_dao (
  *------------------------------------------------------------------------
  */
 int32	ip_send_rpl_lbr (
-		struct	netpacket *pkt	/* Packet buffer	*/
+		struct	netpacket *pkt,		/* Packet buffer	*/
+		struct	netpacket_r *rpkt	/* Radio packet buffer	*/
 		)
 {
-	struct	netpacket_r *rpkt;	/* Radio packet pointer	*/
 	struct	netpacket *npkt;	/* IP packet pointer	*/
 	struct	ip_ext_hdr *exptr;	/* IP extension header	*/
 	struct	netiface *ifptr;	/* Network interface	*/
@@ -364,14 +375,16 @@ int32	ip_send_rpl_lbr (
 
 	ifptr = &iftab[pkt->net_iface];
 
+	/*
 	rpkt = (struct netpacket_r *)getbuf(netbufpool);
 	if((int32)rpkt == SYSERR) {
 		restore(mask);
 		return SYSERR;
 	}
+	*/
 
 	memcpy(rpkt->net_ethsrc, iftab[0].if_hwucast, 6);
-	memcpy(rpkt->net_ethdst, info.mcastaddr, 6);
+	//memcpy(rpkt->net_ethdst, info.mcastaddr, 6);
 	rpkt->net_ethtype = htons(ETH_TYPE_B);
 
 	rpkt->net_radfc = (RAD_FC_FT_DAT |
@@ -417,11 +430,15 @@ int32	ip_send_rpl_lbr (
 		}
 
 		#ifdef DEBUG_RPL
-		kprintf("Copying original packet..\n");
+		kprintf("Copying original packet..%d\n", iplen);
+		for(i = 0; i < 40; i++) {
+			kprintf("%02x ", *((byte *)pkt + i));
+		}
+		kprintf("\n");
 		#endif
-		memcpy(exptr->ipext_rhaddrs[j], pkt, iplen);
+		memcpy(exptr->ipext_rhaddrs[j], pkt, 40 + iplen);
 
-		npkt->net_iplen = ((byte *)exptr->ipext_rhaddrs[j]-npkt->net_ipdata) + iplen;
+		npkt->net_iplen = ((byte *)exptr->ipext_rhaddrs[j]-npkt->net_ipdata) + 40 + iplen;
 		iplen = npkt->net_iplen;
 		ip_hton(npkt);
 	}
@@ -445,7 +462,7 @@ int32	ip_send_rpl_lbr (
 	memcpy(rpkt->net_raddst, nd_ncache[ncindex].nc_hwaddr, 8);
 
 	#ifdef DEBUG_RPL
-	for(i = 0; i < 14+24+40+8+40; i++) {
+	for(i = 0; i < 14+24+40+8+40+20; i++) {
 		kprintf("%02x ", *((byte *)rpkt + i));
 	}
 	kprintf("\n");

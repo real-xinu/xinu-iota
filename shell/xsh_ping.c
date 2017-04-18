@@ -18,6 +18,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 	char	buf[56];		/* buffer of chars		*/
 	int32	i;			/* index into buffer		*/
 	int32	n;			/* No. if echo packets		*/
+	uint32	time1, time2;
 
 	/* For argument '--help', emit help about the 'ping' command	*/
 
@@ -59,6 +60,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 
 	for(i = 0; i < n; i++) {
 
+		time1 = clktimems;
 		retval = icmp_send(ICMP_TYPE_ERQ, 0, ip_unspec, ipaddr, buf, sizeof(buf), 0);
 		if(retval == SYSERR) {
 			fprintf(stderr, "ICMP Sending Failed\n");
@@ -72,6 +74,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 			icmp_release(slot);
 			return 1;
 		}
+		time2 = clktimems;
 
 		if(retval == TIMEOUT) {
 			fprintf(stderr, "ICMP Echo Request Timed out\n");
@@ -83,7 +86,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 			continue;
 		}
 
-		fprintf(stderr, "Response from %s, seq = %d\n", args[1], i);
+		fprintf(stderr, "Response from %s, seq = %d, Resp. Time %d msec\n", args[1], i, (time2-time1));
 
 		if(i < (n-1)) {
 			sleep(1);

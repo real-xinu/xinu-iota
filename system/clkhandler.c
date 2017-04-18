@@ -20,6 +20,8 @@ void	clkhandler()
 		return;
 	}
 
+	clktimems++;
+
 	/* Acknowledge the interrupt */
 
 	csrptr->tisr = AM335X_TIMER1MS_TISR_OVF_IT_FLAG;

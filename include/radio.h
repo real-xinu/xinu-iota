@@ -8,9 +8,12 @@
 struct	nbrentry {
 	byte	state;
 	byte	hwaddr[8];
+	byte	lastseq;
 	uint32	txattempts;
 	uint32	ackrcvd;
-	uint16	etx;
+	double	etx;
+	int32	nextcalc;
+	uint32	calctime;
 };
 
 /* State of radio interface */
@@ -71,6 +74,9 @@ struct	radcblk	{
 	pid32	ro_process;	/* Radio output process			*/
 
 	struct	nbrentry nbrtab[NBRTAB_SIZE];
+	bool8	rowaiting;
+	byte	rowaitseq;
+	byte	rowaitaddr[6];
 };
 
 extern	struct	radcblk	radtab[];	/* array of control blocks      */

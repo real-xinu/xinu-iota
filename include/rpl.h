@@ -286,8 +286,14 @@ struct	rplentry {
 	struct	rpl_prefix prefixes[MAX_RPL_PREFIX];
 				/* List of RPL prefixes		*/
 
+	bool8	daok;
+	uint32	daoktime;
+	byte	daoseq;
+
 	/* MRHOF related fields */
 	uint32	cur_min_path_cost;
+
+	pid32	timerproc;
 };
 
 #define	NRPL	1

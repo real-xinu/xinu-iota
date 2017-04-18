@@ -174,7 +174,7 @@ extern	void	ip_hton(struct netpacket *);
 extern	void	ip_ntoh(struct netpacket *);
 extern	void	ip_printaddr(byte []);
 extern	int32	ip_send_rpl(struct netpacket *, byte []);
-extern	int32	ip_send_rpl_lbr(struct netpacket *);
+extern	int32	ip_send_rpl_lbr(struct netpacket *, struct netpacket_r *);
 extern	int32	colon2ip(char *, byte []);
 
 /* in file net.c */

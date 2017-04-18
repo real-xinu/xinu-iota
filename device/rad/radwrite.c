@@ -44,6 +44,35 @@ devcall	radwrite (
 	return count;
 }
 
+void	rad_applyloss(
+		byte	ethdst[]
+		)
+{
+	int32	i, j, k;
+	byte	bmask;
+
+	bmask = 0x01;
+	j = 0;
+
+	for(i = 5; i >= 0; i--) {
+
+		for(k = 0; k < 8; k++) {
+
+			if(i == 0 && k < 2) {
+				bmask <<= 1;
+			}
+
+			if((rand() % 100) < info.link_info[j].probloss) {
+				kprintf("rad_applyloss: DROP %d. prob %d\n", j, info.link_info[j].probloss);
+				ethdst[i] &= ~bmask;
+			}
+
+			j++;
+			bmask <<= 1;
+		}
+	}
+}
+
 /*------------------------------------------------------------------------
  * rad_out  -  Process that transmits radio packets
  *------------------------------------------------------------------------
@@ -55,6 +84,7 @@ process	rad_out (
 	struct	rad_tx_ring_desc *tdescptr;
 	struct	netpacket_r *rpkt;
 	struct	nbrentry *nbrptr;
+	byte	savedethdst[6];
 	intmask	mask;
 	int32	retries;
 	int32	free;
@@ -97,11 +127,20 @@ process	rad_out (
 			nbrptr = &radptr->nbrtab[free];
 			memset(nbrptr, NULLCH, sizeof(*nbrptr));
 			memcpy(nbrptr->hwaddr, rpkt->net_raddst, 8);
+			nbrptr->txattempts = 0;
+			nbrptr->ackrcvd = 0;
+			nbrptr->nextcalc = 1;
+			nbrptr->etx = 0;
 			nbrptr->state = NBR_STATE_USED;
 		}
 
+		memcpy(savedethdst, rpkt->net_ethdst, 6);
+
 		retries = 0;
 		while(retries < 3) {
+
+			memcpy(rpkt->net_ethdst, savedethdst, 6);
+			rad_applyloss(rpkt->net_ethdst);
 
 			write(ETHER0, tdescptr->data, tdescptr->datalen);
 
@@ -109,13 +148,49 @@ process	rad_out (
 				break;
 			}
 
-			nbrptr->txattempts++;
+			if(!(rpkt->net_radfc & RAD_FC_AR)) {
+				break;
+			}
 
+			nbrptr->txattempts++;
+			nbrptr->nextcalc--;
+
+			radptr->rowaiting = TRUE;
+			radptr->rowaitseq = rpkt->net_radseq;
+			memcpy(radptr->rowaitaddr, rpkt->net_raddst, 8);
 			msg = recvtime(500);
+			radptr->rowaiting = FALSE;
 
 			if(msg == OK) {
 				nbrptr->ackrcvd++;
-				nbrptr->etx = (uint16)((((double)nbrptr->txattempts)/nbrptr->ackrcvd)*128);
+
+				if((nbrptr->nextcalc <= 0) && ((nbrptr->etx == 0) || (clktime >= nbrptr->calctime))) {
+
+					if(nbrptr->ackrcvd == 0) {
+						if(nbrptr->etx == 0) {
+							nbrptr->etx = 511.99;
+						}
+						else {
+							nbrptr->etx = ((double)511.99 + 7.0*nbrptr->etx)/8;
+						}
+					}
+					else {
+						if(nbrptr->etx == 0) {
+							nbrptr->etx = nbrptr->txattempts/nbrptr->ackrcvd;
+						}
+						else {
+							nbrptr->etx = (((double)nbrptr->txattempts/nbrptr->ackrcvd) +
+										7.0*nbrptr->etx)/8;
+						}
+					}
+					nbrptr->nextcalc = 4;
+					nbrptr->calctime = clktime + 60;
+					kprintf("Neighbor: ");
+					for(i = 0; i < 8; i++) {
+						kprintf("%02x ", nbrptr->hwaddr[i]);
+					}
+					kprintf(", ETX = %d, %d, %d\n", (uint16)(128.0*nbrptr->etx), nbrptr->txattempts, nbrptr->ackrcvd);
+				}
 				break;
 			}
 

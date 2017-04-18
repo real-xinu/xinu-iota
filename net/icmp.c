@@ -2,6 +2,7 @@
 
 #include <xinu.h>
 
+//#define	DEBUG_ICMP
 struct	icentry icmptab[ICMP_TABSIZE];
 /*------------------------------------------------------------------------
  * icmp_in  -  Handle incoming ICMP packets

@@ -116,6 +116,7 @@ process	rawin(void) {
 	int32	retval;
 	intmask	mask;
 	int32	rv;
+	int32	free, i;
 
 	while(TRUE) {
 
@@ -177,27 +178,67 @@ process	rawin(void) {
 
 			case RAD_FC_FT_DAT:
 
-				#ifdef DEBUG_RAWIN
-				kprintf("rawin: incoming radio data\n");
-				#endif
-				ackpkt = (struct netpacket_r *)ackbuf;
+				free = -1;
+				for(i = 0; i < NBRTAB_SIZE; i++) {
+					if(radtab[0].nbrtab[i].state == NBR_STATE_FREE) {
+						free = (free == -1) ? i : free;
+						continue;
+					}
+					if(!memcmp(radtab[0].nbrtab[i].hwaddr, rpkt->net_radsrc, 8)) {
+						break;
+					}
+				}
+				if(i >= NBRTAB_SIZE) {
+					if(free == -1) {
+						panic("Neighbor Table full!");
+						freebuf((char *)rpkt);
+						break;
+					}
+					memcpy(radtab[0].nbrtab[free].hwaddr, rpkt->net_radsrc, 8);
+					radtab[0].nbrtab[free].lastseq = rpkt->net_radseq;
+					radtab[0].nbrtab[free].txattempts = 0;
+					radtab[0].nbrtab[free].ackrcvd = 0;
+					radtab[0].nbrtab[free].etx = 0;
+					radtab[0].nbrtab[free].nextcalc = 1;
+					radtab[0].nbrtab[free].calctime = 0;
+					radtab[0].nbrtab[free].state = NBR_STATE_USED;
+					i = free;
+				}
+				else {
+					if(rpkt->net_radseq <= radtab[0].nbrtab[i].lastseq) {
+						kprintf("rawin: stale packet from %d, %d %d\n", rpkt->net_radsrc[7], rpkt->net_radseq, radtab[0].nbrtab[i].lastseq);
+						//freebuf((char *)rpkt);
+						//break;
+					}
+					radtab[0].nbrtab[i].lastseq = rpkt->net_radseq;
+				}
 
-				memcpy(ackpkt->net_ethsrc, iftab[0].if_hwucast, 6);
-				memcpy(ackpkt->net_ethdst, info.mcastaddr, 6);
-				ackpkt->net_ethtype = htons(ETH_TYPE_B);
+				if(rpkt->net_radfc & RAD_FC_AR) {
 
-				ackpkt->net_radfc = RAD_FC_FT_ACK |
-						   RAD_FC_DAM3 |
-						   RAD_FC_FV2 |
-						   RAD_FC_SAM3;
+					#ifdef DEBUG_RAWIN
+					kprintf("rawin: incoming radio data\n");
+					#endif
+					ackpkt = (struct netpacket_r *)ackbuf;
 
-				memcpy(ackpkt->net_radsrc, iftab[1].if_hwucast, 8);
-				memcpy(ackpkt->net_raddst, rpkt->net_radsrc, 8);
+					memcpy(ackpkt->net_ethsrc, iftab[0].if_hwucast, 6);
+					memcpy(ackpkt->net_ethdst, info.mcastaddr, 6);
+					ackpkt->net_ethtype = htons(ETH_TYPE_B);
 
-				#ifdef DEBUG_RAWIN
-				kprintf("rawin: sending ack\n");
-				#endif
-				write(ETHER0, (char *)ackpkt, 14 + 24 + 30);
+					ackpkt->net_radfc = RAD_FC_FT_ACK |
+							   RAD_FC_DAM3 |
+							   RAD_FC_FV2 |
+							   RAD_FC_SAM3;
+
+					memcpy(ackpkt->net_radsrc, iftab[1].if_hwucast, 8);
+					memcpy(ackpkt->net_raddst, rpkt->net_radsrc, 8);
+
+					ackpkt->net_radseq = rpkt->net_radseq;
+
+					#ifdef DEBUG_RAWIN
+					kprintf("rawin: sending ack\n");
+					#endif
+					write(ETHER0, (char *)ackpkt, 14 + 24 + 30);
+				}
 
 				mask = disable();
 				if(semcount(iftab[1].if_iqsem) >= IFQSIZ) {
@@ -222,7 +263,22 @@ process	rawin(void) {
 				#ifdef DEBUG_RAWIN
 				kprintf("rawin: incoming radio ack\n");
 				#endif
-				send(radtab[0].ro_process, OK);
+				if(!radtab[0].rowaiting) {
+					freebuf((char *)epkt);
+					break;
+				}
+
+				#ifdef DEBUG_RAWIN
+				kprintf("rawin: incoming ack..\n");
+				kprintf("\t%d %d\n", radtab[0].rowaitseq, rpkt->net_radseq);
+				#endif
+				if(radtab[0].rowaitseq == rpkt->net_radseq && (!memcmp(radtab[0].rowaitaddr, rpkt->net_radsrc, 8))) {
+					send(radtab[0].ro_process, OK);
+				}
+				else {
+					kprintf("rawin: ACK DOES NOT MATCH!!!!!!!!!!\n");
+				}
+
 				freebuf((char *)epkt);
 				break;
 

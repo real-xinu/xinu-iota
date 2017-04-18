@@ -45,7 +45,7 @@ void	rpl_init (
 		rplptr->state = RPL_STATE_FREE;
 	}
 
-	resume(create(rpl_timer, 8192, NETPRIO, "rpl timer", 0, NULL));
+	resume(rplptr->timerproc = create(rpl_timer, 8192, NETPRIO, "rpl timer", 0, NULL));
 
 	restore(mask);
 }
@@ -70,6 +70,10 @@ void	rpl_in (
 
 	case ICMP_CODE_RPL_DAO:
 		rpl_in_dao(pkt);
+		break;
+	
+	case ICMP_CODE_RPL_DAOK:
+		rpl_in_daok(pkt);
 		break;
 	}
 }
@@ -141,6 +145,10 @@ void	rpl_in_dis (
 			continue;
 		}
 
+		if(rplptr->daok) {
+			continue;
+		}
+
 		if(siopt->rplopt_i && (rplptr->rplinsid != siopt->rplopt_insid)) {
 			continue;
 		}
@@ -187,6 +195,7 @@ void	rpl_in_dio (
 	bool8	newrpl;			/* NewRPL entry?	*/
 	int32	a, b;			/* Temporary values	*/
 	int32	i;			/* Index variable	*/
+	byte	hwaddr[8];
 
 	#ifdef DEBUG_RPL
 	kprintf("rpl_in_dio: ...\n");
@@ -289,15 +298,39 @@ void	rpl_in_dio (
 			rplptr->neighbors[i].rank = ntohs(diomsg->rpl_rank);
 
 			//TODO: compute path cost here by replacing 128 by etx of this neighbor
-			rplptr->neighbors[i].pathcost = rplptr->neighbors[i].rank + 128;
+			/*
+			memcpy(hwaddr, &rplptr->neighbors[i].lluip[8], 8);
+			if(hwaddr[0] & 0x02) {
+				hwaddr[0] &= ~0x02;
+			}
+			else {
+				hwaddr[0] |= 0x02;
+			}
+			for(i = 0; i < NBRTAB_SIZE; i++) {
+				if(radtab[0].nbrtab[i].state == NBR_STATE_FREE) {
+					continue;
+				}
+				if(!memcmp(radtab[0].nbrtab[i].hwaddr, hwaddr, 8)) {
+					break;
+				}
+			}
+			if(i >= NBRTAB_SIZE) {
+				rplptr->neighbors[i].pathcost = rplptr->neighbors[i].rank + 128;
+			}
+			else {
+				rplptr->neighbors[i].pathcost = rplptr->neighbors[i].rank + 128*radtab[0].nbrtab[i].etx;
+			}
 
 			a = rplptr->neighbors[i].pathrank;
 			b = rplptr->neighbors[i].rank + rplptr->minhoprankinc;
 			rplptr->neighbors[i].pathrank = (a > b) ? a : b;
+			*/
 
 			rplptr->neighbors[i].parent = FALSE;
 
 			rplptr->nneighbors++;
+
+			nd_regaddr(rplptr->neighbors[i].lluip, rplptr->iface);
 
 			rpl_parents(found);
 
@@ -538,13 +571,20 @@ void	rpl_in_dio (
 		kprintf("\n");
 		#endif
 		rplptr->neighbors[0].rank = ntohs(diomsg->rpl_rank);
+		/*
 		//TODO compute path cost by replacing 128 by etx of neighbor
 		rplptr->neighbors[0].pathcost = rplptr->neighbors[0].rank + 128;
 
 		a = rplptr->neighbors[0].rank + rplptr->minhoprankinc;
 		b = rplptr->neighbors[0].pathcost;
 		rplptr->neighbors[0].pathrank = a > b ? a : b;
+		*/
+
 		rplptr->nneighbors = 1;
+
+		/* This NS message is for registration as well as ETX */
+
+		nd_regaddr(rplptr->neighbors[0].lluip, rplptr->iface);
 
 		/* Compute the path control mask */
 		rplptr->pcmask = 0x80;
@@ -565,6 +605,39 @@ void	rpl_in_dio (
 }
 
 /*------------------------------------------------------------------------
+ * rpl_in_daok  -  Handle incoming DAO ACK message
+ *------------------------------------------------------------------------
+ */
+void	rpl_in_daok (
+		struct	netpacket *pkt	/* Packet buffer	*/
+		)
+{
+	struct	rplentry *rplptr;
+	struct	rpl_daoack *daokptr;
+
+	// TODO For now...
+	rplptr = &rpltab[0];
+
+	if(!rplptr->daok) {
+		return;
+	}
+
+	daokptr = (struct rpl_daoack *)pkt->net_icdata;
+
+	if(daokptr->rpl_daoseq != rplptr->daoseq) {
+		//#ifdef DEBUG_RPL
+		kprintf("rpl_in_daok: Seq does not match. exp %d, act %d\n", rplptr->daoseq, daokptr->rpl_daoseq);
+		//#endif
+		return;
+	}
+
+	//#ifdef DEBUG_RPL
+	kprintf("rpl_in_daok: seq matched\n");
+	//#endif
+	rplptr->daok = FALSE;
+}
+
+/*------------------------------------------------------------------------
  * rpl_parents  -  Choose our RPl parents from neighbors (intr. off)
  *------------------------------------------------------------------------
  */
@@ -578,8 +651,9 @@ int32	rpl_parents (
 					/* Sorted neighbor indexes	*/
 	int32	i, j, t, n;		/* Index variables		*/
 	int32	min;			/* Minimum value		*/
-	int32	a;			/* Temporary value		*/
+	int32	a, b;			/* Temporary value		*/
 	int32	rank;			/* Rank				*/
+	byte	hwaddr[6];		/* Hardware address of neighbor	*/
 
 	rplptr = &rpltab[rplindex];
 
@@ -589,6 +663,27 @@ int32	rpl_parents (
 	for(i = 0; i < n; i++) {
 		sorted[i] = i;
 		rplptr->neighbors[i].parent = FALSE;
+		memcpy(hwaddr, &rplptr->neighbors[i].lluip[8], 8);
+		if(hwaddr[0] & 0x02) {
+			hwaddr[0] &= ~0x02;
+		}
+		else {
+			hwaddr[0] |= 0x02;
+		}
+		for(j = 0; j < NBRTAB_SIZE; j++) {
+			if(!memcmp(hwaddr, radtab[0].nbrtab[j].hwaddr, 8)) {
+				break;
+			}
+		}
+		if(j >= NBRTAB_SIZE) {
+			//Candidate parent not in neighbor table!
+		}
+
+		rplptr->neighbors[i].pathcost = rplptr->neighbors[i].rank +
+					(uint16)(radtab[0].nbrtab[j].etx*128);
+		a = rplptr->neighbors[i].pathcost;
+		b = rplptr->neighbors[i].rank + rplptr->minhoprankinc;
+		rplptr->neighbors[i].pathrank = a > b ? a : b;
 	}
 
 	/* Sort all the neighbors according to the path cost */
@@ -613,7 +708,7 @@ int32	rpl_parents (
 	for(i = 0; i < n; i++) {
 		rplptr->neighbors[sorted[i]].parent = TRUE;
 		rplptr->parents[i] = sorted[i];
-		nd_regaddr(rplptr->neighbors[sorted[i]].lluip, rplptr->iface);
+		//nd_regaddr(rplptr->neighbors[sorted[i]].lluip, rplptr->iface);
 	}
 
 	/* First sorted neighbor is our preferred parent */
@@ -652,11 +747,11 @@ int32	rpl_parents (
 	ipfwptr->ipfw_onlink = 0;
 	memcpy(ipfwptr->ipfw_nxthop, rplptr->neighbors[rplptr->prefparent].lluip, 16);
 
-	#ifdef DEBUG_RPL
+	//#ifdef DEBUG_RPL
 	kprintf("rpl_parents: default route through: ");
 	ip_printaddr(rplptr->neighbors[rplptr->prefparent].lluip);
 	kprintf("\n");
-	#endif
+	//#endif
 
 	ipfwptr->ipfw_state = IPFW_STATE_USED;
 
@@ -848,10 +943,11 @@ int32	rpl_send_dao (
 	int32	msglen;			/* MEssage length	*/
 	byte	pc;			/* Path Control		*/
 	int32	i, n;			/* Index variables	*/
+	static	int seq = 1;
 
-	#ifdef DEBUG_RPL
+	//#ifdef DEBUG_RPL
 	kprintf("rpl_send_dao: ...\n");
-	#endif
+	//#endif
 
 	rplptr = &rpltab[rplindex];
 
@@ -905,7 +1001,7 @@ int32	rpl_send_dao (
 	daomsg->rpl_insid = rplptr->rplinsid;
 	daomsg->rpl_d = 1;
 	daomsg->rpl_k = 1;
-	daomsg->rpl_daoseq = 1;
+	daomsg->rpl_daoseq = seq;
 	memcpy(daomsg->rpl_dodagid, rplptr->dodagid, 16);
 
 	tgtopt = (struct rplopt_tgt *)daomsg->rpl_opts;
@@ -953,9 +1049,15 @@ int32	rpl_send_dao (
 		tiopt = (struct rplopt_transitinfo *)(padopt + 2);
 	}
 
-	#ifdef DEBUG_RPL
+	rplptr->daoktime = clktimems + 1000;
+	rplptr->daoseq = seq++;
+	rplptr->daok = TRUE;
+
+	resume(rplptr->timerproc);
+
+	//#ifdef DEBUG_RPL
 	kprintf("rpl_send_dao: sending..%d\n", msglen);
-	#endif
+	//#endif
 	icmp_send(ICMP_TYPE_RPL,
 		  ICMP_CODE_RPL_DAO,
 		  ip_unspec,
@@ -985,7 +1087,25 @@ process	rpl_timer (void) {
 	while(rplptr->state == RPL_STATE_FREE) {
 		restore(mask);
 		rpl_send_dis(-1, 1);
-		sleep(5);
+		sleep(1);
+	}
+
+	while(1) {
+
+		mask = disable();
+
+		if(rplptr->daok) {
+			if(clktimems >= rplptr->daoktime) {
+				rpl_send_dao(0, -1);
+				rplptr->daok = TRUE;
+				rplptr->daoktime = clktimems + 1000;
+			}
+			restore(mask);
+			sleepms(rplptr->daoktime-clktimems);
+			continue;
+		}
+
+		suspend(getpid());
 	}
 
 	return OK;

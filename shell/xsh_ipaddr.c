@@ -35,6 +35,8 @@ shellcmd xsh_ipaddr(int nargs, char *args[]) {
 		return SYSERR;
 	}
 
+	kprintf("Node ID: %d\n", info.nodeid);
+
 	for(i = 0; i < NIFACES; i++) {
 
 		ifptr = &iftab[i];

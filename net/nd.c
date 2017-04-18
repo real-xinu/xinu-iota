@@ -681,7 +681,7 @@ int32	nd_send_ns (
 		ndopt->ndopt_len = 2;
 		ndopt->ndopt_status = 0;
 		//TODO
-		ndopt->ndopt_reglife = 10;
+		ndopt->ndopt_reglife = htons(10);
 		memcpy(ndopt->ndopt_eui64, iftab[ncptr->nc_iface].if_hwucast, 8);
 		memcpy(ipdst, ncptr->nc_ipaddr, 16);
 		//TODO
@@ -769,6 +769,9 @@ int32	nd_regaddr (
 
 	mask = disable();
 
+	//kprintf("Registering IP address with neighbor: "); ip_print(nbrip);
+	//kprintf("\n");
+
 	ncindex = nd_ncfind(nbrip);
 
 	if(ncindex == SYSERR) {
@@ -787,7 +790,7 @@ int32	nd_regaddr (
 
 	ncptr->nc_type = NC_TYPE_TEN;
 
-	ncptr->nc_texpire = 10;
+	ncptr->nc_texpire = 100;
 
 	//kprintf("Registering with neighbor: ");
 	//ip_printaddr(nbrip);
@@ -818,6 +821,25 @@ process	nd_timer (void) {
 			ncptr = &nd_ncache[i];
 
 			if(ncptr->nc_state == NC_STATE_FREE) {
+				continue;
+			}
+
+			if(ncptr->nc_type != NC_TYPE_GC) {
+
+				if(--ncptr->nc_texpire <= 0) {
+					if(ncptr->nc_type == NC_TYPE_TEN) {
+						ncptr->nc_texpire = 100;
+						nd_send_ns(i);
+					}
+					else if(ncptr->nc_type == NC_TYPE_REG1) {
+						ncptr->nc_type = NC_TYPE_TEN;
+						ncptr->nc_texpire = 100;
+						nd_send_ns(i);
+					}
+					else if(ncptr->nc_type == NC_TYPE_REG2) {
+						ncptr->nc_state = NC_STATE_FREE;
+					}
+				}
 				continue;
 			}
 
