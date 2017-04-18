@@ -1,0 +1,9 @@
+
+***The command is***:cleanup
+
+<====Reply from testbed server: OK
+
+***The command is***:newtop xinutop1.0
+
+<====Reply from testbed server: OK
+Emulation time = 197.259690 seconds
