@@ -35,6 +35,7 @@ void amsg_handler ( struct netpacket_e *node_msg )
 		}
                 kprintf ("\n");
                 print_info();
+		info.assign_times[info.ntimes++] = clktimems;
                 kprintf ( "\n====>ACK message is sent\n" );
             }
 

@@ -3,7 +3,7 @@
 #define	RPLNODE_STATE_FREE	0
 #define	RPLNODE_STATE_USED	1
 
-#define	NRPLNODES	20
+#define	NRPLNODES	50
 
 struct	rplnode {
 	byte	state;
@@ -18,6 +18,8 @@ struct	rplnode {
 	} parents[RPL_PARENT_SET_SIZE];
 	int32	nparents;
 	int32	prefparent;
+	uint32	time;
+	int32	maxseq;
 };
 
 extern	struct rplnode rplnodes[NRPLNODES];

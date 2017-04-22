@@ -145,7 +145,7 @@ void	rpl_in_dis (
 			continue;
 		}
 
-		if(rplptr->daok) {
+		if(!rplptr->daok) {
 			continue;
 		}
 
@@ -165,8 +165,15 @@ void	rpl_in_dis (
 		kprintf("rpl_in_dis: sending DIO\n");
 		#endif
 
-		/* Send a DIO message to sender */
-		rpl_send_dio(i, pkt->net_ipsrc);
+		if(!isipmc(pkt->net_ipdst)) {
+			/* Send a DIO message to sender */
+			rpl_send_dio(i, pkt->net_ipsrc);
+		}
+		else {
+			/* Reset the trickle timer */
+			trickle_reset(rplptr->trickle);
+			//rpl_send_dio(i, ip_allrplnodesmc);
+		}
 	}
 
 	restore(mask);
@@ -263,6 +270,18 @@ void	rpl_in_dio (
 				return;
 			}
 
+			#ifdef DEBUG_RPL
+			kprintf("rpl_in_dio: neighbor: ");
+			ip_printaddr(pkt->net_ipsrc);
+			kprintf(" rank %d, %d...", RPL_DAGRank(rplptr, ntohs(diomsg->rpl_rank)), RPL_DAGRank(rplptr, rplptr->rank));
+			#endif
+			if(RPL_DAGRank(rplptr, ntohs(diomsg->rpl_rank)) >= RPL_DAGRank(rplptr, rplptr->rank)) {
+				//kprintf("ignoring\n");
+				restore(mask);
+				return;
+			}
+			//kprintf("considering\n");
+
 			/* For a new neighbor, we will need a PI option with R flag set */
 
 			rplopt = diomsg->rpl_opts;
@@ -330,9 +349,9 @@ void	rpl_in_dio (
 
 			rplptr->nneighbors++;
 
-			nd_regaddr(rplptr->neighbors[i].lluip, rplptr->iface);
+			nd_regaddr(rplptr->neighbors[i].lluip, rplptr->iface, rpl_parents_cb, 0, 0);
 
-			rpl_parents(found);
+			//rpl_parents(found);
 
 			if(rplptr->neighbors[i].parent == FALSE) {
 				restore(mask);
@@ -343,6 +362,7 @@ void	rpl_in_dio (
 
 			/* Check if the neighbor's rank has changed */
 			if(rplptr->neighbors[i].rank != ntohs(diomsg->rpl_rank)) {
+				kprintf("rpl_in_dio: PARENT WITH CHANGED RANK: %d %d\n", rplptr->neighbors[i].rank, ntohs(diomsg->rpl_rank));
 				rpl_parents(found);
 			}
 			restore(mask);
@@ -507,6 +527,7 @@ void	rpl_in_dio (
 				else {
 					ifptr->if_ipucast[i].ipaddr[8] |= 0x02;
 				}
+				ifptr->if_iptimes[i] = clktimems;
 				ifptr->if_nipucast++;
 
 				memcpy(rplptr->prefixes[rplptr->nprefixes-1].prefix+8,
@@ -561,6 +582,8 @@ void	rpl_in_dio (
 			return;
 		}
 
+		rplptr->trickle = trickle_new(8, 268435456, 10);
+
 		/* Make the sender our neighbor */
 
 		memcpy(rplptr->neighbors[0].lluip, pkt->net_ipsrc, 16);
@@ -584,7 +607,7 @@ void	rpl_in_dio (
 
 		/* This NS message is for registration as well as ETX */
 
-		nd_regaddr(rplptr->neighbors[0].lluip, rplptr->iface);
+		nd_regaddr(rplptr->neighbors[0].lluip, rplptr->iface, rpl_parents_cb, 0, 0);
 
 		/* Compute the path control mask */
 		rplptr->pcmask = 0x80;
@@ -598,7 +621,7 @@ void	rpl_in_dio (
 
 		rplptr->state = RPL_STATE_USED;
 
-		rpl_parents(free);
+		//rpl_parents(free);
 	}
 
 	restore(mask);
@@ -618,7 +641,7 @@ void	rpl_in_daok (
 	// TODO For now...
 	rplptr = &rpltab[0];
 
-	if(!rplptr->daok) {
+	if(!rplptr->daokwait) {
 		return;
 	}
 
@@ -634,7 +657,20 @@ void	rpl_in_daok (
 	//#ifdef DEBUG_RPL
 	kprintf("rpl_in_daok: seq matched\n");
 	//#endif
-	rplptr->daok = FALSE;
+	rplptr->daok = TRUE;
+	rplptr->daokwait = FALSE;
+}
+
+/*------------------------------------------------------------------------
+ * rpl_parents_cb  -  RPL Parents callback called by ND registration
+ *------------------------------------------------------------------------
+ */
+void	rpl_parents_cb (
+		int32	arg1,
+		int32	arg2
+		)
+{
+	rpl_parents(arg1);
 }
 
 /*------------------------------------------------------------------------
@@ -755,6 +791,10 @@ int32	rpl_parents (
 
 	ipfwptr->ipfw_state = IPFW_STATE_USED;
 
+	rplptr->daokwait = TRUE;
+	rplptr->daoktime = clktimems + 3000;
+	resume(rplptr->timerproc);
+
 	/* Send DAO message to RPL DODAG root */
 	rpl_send_dao(rplindex, -1);
 
@@ -855,6 +895,10 @@ int32	rpl_send_dio (
 		return SYSERR;
 	}
 
+	if(!rplptr->daok) {
+		return SYSERR;
+	}
+
 	/* Compute the message length */
 	msglen = sizeof(struct rpl_dio) +
 		 sizeof(struct rplopt_dodagconfig) +
@@ -890,7 +934,7 @@ int32	rpl_send_dio (
 	dcopt->rplopt_minhoprankinc = htons(rplptr->minhoprankinc);
 	dcopt->rplopt_ocp = rplptr->ocp;
 	dcopt->rplopt_deflife = rplptr->deflife;
-	dcopt->rplopt_lifeunit = rplptr->lifeunit;
+	dcopt->rplopt_lifeunit = htons(rplptr->lifeunit);
 
 	rplopt = (byte *)(dcopt + 1);
 	for(i = 0; i < rplptr->nprefixes; i++) {
@@ -1051,7 +1095,7 @@ int32	rpl_send_dao (
 
 	rplptr->daoktime = clktimems + 1000;
 	rplptr->daoseq = seq++;
-	rplptr->daok = TRUE;
+	rplptr->daokwait = TRUE;
 
 	resume(rplptr->timerproc);
 
@@ -1094,11 +1138,11 @@ process	rpl_timer (void) {
 
 		mask = disable();
 
-		if(rplptr->daok) {
+		if(rplptr->daokwait) {
 			if(clktimems >= rplptr->daoktime) {
 				rpl_send_dao(0, -1);
-				rplptr->daok = TRUE;
-				rplptr->daoktime = clktimems + 1000;
+				rplptr->daokwait = TRUE;
+				rplptr->daoktime = clktimems + 3000;
 			}
 			restore(mask);
 			sleepms(rplptr->daoktime-clktimems);

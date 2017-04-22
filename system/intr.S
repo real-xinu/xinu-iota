@@ -78,6 +78,7 @@ defexp_handler:
 	mov	r1, lr
 	bl	kprintf
 	ldr	r0, =expmsg2
+	b	defexp_handler
 	bl	panic
 
 /*------------------------------------------------------------------------

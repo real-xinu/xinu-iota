@@ -3,7 +3,7 @@
 #define	NBR_STATE_FREE	0
 #define	NBR_STATE_USED	1
 
-#define	NBRTAB_SIZE	10
+#define	NBRTAB_SIZE	50
 
 struct	nbrentry {
 	byte	state;
@@ -11,7 +11,8 @@ struct	nbrentry {
 	byte	lastseq;
 	uint32	txattempts;
 	uint32	ackrcvd;
-	double	etx;
+	//double	etx;
+	uint32	etx;
 	int32	nextcalc;
 	uint32	calctime;
 };

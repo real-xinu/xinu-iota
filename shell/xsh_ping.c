@@ -19,6 +19,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 	int32	i;			/* index into buffer		*/
 	int32	n;			/* No. if echo packets		*/
 	uint32	time1, time2;
+	int32	lost;
 
 	/* For argument '--help', emit help about the 'ping' command	*/
 
@@ -58,6 +59,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 		n = atoi(args[2]);
 	}
 
+	lost = 0;
 	for(i = 0; i < n; i++) {
 
 		time1 = clktimems;
@@ -78,6 +80,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 
 		if(retval == TIMEOUT) {
 			fprintf(stderr, "ICMP Echo Request Timed out\n");
+			lost++;
 			continue;
 		}
 
@@ -92,6 +95,7 @@ shellcmd xsh_ping(int nargs, char *args[])
 			sleep(1);
 		}
 	}
+	kprintf("Responses received: %d/%d\n", (n-lost), n);
 
 	icmp_release(slot);
 

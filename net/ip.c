@@ -100,6 +100,10 @@ void	ip_in (
 	/* a source routed packet. Let's process the extensions		*/
 
 	#ifdef DEBUG_IP
+	for(i = 0; i < 120; i++) {
+		kprintf("%02x ", *((byte *)pkt + i));
+	}
+	kprintf("\n");
 	kprintf("ip_in: calling ip_in_ext\n");
 	#endif
 
@@ -737,7 +741,7 @@ int32	ip_send_rpl (
 		memcpy(rpkt->net_raddata, pkt, iplen);
 	}
 	else { /* Off-link IP address */
-
+		/*
 		if(rpltab[0].root) {
 			#ifdef DEBUG_IP
 			kprintf("ip_send_rpl: calling ip_send_rpl_lbr\n");
@@ -746,7 +750,7 @@ int32	ip_send_rpl (
 			restore(mask);
 			return OK;
 		}
-
+		*/
 		ncindex = nd_ncfind(pkt->net_ipdst);
 		if(ncindex != SYSERR) {
 
@@ -758,6 +762,16 @@ int32	ip_send_rpl (
 			memcpy(rpkt->net_raddata, pkt, iplen);
 		}
 		else {
+
+			if(rpltab[0].root) {
+				#ifdef DEBUG_IP
+				kprintf("ip_send_rpl: calling ip_send_rpl_lbr\n");
+				#endif
+				ip_send_rpl_lbr(pkt, rpkt);
+				restore(mask);
+				return OK;
+			}
+
 			/* If source routed, this will result in a loop! */
 
 			if(pkt->net_ipnh == IP_EXT_RH) {
@@ -865,6 +879,8 @@ void	ip_printaddr (
 {
 	int32	i;
 	uint16	*ptr16;
+	char	_ipstr[100];
+	int32	cursor = 0;
 
 	ptr16 = (uint16 *)ipaddr;
 

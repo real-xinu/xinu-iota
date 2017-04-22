@@ -110,6 +110,8 @@ struct node_info {
 	  byte	lqi_high;
 	  byte	probloss;
 	} link_info[46];
+	uint32	assign_times[20];
+	int32	ntimes;
 };
 
 extern struct node_info info;

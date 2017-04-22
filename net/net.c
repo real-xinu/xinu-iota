@@ -33,6 +33,7 @@ void	net_init(void) {
 		resume(create(netin, 8192, NETPRIO, procname, 1, iface));
 	}
 
+	info.ntimes = 0;
 }
 
 /*------------------------------------------------------------------------
@@ -206,7 +207,7 @@ process	rawin(void) {
 				}
 				else {
 					if(rpkt->net_radseq <= radtab[0].nbrtab[i].lastseq) {
-						kprintf("rawin: stale packet from %d, %d %d\n", rpkt->net_radsrc[7], rpkt->net_radseq, radtab[0].nbrtab[i].lastseq);
+						//kprintf("rawin: stale packet from %d, %d %d\n", rpkt->net_radsrc[7], rpkt->net_radseq, radtab[0].nbrtab[i].lastseq);
 						//freebuf((char *)rpkt);
 						//break;
 					}

@@ -5,6 +5,7 @@
 /* Neighbor Cache */
 struct	nd_ncentry nd_ncache[ND_NCACHE_SIZE];
 
+#define	DEBUG_ND	1
 /*------------------------------------------------------------------------
  * nd_init  -  Initialize ND relate data structures
  *------------------------------------------------------------------------
@@ -474,6 +475,9 @@ void	nd_in_na (
 		return;
 	}
 
+	#ifdef DEBUG_ND
+	kprintf("nd_in_na: ...\n");
+	#endif
 	mask = disable();
 
 	/* Look for entry in the neighbor cache */
@@ -521,6 +525,9 @@ void	nd_in_na (
 
 	if(ncptr->nc_type != NC_TYPE_GC) {
 		if(!aro) {
+			#ifdef DEBUG_ND
+			kprintf("nd_in_na: No ARO in NA for non GC entry\n");
+			#endif
 			restore(mask);
 			return;
 		}
@@ -528,6 +535,14 @@ void	nd_in_na (
 		if(ncptr->nc_type == NC_TYPE_TEN) {
 			ncptr->nc_type = NC_TYPE_REG1;
 			ncptr->nc_texpire = 9 * 60000;
+		}
+
+		#ifdef DEBUG_ND
+		kprintf("nd_in_na: callback = %08x\n", ncptr->nc_callback);
+		#endif
+		if(ncptr->nc_callback) {
+			ncptr->nc_callback(ncptr->nc_arg1, ncptr->nc_arg2);
+			ncptr->nc_callback = NULL;
 		}
 
 		restore(mask);
@@ -681,7 +696,7 @@ int32	nd_send_ns (
 		ndopt->ndopt_len = 2;
 		ndopt->ndopt_status = 0;
 		//TODO
-		ndopt->ndopt_reglife = htons(10);
+		ndopt->ndopt_reglife = htons(120);
 		memcpy(ndopt->ndopt_eui64, iftab[ncptr->nc_iface].if_hwucast, 8);
 		memcpy(ipdst, ncptr->nc_ipaddr, 16);
 		//TODO
@@ -756,7 +771,10 @@ int32	nd_resolve (
  */
 int32	nd_regaddr (
 		byte	nbrip[],	/* LL IP address of neighbor	*/
-		int32	iface
+		int32	iface,
+		void	(*callback)(int32, int32),
+		int32	arg1,
+		int32	arg2
 		)
 {
 	struct	nd_ncentry *ncptr;
@@ -790,13 +808,17 @@ int32	nd_regaddr (
 
 	ncptr->nc_type = NC_TYPE_TEN;
 
-	ncptr->nc_texpire = 100;
+	ncptr->nc_texpire = rand() % 1000;
+
+	ncptr->nc_callback = callback;
+	ncptr->nc_arg1 = arg1;
+	ncptr->nc_arg2 = arg2;
 
 	//kprintf("Registering with neighbor: ");
 	//ip_printaddr(nbrip);
 	//kprintf("\n");
 
-	nd_send_ns(ncindex);
+	//nd_send_ns(ncindex);
 
 	restore(mask);
 	return OK;
@@ -828,12 +850,12 @@ process	nd_timer (void) {
 
 				if(--ncptr->nc_texpire <= 0) {
 					if(ncptr->nc_type == NC_TYPE_TEN) {
-						ncptr->nc_texpire = 100;
+						ncptr->nc_texpire = 3000;
 						nd_send_ns(i);
 					}
 					else if(ncptr->nc_type == NC_TYPE_REG1) {
 						ncptr->nc_type = NC_TYPE_TEN;
-						ncptr->nc_texpire = 100;
+						ncptr->nc_texpire = 3000;
 						nd_send_ns(i);
 					}
 					else if(ncptr->nc_type == NC_TYPE_REG2) {

@@ -11,6 +11,10 @@ void	panic (
 	)
 {
 	disable();			/* Disable interrupts		*/
-	kprintf("\n\n\rpanic: %s\n\n\r", msg);
+	while(1) {
+
+		kprintf("\n\n\rpanic: %s\n\n\r", msg);
+		MDELAY(1000);
+	}
 	while(TRUE) {;}			/* Busy loop forever		*/
 }

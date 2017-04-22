@@ -18,7 +18,7 @@
 #define	IF_MAX_NIPMCAST	5
 #define	IF_MAX_NIPPREF	5
 
-#define IFQSIZ          10
+#define IFQSIZ          50
 
 /* Structure of an IPv6 address */
 struct	ifipaddr {
@@ -48,6 +48,7 @@ struct	netiface {
 	int32	if_nipmcast;
 	struct	ifipaddr if_ipucast[IF_MAX_NIPUCAST];
 	struct	ifipaddr if_ipmcast[IF_MAX_NIPMCAST];
+	uint32	if_iptimes[IF_MAX_NIPUCAST];
 
 	/* Sequence number for radio interface */
 	byte	if_seq;

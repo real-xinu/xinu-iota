@@ -287,6 +287,7 @@ struct	rplentry {
 				/* List of RPL prefixes		*/
 
 	bool8	daok;
+	bool8	daokwait;
 	uint32	daoktime;
 	byte	daoseq;
 
@@ -294,6 +295,8 @@ struct	rplentry {
 	uint32	cur_min_path_cost;
 
 	pid32	timerproc;
+
+	int32	trickle;
 };
 
 #define	NRPL	1

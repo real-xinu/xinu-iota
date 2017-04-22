@@ -283,6 +283,9 @@ int32	icmp_recv (
 
 	if(icptr->icstate == ICENTRY_FREE) {
 		restore(mask);
+		#ifdef DEBUG_ICMP
+		kprintf("icmp_recv: icslot %d FREE\n", icslot);
+		#endif
 		return SYSERR;
 	}
 
@@ -290,8 +293,11 @@ int32	icmp_recv (
 		icptr->icstate = ICENTRY_RECV;
 		icptr->icpid = getpid();
 		retval = recvtime(timeout);
+		icptr->icstate = ICENTRY_USED;
 		if(retval == SYSERR || retval == TIMEOUT) {
-			icptr->icstate = ICENTRY_USED;
+			#ifdef DEBUG_ICMP
+			kprintf("icmp_recv: recvtime returns %d\n", retval);
+			#endif
 			restore(mask);
 			return retval;
 		}

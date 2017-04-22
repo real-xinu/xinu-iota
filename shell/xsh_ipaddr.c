@@ -36,6 +36,16 @@ shellcmd xsh_ipaddr(int nargs, char *args[]) {
 	}
 
 	kprintf("Node ID: %d\n", info.nodeid);
+	kprintf("Link info: ");
+	for(i = 0; i < 46; i++) {
+		kprintf("%02x ", info.link_info[i].probloss);
+	}
+	kprintf("\n");
+	kprintf("Assign times: ");
+	for(i = 0; i < info.ntimes; i++) {
+		kprintf("%d ", info.assign_times[i]);
+	}
+	kprintf("\n");
 
 	for(i = 0; i < NIFACES; i++) {
 
@@ -51,7 +61,7 @@ shellcmd xsh_ipaddr(int nargs, char *args[]) {
 		for(j = 0; j < ifptr->if_nipucast; j++) {
 			kprintf("    ");
 			ip_printaddr(ifptr->if_ipucast[j].ipaddr);
-			printf("\n");
+			kprintf(" Time %d\n", ifptr->if_iptimes[j]);
 		}
 		kprintf("  Multicast IP addresses:\n");
 		for(j = 0; j < ifptr->if_nipmcast; j++) {

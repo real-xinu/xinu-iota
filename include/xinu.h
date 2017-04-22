@@ -52,3 +52,4 @@
 #include <am335x_watchdog.h>
 #include <armv7a.h>
 #include <_6lowpan.h>
+#include <trickle.h>

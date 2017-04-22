@@ -335,7 +335,7 @@ extern	void	nd_in_na(struct netpacket *);
 extern	int32	nd_send_ns(int32);
 extern	int32	nd_resolve(byte [], int32, void *);
 extern	process	nd_timer(void);
-extern	int32	nd_regaddr(byte [], int32);
+extern	int32	nd_regaddr(byte [], int32, void (*)(int32, int32), int32, int32);
 
 /* in file netiface.c */
 extern  void netiface_init(void);
@@ -540,6 +540,7 @@ extern	void	rpl_in(struct netpacket *);
 extern	void	rpl_in_dis(struct netpacket *);
 extern	void	rpl_in_dio(struct netpacket *);
 extern	int32	rpl_parents(int32);
+extern	void	rpl_parents_cb(int32, int32);
 extern	int32	rpl_send_dis(int32, int32);
 extern	int32	rpl_send_dio(int32, byte []);
 extern	int32	rpl_send_dao(int32, int32);
@@ -732,6 +733,11 @@ extern  int32   tmfire();
 extern  int32   tmset(int32, int32, int32);
 extern  int32   tmdel(int32, int32);
 
+/* in file trickle.c */
+extern	void	trickle_init (void);
+extern	int32	trickle_new (int32, int32, int32);
+extern	void	trickle_reset(int32);
+extern	process	trickle_process(int32);
 
 /* in file ttycontrol.c */
 extern	devcall	ttycontrol(struct dentry *, int32, int32, int32);

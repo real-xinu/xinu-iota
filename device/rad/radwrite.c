@@ -60,10 +60,11 @@ void	rad_applyloss(
 
 			if(i == 0 && k < 2) {
 				bmask <<= 1;
+				continue;
 			}
 
-			if((rand() % 100) < info.link_info[j].probloss) {
-				kprintf("rad_applyloss: DROP %d. prob %d\n", j, info.link_info[j].probloss);
+			if((char)(rand() % 100) < (char)info.link_info[j].probloss) {
+				//kprintf("rad_applyloss: DROP %d. prob %d\n", j, info.link_info[j].probloss);
 				ethdst[i] &= ~bmask;
 			}
 
@@ -158,7 +159,7 @@ process	rad_out (
 			radptr->rowaiting = TRUE;
 			radptr->rowaitseq = rpkt->net_radseq;
 			memcpy(radptr->rowaitaddr, rpkt->net_raddst, 8);
-			msg = recvtime(500);
+			msg = recvtime(50);
 			radptr->rowaiting = FALSE;
 
 			if(msg == OK) {
@@ -168,10 +169,12 @@ process	rad_out (
 
 					if(nbrptr->ackrcvd == 0) {
 						if(nbrptr->etx == 0) {
-							nbrptr->etx = 511.99;
+							//nbrptr->etx = 511.99;
+							nbrptr->etx = 511;
 						}
 						else {
-							nbrptr->etx = ((double)511.99 + 7.0*nbrptr->etx)/8;
+							//nbrptr->etx = ((double)511.99 + 7.0*nbrptr->etx)/8;
+							nbrptr->etx = (511 + (7*nbrptr->etx))/8;
 						}
 					}
 					else {
@@ -179,17 +182,21 @@ process	rad_out (
 							nbrptr->etx = nbrptr->txattempts/nbrptr->ackrcvd;
 						}
 						else {
-							nbrptr->etx = (((double)nbrptr->txattempts/nbrptr->ackrcvd) +
-										7.0*nbrptr->etx)/8;
+							//nbrptr->etx = (((double)nbrptr->txattempts/nbrptr->ackrcvd) +
+							//			7.0*nbrptr->etx)/8;
+							nbrptr->etx = ((nbrptr->txattempts/nbrptr->ackrcvd) +
+									(7*nbrptr->etx))/8;
 						}
 					}
 					nbrptr->nextcalc = 4;
 					nbrptr->calctime = clktime + 60;
+					/*
 					kprintf("Neighbor: ");
 					for(i = 0; i < 8; i++) {
 						kprintf("%02x ", nbrptr->hwaddr[i]);
 					}
 					kprintf(", ETX = %d, %d, %d\n", (uint16)(128.0*nbrptr->etx), nbrptr->txattempts, nbrptr->ackrcvd);
+					*/
 				}
 				break;
 			}

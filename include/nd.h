@@ -88,7 +88,7 @@ struct	nd_opt {
 #define	ND_MAX_UNICAST_SOLICIT		3
 #define	ND_MAX_MULTICAST_SOLICIT	3
 
-#define	ND_NCACHE_SIZE	10
+#define	ND_NCACHE_SIZE	50
 
 #define NC_PKTQ_SIZE	2
 
@@ -107,6 +107,9 @@ struct	nd_ncentry {
 	int32	nc_pqhead;
 	int32	nc_pqtail;
 	int32	nc_pqcount;
+	void	(*nc_callback)(int32, int32);
+	int32	nc_arg1;
+	int32	nc_arg2;
 };
 
 extern	struct	nd_ncentry nd_ncache[];

@@ -2,7 +2,7 @@
 
 #include <xinu.h>
 
-#define	DEBUG_RPL	1
+//#define	DEBUG_RPL	1
 
 struct	rplnode rplnodes[NRPLNODES];
 
@@ -91,6 +91,9 @@ void	rpl_lbr_init (void) {
 	rplnodes[0].nparents = 0;
 	rplnodes[0].rplindex = 0;
 	rplnodes[0].state = RPLNODE_STATE_USED;
+
+	rplptr->daok = TRUE;
+	rplptr->trickle = trickle_new(8, 268435456, 10);
 
 	restore(mask);
 }
@@ -279,6 +282,10 @@ void	rpl_in_dao (
 							kprintf("\tprefered parent of %d is at index %d\n", i, rplnodes[i].prefparent);
 							#endif
 							rplnodes[i].nparents++;
+							rplnodes[i].time = clktimems;
+							if(rplnodes[i].maxseq < daomsg->rpl_daoseq) {
+								rplnodes[i].maxseq = daomsg->rpl_daoseq;
+							}
 							break;
 						}
 					}
@@ -343,6 +350,11 @@ int32	ip_send_rpl_lbr (
 		}
 	}
 	if(i >= NRPLNODES) {
+		#ifdef DEBUG_RPL
+		kprintf("ip_send_rpl_lbr: Cannot find dst: ");
+		ip_printaddr(pkt->net_ipdst);
+		kprintf(" in the RPL nodes table\n");
+		#endif
 		freebuf((char *)pkt);
 		restore(mask);
 		return SYSERR;
