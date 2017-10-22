@@ -1,6 +1,6 @@
 #define IP_BRDCAST   "128.10.137.255"
 #define BUFLEN 2048
-#define PORT 55000  // UDP prort
+#define PORT 55001  // UDP prort
 #define ERR -1
 #define OK 1
 #define BIT_TEST 1

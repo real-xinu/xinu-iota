@@ -9,8 +9,8 @@
 #define	ETH_ARP     0x0806		/* Ethernet type for ARP	*/
 #define	ETH_IP      0x0800		/* Ethernet type for IP		*/
 #define	ETH_IPv6    0x86DD		/* Ethernet type for IPv6	*/
-#define ETH_TYPE_A  0x88b5              /* Ethernet type A              */
-#define ETH_TYPE_B  0x88b6              /* Ethernet type B              */
+#define ETH_TYPE_A  0x89b5              /* Ethernet type A              */
+#define ETH_TYPE_B  0x89b6              /* Ethernet type B              */
 
 /* Format of an Ethernet packet carrying IPv4 and UDP */
 

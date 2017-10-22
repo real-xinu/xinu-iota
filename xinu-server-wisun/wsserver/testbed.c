@@ -32,7 +32,7 @@ void	testbed_init (void) {
 		tbedmap[i].state = TMAP_STATE_FREE;
 	}
 
-	resume(create(testbed_proc, 8192, NETPRIO, "testbed process", 0));
+	resume(create(testbed_proc, 8192, NETPRIO-1, "testbed process", 0));
 
 	restore(mask);
 }
@@ -83,6 +83,7 @@ process	testbed_proc (void) {
 		case TBR_TYPE_ASSIGN:
 			kprintf("testbed_proc: ASSIGN\n");
 			pkt->amsg.amsgtyp = htonl(A_ASSIGN);
+			/*
 			pkt->amsg.anodeid = htonl(req.nodeid);
 			kprintf("\tnodeid: %d\n", ntohl(pkt->amsg.anodeid));
 			memcpy(pkt->amsg.amcastaddr, req.mcast, 6);
@@ -90,6 +91,13 @@ process	testbed_proc (void) {
 				pkt->amsg.link_info[i].lqi_low = req.link_info[i].lqi_low;
 				pkt->amsg.link_info[i].lqi_high = req.link_info[i].lqi_high;
 				pkt->amsg.link_info[i].probloss = req.link_info[i].probloss;
+			}*/
+			pkt->amsg.anodeid = htonl(topo[req.topoidx].t_nodeid);
+			memcpy(pkt->amsg.amcastaddr, topo[req.topoidx].t_neighbors, 6);
+			for(i = 0; i < 46; i++) {
+				pkt->amsg.link_info[i].lqi_low = topo[req.topoidx].link_info[i].lqi_low;
+				pkt->amsg.link_info[i].lqi_high = topo[req.topoidx].link_info[i].lqi_high;
+				pkt->amsg.link_info[i].probloss = topo[req.topoidx].link_info[i].probloss;
 			}
 			break;
 

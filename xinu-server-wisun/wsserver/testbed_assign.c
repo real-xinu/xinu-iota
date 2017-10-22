@@ -89,9 +89,11 @@ status	testbed_assign (
 	}
 
 	kprintf("testbed_assign: initializing request...\n");
+
 	rqptr->type = TBR_TYPE_ASSIGN;
 	kprintf("\tcopying dst %08x %08x\n", rqptr->dst, ethaddr);
 	memcpy(rqptr->dst, topo[index].t_macaddr, 6);
+	/*
 	rqptr->nodeid = topo[index].t_nodeid;
 	kprintf("\tcopying mcast\n");
 	memcpy(rqptr->mcast, topo[index].t_neighbors, 6);
@@ -101,6 +103,8 @@ status	testbed_assign (
 		rqptr->link_info[i].lqi_high = topo[index].link_info[i].lqi_high;
 		rqptr->link_info[i].probloss = topo[index].link_info[i].probloss;
 	}
+	*/
+	rqptr->topoidx = index;
 	rqptr->waiting = FALSE;
 
 	restore(mask);

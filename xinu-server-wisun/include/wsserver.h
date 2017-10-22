@@ -248,7 +248,7 @@ struct	c_msg {
  * TIME_OUT value
  * ping status
  * ------------*/
-#define WS_PORT		55000
+#define WS_PORT		55001
 #define WS_TIMEOUT	600000
 #define WS_NOTACTIV	0
 #define WS_ALIVE	1

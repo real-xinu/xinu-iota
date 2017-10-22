@@ -12,6 +12,7 @@ struct	tbreq {
 	pid32	waitpid;
 	uint32	nodeid;
 	//union {
+	  int32	topoidx;
 	  struct {
 	    byte	mcast[6];
 	    struct {
@@ -25,7 +26,7 @@ struct	tbreq {
 
 #define	TB_STATE_WAIT	1
 
-#define	TB_QSIZE	10
+#define	TB_QSIZE	80
 
 struct	tbinfo {
 	uint32	state;

@@ -84,21 +84,21 @@ int main(int argc, char **argv) {
   case 0:
     /* Starting with tail end */
     for (i = 0; i < n-1; i++) {
-      fprintf(fout, "%s_%d: %s_%d\n", family_name, i, family_name, i+1);
+      fprintf(fout, "%s_%d: %s_%d 0 0 0\n", family_name, i, family_name, i+1);
     }
     break;
 
   case 1:
     /* Starting with one end */
-    fprintf(fout, "%s_0: %s_1\n", family_name, family_name);
+    fprintf(fout, "%s_0: %s_1 0 0 0\n", family_name, family_name);
 
     for (i = 1; i < n-1; i++) {
       /* Just the central node for all nodes */
-      fprintf(fout, "%s_%d: %s_%d %s_%d\n", family_name, i, family_name, i-1, family_name, i+1);
+      fprintf(fout, "%s_%d: %s_%d 0 0 0 %s_%d 0 0 0\n", family_name, i, family_name, i-1, family_name, i+1);
     }
 
     /* Finish off with the other end */
-    fprintf(fout, "%s_%d: %s_%d\n", family_name, i, family_name, i-1);
+    fprintf(fout, "%s_%d: %s_%d 0 0 0\n", family_name, i, family_name, i-1);
     break;
   }
 

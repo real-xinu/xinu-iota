@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     fprintf(fout, "%s_0:", family_name);
 
     for (i = 1; i < n; i++) {
-      fprintf(fout, " %s_%d", family_name, i);
+      fprintf(fout, " %s_%d 0 0 0", family_name, i);
     }
 
     fprintf(fout, "\n");
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
     /* For spokes */
 
     for (i = 1; i < n; i++) {
-      fprintf(fout, "%s_%d: %s_0\n", family_name, i, family_name);
+      fprintf(fout, "%s_%d: %s_0 0 0 0\n", family_name, i, family_name);
     }
     break;
 
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 
     for (i = 1; i < n; i++) {
       /* Just the central node for all nodes */
-      fprintf(fout, "%s_%d: %s_0\n", family_name, i, family_name);
+      fprintf(fout, "%s_%d: %s_0 0 0 0\n", family_name, i, family_name);
     }
     break;
 
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
     fprintf(fout, "%s_0:", family_name);
 
     for (i = 1; i < n; i++) {
-      fprintf(fout, " %s_%d", family_name, i);
+      fprintf(fout, " %s_%d 0 0 0", family_name, i);
     }
 
     fprintf(fout, "\n");

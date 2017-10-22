@@ -17,8 +17,9 @@ process	main(void)
 
         kprintf("\n...creating testbed server process\n");
 	recvclr();
-	resume(create(wsserver, 8192, NETPRIO, "wsserver", 1, CONSOLE));
 	init_topo();
+	resume(create(wsserver, 8192, NETPRIO-2, "wsserver", 1, CONSOLE));
+	//init_topo();
 	/*while (TRUE) {
 		receive();
 		sleepms(200);
