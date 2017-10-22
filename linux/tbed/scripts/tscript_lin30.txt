@@ -1,0 +1,69 @@
+download t 182 xinu_tserver
+download n 132 xinu_wisun_root
+download n 133 xinu_wisun_node
+download n 134 xinu_wisun_node
+download n 135 xinu_wisun_node
+download n 136 xinu_wisun_node
+download n 137 xinu_wisun_node
+download n 138 xinu_wisun_node
+download n 139 xinu_wisun_node
+download n 140 xinu_wisun_node
+download n 141 xinu_wisun_node
+download n 142 xinu_wisun_node
+download n 143 xinu_wisun_node
+download n 144 xinu_wisun_node
+download n 145 xinu_wisun_node
+download n 146 xinu_wisun_node
+download n 147 xinu_wisun_node
+download n 148 xinu_wisun_node
+download n 149 xinu_wisun_node
+download n 150 xinu_wisun_node
+download n 151 xinu_wisun_node
+download n 152 xinu_wisun_node
+download n 153 xinu_wisun_node
+download n 154 xinu_wisun_node
+download n 155 xinu_wisun_node
+download n 156 xinu_wisun_node
+download n 157 xinu_wisun_node
+download n 158 xinu_wisun_node
+download n 159 xinu_wisun_node
+download n 160 xinu_wisun_node
+download n 161 xinu_wisun_node
+delay 1000
+pcycle t
+delay 8000
+cleanup
+pcycle 132
+pcycle 133
+pcycle 134
+pcycle 135
+pcycle 136
+pcycle 137
+pcycle 138
+pcycle 139
+pcycle 140
+pcycle 141
+pcycle 142
+pcycle 143
+pcycle 144
+pcycle 145
+pcycle 146
+pcycle 147
+pcycle 148
+pcycle 149
+pcycle 150
+pcycle 151
+pcycle 152
+pcycle 153
+pcycle 154
+pcycle 155
+pcycle 156
+pcycle 157
+pcycle 158
+pcycle 159
+pcycle 160
+pcycle 161
+delay 5000
+settime
+delay 2000
+newtop lin30.0

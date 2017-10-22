@@ -1,0 +1,19 @@
+download t 182 xinu_tserver
+download n 132 xinu_wisun_root
+download n 133 xinu_wisun_node
+download n 134 xinu_wisun_node
+download n 135 xinu_wisun_node
+download n 136 xinu_wisun_node
+delay 1000
+pcycle t
+delay 8000
+cleanup
+pcycle 132
+pcycle 133
+pcycle 134
+pcycle 135
+pcycle 136
+delay 5000
+settime
+delay 2000
+newtop lin5.0
