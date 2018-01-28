@@ -115,22 +115,27 @@ int	linenum = 1;		/* The line number (for error messages)	*/
 int	map[CHARRNG];		/* Map of chracters allowed in a token	*/
 
 struct	node {			/* An entry in the list of node names	*/
-	int	nstatus;	/* Have we seen this node already?	*/
-	int	nrecv;		/* Can the node receive from any other?	*/
-	int	nsend;		/* Can the node send to any others?	*/
-	char	nname[NAMLEN];	/* Name of the node			*/
-	unsigned char nmcast[6];/* Multicast address to use when sending*/
+    int	nstatus;	/* Have we seen this node already?	*/
+    int	nrecv;		/* Can the node receive from any other?	*/
+    int	nsend;		/* Can the node send to any others?	*/
+    char	nname[NAMLEN];	/* Name of the node			*/
+    unsigned char nmcast[6];/* Multicast address to use when sending*/
 
-	struct {
-		unsigned char lqi_low;	/* Link quality info - def 255	*/
-		unsigned char lqi_high;	/* Link quality info - def 255	*/
-		unsigned char loss;	/* Link loss - default 0	*/
-	} linkinfo[NODES];
+    struct {
+        unsigned char lqi_low;	/* Link quality info - def 255	*/
+        unsigned char lqi_high;	/* Link quality info - def 255	*/
+        unsigned char threshold;
+        unsigned char pathloss_ref;
+        unsigned char pathloss_exp;
+        unsigned char dist_ref;
+        unsigned char sigma;
+        unsigned int  distance;
+    } linkinfo[NODES];
 };
 
 struct	node	nodes[NODES];	/* List of node names			*/
 int	nnodes = 0;		/* Current number of names in the nodes	*/
-				/*	array				*/
+/*	array				*/
 
 /************************************************************************/
 /*									*/
@@ -139,13 +144,13 @@ int	nnodes = 0;		/* Current number of names in the nodes	*/
 /************************************************************************/
 
 void	errexit (
-	  char	*fmt,		/* Printf format to use			*/
-	  long	arg1,		/* First argument to printf		*/
-	  long	arg2		/* Second argument to printf		*/
-	)
+        char	*fmt,		/* Printf format to use			*/
+        long	arg1,		/* First argument to printf		*/
+        long	arg2		/* Second argument to printf		*/
+        )
 {
-	fprintf(stderr, fmt, arg1, arg2);
-	exit(1);
+    fprintf(stderr, fmt, arg1, arg2);
+    exit(1);
 }
 
 /************************************************************************/
@@ -156,61 +161,66 @@ void	errexit (
 
 void	init (void)
 {
-	int	i;		/* Array index used with nap and nodes	*/
-	int	j;		/* Index in a multicast array		*/
-	int	k;		/* Index to node link array		*/
-	struct	node	*nptr;	/* Ptr to an entry in modes		*/
+    int	i;		/* Array index used with nap and nodes	*/
+    int	j;		/* Index in a multicast array		*/
+    int	k;		/* Index to node link array		*/
+    struct	node	*nptr;	/* Ptr to an entry in modes		*/
 
-	/* Initialize the nodes array */
+    /* Initialize the nodes array */
 
-	for (i=0; i<NODES; i++) {
-		nptr = &nodes[i];
-		nptr->nstatus = RECVUDEF;
-		nptr->nrecv = nptr->nsend = 0;
-		nptr->nname[0] = NULLCH;
-		nptr->nmcast[0]= 0x01;
-		for (j=1; j<6; j++) {
-			nptr->nmcast[j] = 0x00;
-		}
-		for(k = 0; k < NODES; k++) {
-			nptr->linkinfo[k].lqi_low = 0x00;
-			nptr->linkinfo[k].lqi_high = 0xff;
-			nptr->linkinfo[k].loss = 0x00;
-		}
-	}
+    for (i=0; i<NODES; i++) {
+        nptr = &nodes[i];
+        nptr->nstatus = RECVUDEF;
+        nptr->nrecv = nptr->nsend = 0;
+        nptr->nname[0] = NULLCH;
+        nptr->nmcast[0]= 0x01;
+        for (j=1; j<6; j++) {
+            nptr->nmcast[j] = 0x00;
+        }
+        for(k = 0; k < NODES; k++) {
+            nptr->linkinfo[k].lqi_low = 0x00;
+            nptr->linkinfo[k].lqi_high = 0xff;
+            nptr->linkinfo[k].threshold = 0x00;
+            nptr->linkinfo[k].pathloss_ref = 0x00;
+            nptr->linkinfo[k].pathloss_exp = 0x00;
+            nptr->linkinfo[k].dist_ref = 0x00;
+            nptr->linkinfo[k].distance = 0x00;
+            nptr->linkinfo[k].sigma = 0x00;
+        }
+    }
 
-	/* Initialize the token map (i.e., the set of characters */
-	/*	 allowed in a node name plus color)		 */
+    /* Initialize the token map (i.e., the set of characters */
+    /*	 allowed in a node name plus color)		 */
 
-	/* Begin by disallowing all characters */
+    /* Begin by disallowing all characters */
 
-	for (i=0; i<CHARRNG; i++) {
-		map[i] = 0;
-	}
+    for (i=0; i<CHARRNG; i++) {
+        map[i] = 0;
+    }
 
-	/* Allow lowercase letters */
+    /* Allow lowercase letters */
 
-	for (i='a'; i<='z'; i++) {
-		map[i] = 1;
-	}
+    for (i='a'; i<='z'; i++) {
+        map[i] = 1;
+    }
 
-	/* Allow lowercase letters */
+    /* Allow lowercase letters */
 
-	for (i='A'; i<='Z'; i++) {
-		map[i] = 1;
-	}
+    for (i='A'; i<='Z'; i++) {
+        map[i] = 1;
+    }
 
-	/* Allow digits */
+    /* Allow digits */
 
-	for (i='0'; i<='9'; i++) {
-		map[i] = 1;
-	}
+    for (i='0'; i<='9'; i++) {
+        map[i] = 1;
+    }
 
-	/* Allow underscore, period, and colon */
+    /* Allow underscore, period, and colon */
 
-	map['_'] = map['.'] = map[':'] = 1;
+    map['_'] = map['.'] = map[':'] = 1;
 
-	return;
+    return;
 }
 
 
@@ -222,41 +232,41 @@ void	init (void)
 
 int	skipblanks(void)
 {
-	int	ch;		/* Next character read from stdin */
+    int	ch;		/* Next character read from stdin */
 
-	/* Get one character */
+    /* Get one character */
 
-	ch = fgetc(stdin);
+    ch = fgetc(stdin);
 
-	/* Skip by whitespace */
+    /* Skip by whitespace */
 
-	while ((ch==BLANK) || (ch==TAB) || (ch==NEWLINE) || (ch==SHARP)) {
+    while ((ch==BLANK) || (ch==TAB) || (ch==NEWLINE) || (ch==SHARP)) {
 
-		/* If end-of-file has been reached, return EOF */
+        /* If end-of-file has been reached, return EOF */
 
-		if (ch == EOF) {
-			return EOF;
-		}
+        if (ch == EOF) {
+            return EOF;
+        }
 
-		/* Ignore # comment end-of-line (or EOF) */
+        /* Ignore # comment end-of-line (or EOF) */
 
-		if (ch == SHARP) {
-			while( (ch!=NEWLINE) && (ch!=EOF)) {
-				ch = fgetc(stdin);
-			}
-			if (ch == EOF) {
-				return EOF;
-			}
-		}
-		if (ch == NEWLINE) {
-			linenum++;
-		}
-		ch = fgetc(stdin);
-	}
+        if (ch == SHARP) {
+            while( (ch!=NEWLINE) && (ch!=EOF)) {
+                ch = fgetc(stdin);
+            }
+            if (ch == EOF) {
+                return EOF;
+            }
+        }
+        if (ch == NEWLINE) {
+            linenum++;
+        }
+        ch = fgetc(stdin);
+    }
 
-	/* Return a non-whitespace character or EOF */
+    /* Return a non-whitespace character or EOF */
 
-	return ch;
+    return ch;
 }
 
 /************************************************************************/
@@ -265,10 +275,10 @@ int	skipblanks(void)
 /*									*/
 /************************************************************************/
 int istoknumber(char *tok) {
-  int i;
-  for(i = 0; i < strlen(tok); i++)
-    if(!isdigit(tok[i])) return 0;
-  return 1;
+    int i;
+    for(i = 0; i < strlen(tok); i++)
+        if(!isdigit(tok[i])) return 0;
+    return 1;
 }
 
 /************************************************************************/
@@ -278,73 +288,73 @@ int istoknumber(char *tok) {
 /************************************************************************/
 
 int	gettok(
-	  char *tok		/* Buffer used to store the token	*/
-	 )
+        char *tok		/* Buffer used to store the token	*/
+        )
 {
 
-	int	ch;		/* Next character read from stdin	*/
-	int	colonseen;	/* Have we seen a colon?		*/
-	int	len;		/* The number of characters in the token*/
+    int	ch;		/* Next character read from stdin	*/
+    int	colonseen;	/* Have we seen a colon?		*/
+    int	len;		/* The number of characters in the token*/
 
-	len = colonseen = 0;
+    len = colonseen = 0;
 
-	/* Find the first character of the token */
+    /* Find the first character of the token */
 
-	ch = skipblanks();
+    ch = skipblanks();
 
-	/* If end-of-file was encountered, return the EOF token */
+    /* If end-of-file was encountered, return the EOF token */
 
-	if (ch == EOF) {
-		return TOKEOF;
-	}
+    if (ch == EOF) {
+        return TOKEOF;
+    }
 
-	/* Accumulate characters of the token */
+    /* Accumulate characters of the token */
 
-	while ((ch!=BLANK) && (ch!=TAB) && (ch!=EOF) && (ch!=NEWLINE) ) {
-		if (ch == COLON) {
-			if ( (colonseen>0) || (len==0) ) {
-				errexit("error: misplaced colon on line %d\n", linenum, 0);
-			}
-			colonseen = 1;
-		} else if (map[ch] == 0) {
-			if (isprint(ch)) {
-				errexit("error: illegal character %c appears on line %d\n",ch,linenum);
-			} else {
-				errexit("error: unprintable character appears on line %d\n",linenum, 0);
-			}
-		}
-		tok[len++] = ch;
-		if (len >= NAMLEN - 1) {
-			errexit("error: token exceeds maximum size on line %d\n", linenum, 0);
-		}
-		ch = fgetc(stdin);
-	}
+    while ((ch!=BLANK) && (ch!=TAB) && (ch!=EOF) && (ch!=NEWLINE) ) {
+        if (ch == COLON) {
+            if ( (colonseen>0) || (len==0) ) {
+                errexit("error: misplaced colon on line %d\n", linenum, 0);
+            }
+            colonseen = 1;
+        } else if (map[ch] == 0) {
+            if (isprint(ch)) {
+                errexit("error: illegal character %c appears on line %d\n",ch,linenum);
+            } else {
+                errexit("error: unprintable character appears on line %d\n",linenum, 0);
+            }
+        }
+        tok[len++] = ch;
+        if (len >= NAMLEN - 1) {
+            errexit("error: token exceeds maximum size on line %d\n", linenum, 0);
+        }
+        ch = fgetc(stdin);
+    }
 
-	tok[len] = NULLCH;
+    tok[len] = NULLCH;
 
-	if (ch == NEWLINE) {
-		linenum++;
-	}
+    if (ch == NEWLINE) {
+        linenum++;
+    }
 
-	if(istoknumber(tok))
-	  return TOKNUM;
-	/* Ensure that the first character of the token is not numeric */
-	else if ( (tok[0]>='0') && (tok[0]<='9') ) {
-		errexit("error: on line %d, token name '%s' starts with a digit\n",linenum, (long)tok);
-	}
+    if(istoknumber(tok))
+        return TOKNUM;
+    /* Ensure that the first character of the token is not numeric */
+    else if ( (tok[0]>='0') && (tok[0]<='9') ) {
+        errexit("error: on line %d, token name '%s' starts with a digit\n",linenum, (long)tok);
+    }
 
-	if (colonseen > 0) {
-		if (len == 1) {
-			errexit("error: stray colon found on line %d\n", linenum, 0);
-		}
+    if (colonseen > 0) {
+        if (len == 1) {
+            errexit("error: stray colon found on line %d\n", linenum, 0);
+        }
 
-		/* Remove the trailing colon */
+        /* Remove the trailing colon */
 
-		len--;
-		tok[len] = NULLCH;
-		return TOKSEND;
-	}
-	return TOKRECV;
+        len--;
+        tok[len] = NULLCH;
+        return TOKSEND;
+    }
+    return TOKRECV;
 }
 
 
@@ -383,57 +393,57 @@ int	gettok(
 typedef	unsigned char	byte;
 
 int	srbit (
-	  byte	addr[],		/* A 48-bit Ethernet multicast address	*/
-	  int	nodeid,		/* A node ID (0 - 45)			*/
-	  int	cmd		/* BIT_SET or BIT_TEST or BIT_RESET   	*/
-	)
+        byte	addr[],		/* A 48-bit Ethernet multicast address	*/
+        int	nodeid,		/* A node ID (0 - 45)			*/
+        int	cmd		/* BIT_SET or BIT_TEST or BIT_RESET   	*/
+        )
 {
-	int	aindex;		/* The byte index in the address array	*/
-				/*	(0 through 5)			*/
-	int	mask;		/* A byte with a 1 in the bit position	*/
-				/*	to use and 0 in other positions	*/
+    int	aindex;		/* The byte index in the address array	*/
+    /*	(0 through 5)			*/
+    int	mask;		/* A byte with a 1 in the bit position	*/
+    /*	to use and 0 in other positions	*/
 
-	/* Ensure that the bit value is valid */
+    /* Ensure that the bit value is valid */
 
-	if ( (nodeid < 0) || (nodeid > 45) ) {
-		return SYSERR;
-	}
+    if ( (nodeid < 0) || (nodeid > 45) ) {
+        return SYSERR;
+    }
 
-	/* Compute a mask 2^(floor(nodeid modulo 8))*/
+    /* Compute a mask 2^(floor(nodeid modulo 8))*/
 
-	mask = 1 << (nodeid % 8);
+    mask = 1 << (nodeid % 8);
 
-	/* Compute the appropriate array index */
+    /* Compute the appropriate array index */
 
-	aindex = 5 - (nodeid >> 3);
+    aindex = 5 - (nodeid >> 3);
 
-	/* Adjust the mask one bit for the high-order byte */
+    /* Adjust the mask one bit for the high-order byte */
 
-	if (aindex == 0) {
-		mask = mask << 1;
-	}
+    if (aindex == 0) {
+        mask = mask << 1;
+    }
 
-	/* If command specifies setting, change set the bit */
+    /* If command specifies setting, change set the bit */
 
-	if (cmd == BIT_SET) {
-		addr[aindex] |= mask;
-		return 1;
-	}
+    if (cmd == BIT_SET) {
+        addr[aindex] |= mask;
+        return 1;
+    }
 
-	/* If command specifies resetting, reset the bit to 0 */
+    /* If command specifies resetting, reset the bit to 0 */
 
-	if (cmd == BIT_RESET) {
-		addr[aindex] &= ~mask;
-		return 2;
-	}
+    if (cmd == BIT_RESET) {
+        addr[aindex] &= ~mask;
+        return 2;
+    }
 
-	/* Command specifies testing */
+    /* Command specifies testing */
 
-	if ( (addr[aindex] & mask) == 0) {
-		return 0;	/* Bit is 0 */
-	} else {
-		return 1;	/* Bit is 1 */
-	}
+    if ( (addr[aindex] & mask) == 0) {
+        return 0;	/* Bit is 0 */
+    } else {
+        return 1;	/* Bit is 1 */
+    }
 }
 
 
@@ -445,25 +455,25 @@ int	srbit (
 /************************************************************************/
 
 int	lookup(
-	  char	*tok		/* A token name to look up in the list	*/
-	)
+        char	*tok		/* A token name to look up in the list	*/
+        )
 
 {
-	int	i;		/* Index in the token list		*/
-	struct	node	*nptr;	/* Pointer to an entry in nodes		*/
+    int	i;		/* Index in the token list		*/
+    struct	node	*nptr;	/* Pointer to an entry in nodes		*/
 
-	for (i=0; i<nnodes; i++) {
-		nptr = &nodes[i];
-		if (strcmp(tok,nptr->nname) == 0) {
-			return i;
-		}
-	}
-	nptr = &nodes[nnodes++];
-	if (nnodes >= NODES) {
-		errexit("Maximum number of nodes exceeded on line %d\n",linenum, 0);
-	}
-	strcpy(nptr->nname, tok);
-	return i;
+    for (i=0; i<nnodes; i++) {
+        nptr = &nodes[i];
+        if (strcmp(tok,nptr->nname) == 0) {
+            return i;
+        }
+    }
+    nptr = &nodes[nnodes++];
+    if (nnodes >= NODES) {
+        errexit("Maximum number of nodes exceeded on line %d\n",linenum, 0);
+    }
+    strcpy(nptr->nname, tok);
+    return i;
 }
 
 /************************************************************************/
@@ -473,18 +483,18 @@ int	lookup(
 /************************************************************************/
 
 int	node_can_send(
-	  int nodeid
-	)
+        int nodeid
+        )
 
 {
-	int i;			/* Index for node list			*/
+    int i;			/* Index for node list			*/
 
-	for (i = 0; i < nnodes; i++) {
-	  if (srbit(nodes[nodeid].nmcast, i, BIT_TEST) == 1) {
-	    return 1;
-	  }
-	}
-	return 0;
+    for (i = 0; i < nnodes; i++) {
+        if (srbit(nodes[nodeid].nmcast, i, BIT_TEST) == 1) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /************************************************************************/
@@ -494,17 +504,17 @@ int	node_can_send(
 /************************************************************************/
 
 int	node_can_receive(
-	  int nodeid
-	)
+        int nodeid
+        )
 
 {
-	int i;			/* Index for node list			*/
+    int i;			/* Index for node list			*/
 
-	for (i = 0; i < nnodes; i++) {
-	  if (srbit(nodes[i].nmcast, nodeid, BIT_TEST) == 1)
-	    return 1;
-	}
-	return 0;
+    for (i = 0; i < nnodes; i++) {
+        if (srbit(nodes[i].nmcast, nodeid, BIT_TEST) == 1)
+            return 1;
+    }
+    return 0;
 }
 
 /************************************************************************/
@@ -515,19 +525,19 @@ int	node_can_receive(
 /************************************************************************/
 
 void	set_reset_send_all(
-	  int nodeid,
-	  int bit_op
-	)
+        int nodeid,
+        int bit_op
+        )
 
 {
-	int i;			/* Index for node list			*/
+    int i;			/* Index for node list			*/
 
-	for (i = 0; i < nnodes; i++) {
-	  srbit(nodes[nodeid].nmcast, i, bit_op);
-	}
+    for (i = 0; i < nnodes; i++) {
+        srbit(nodes[nodeid].nmcast, i, bit_op);
+    }
 
-	/* node can't send to itself */
-	srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET);
+    /* node can't send to itself */
+    srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET);
 }
 
 /************************************************************************/
@@ -538,18 +548,18 @@ void	set_reset_send_all(
 /************************************************************************/
 
 void	set_reset_receive_all(
-	  int nodeid,
-	  int bit_op
-	)
+        int nodeid,
+        int bit_op
+        )
 {
-	int i;			/* Index for node list			*/
+    int i;			/* Index for node list			*/
 
-	for (i = 0; i < nnodes; i++) {
-	  srbit(nodes[i].nmcast, nodeid, bit_op);
-	}
+    for (i = 0; i < nnodes; i++) {
+        srbit(nodes[i].nmcast, nodeid, bit_op);
+    }
 
-	/* node can't receive from itself */
-	srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET);
+    /* node can't receive from itself */
+    srbit(nodes[nodeid].nmcast, nodeid, BIT_RESET);
 }
 
 /************************************************************************/
@@ -560,82 +570,82 @@ void	set_reset_receive_all(
 /************************************************************************/
 
 void	apply_update(
-	  char *update_string,
-	  int symmetric
-	)
+        char *update_string,
+        int symmetric
+        )
 
 {
-	char op[5];		/* Operation - "+" (add link) or	*/
-				/*	       "-" (delete link)	*/
-	char snode[NAMLEN];	/* Name of sending node			*/
-	char rnode[NAMLEN];	/* Name of receiving node		*/
-	int sindex;		/* Index of sending node		*/
-	int rindex;		/* Index of receiving node	        */
-	int plus_minus;		/* Specifies which operation in terms	*/
-				/* setting or resetting bits		*/
-	int i;			/* Index for node list			*/
+    char op[5];		/* Operation - "+" (add link) or	*/
+    /*	       "-" (delete link)	*/
+    char snode[NAMLEN];	/* Name of sending node			*/
+    char rnode[NAMLEN];	/* Name of receiving node		*/
+    int sindex;		/* Index of sending node		*/
+    int rindex;		/* Index of receiving node	        */
+    int plus_minus;		/* Specifies which operation in terms	*/
+    /* setting or resetting bits		*/
+    int i;			/* Index for node list			*/
 
-	strcpy(op, strtok(update_string, " "));
-	strcpy(snode, strtok(NULL, " "));
-	strcpy(rnode, strtok(NULL, " "));
+    strcpy(op, strtok(update_string, " "));
+    strcpy(snode, strtok(NULL, " "));
+    strcpy(rnode, strtok(NULL, " "));
 
 
-	if(((strcmp(op, "+") != 0 && strcmp(op, "-") != 0)) || snode == NULL || rnode == NULL) {
-		fprintf(stderr, "%s", "Illegal operation");
-		exit(1);
-	}
+    if(((strcmp(op, "+") != 0 && strcmp(op, "-") != 0)) || snode == NULL || rnode == NULL) {
+        fprintf(stderr, "%s", "Illegal operation");
+        exit(1);
+    }
 
-	if ( (snode[0]>='0') && (snode[0]<='9') ) {
-		printf("error: on line %d, token name '%s' starts with a digit\n", linenum, snode);
-		exit(1);
-	}
+    if ( (snode[0]>='0') && (snode[0]<='9') ) {
+        printf("error: on line %d, token name '%s' starts with a digit\n", linenum, snode);
+        exit(1);
+    }
 
-	if ( (rnode[0]>='0') && (rnode[0]<='9') ) {
-		printf("error: on line %d, token name '%s' starts with a digit\n", linenum, snode);
-		exit(1);
-	}
+    if ( (rnode[0]>='0') && (rnode[0]<='9') ) {
+        printf("error: on line %d, token name '%s' starts with a digit\n", linenum, snode);
+        exit(1);
+    }
 
-	if (strcmp(op, "+") == 0)
-		plus_minus = BIT_SET;
-	else
-		plus_minus = BIT_RESET;
+    if (strcmp(op, "+") == 0)
+        plus_minus = BIT_SET;
+    else
+        plus_minus = BIT_RESET;
 
-	/* Test for broadcast-like messages */
+    /* Test for broadcast-like messages */
 
-	if (strcmp(snode, "*") == 0) {
-		if (strcmp(rnode, "*") == 0) {
-			for (i = 0; i < nnodes; i++) {
-				set_reset_send_all(i, plus_minus);
-			}
-		}
-		else {
-			rindex = lookup(rnode);
-			set_reset_receive_all(rindex, plus_minus);
-			if (symmetric > 0) {
-				set_reset_send_all(rindex, plus_minus);
-			}
-		}
-	}
+    if (strcmp(snode, "*") == 0) {
+        if (strcmp(rnode, "*") == 0) {
+            for (i = 0; i < nnodes; i++) {
+                set_reset_send_all(i, plus_minus);
+            }
+        }
+        else {
+            rindex = lookup(rnode);
+            set_reset_receive_all(rindex, plus_minus);
+            if (symmetric > 0) {
+                set_reset_send_all(rindex, plus_minus);
+            }
+        }
+    }
 
-	else if(strcmp(rnode, "*") == 0) {
-		sindex = lookup(snode);
-		set_reset_send_all(sindex, plus_minus);
-		if (symmetric > 0) {
-			set_reset_receive_all(sindex, plus_minus);
-		}
-	}
+    else if(strcmp(rnode, "*") == 0) {
+        sindex = lookup(snode);
+        set_reset_send_all(sindex, plus_minus);
+        if (symmetric > 0) {
+            set_reset_receive_all(sindex, plus_minus);
+        }
+    }
 
-	else {
-		sindex = lookup(snode);
-		rindex = lookup(rnode);
-		if (sindex == rindex) {
-			errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)sindex, linenum);
-		}
-		srbit(nodes[sindex].nmcast, rindex, plus_minus);
-		if(symmetric > 0) {
-			srbit(nodes[rindex].nmcast, sindex, plus_minus);
-		}
-	}
+    else {
+        sindex = lookup(snode);
+        rindex = lookup(rnode);
+        if (sindex == rindex) {
+            errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)sindex, linenum);
+        }
+        srbit(nodes[sindex].nmcast, rindex, plus_minus);
+        if(symmetric > 0) {
+            srbit(nodes[rindex].nmcast, sindex, plus_minus);
+        }
+    }
 }
 
 /************************************************************************/
@@ -648,35 +658,35 @@ void	apply_update(
 void analyze_results()
 
 {
-	struct node *sptr;		/* Ptr to sending node entry	*/
-	char *msg;			/* Used to select a message to	*/
-					/*  print			*/
-	int i, j;			/* Indices used for bytes and	*/
-					/*  bits of a multicast address	*/
+    struct node *sptr;		/* Ptr to sending node entry	*/
+    char *msg;			/* Used to select a message to	*/
+    /*  print			*/
+    int i, j;			/* Indices used for bytes and	*/
+    /*  bits of a multicast address	*/
 
-	for (int nindex=0; nindex<nnodes; nindex++) {
-	       	sptr = &nodes[nindex];
-		printf("Node %2d ", nindex);
-		msg="Can send & receive";
-		if (sptr->nsend == 0) {
-			msg = "Can only receive";
-			if (sptr->nrecv == 0) {
-				msg = "Completely isolated";
-			}
-		} else if (sptr->nrecv == 0) {
-	       		msg = "Can only send";
-		}
-		printf(" %-19s",msg);
-		printf(" (original name %s)\n", sptr->nname);
-		printf("         Multicast address: ");
-		for (i=0;i<6;i++) {
-			printf(" ");
-			for (j=7; j>=0; j--) {
-				printf("%d",(sptr->nmcast[i]>>j)&0x01);
-			}
-		}
-		printf("\n");
-	}
+    for (int nindex=0; nindex<nnodes; nindex++) {
+        sptr = &nodes[nindex];
+        printf("Node %2d ", nindex);
+        msg="Can send & receive";
+        if (sptr->nsend == 0) {
+            msg = "Can only receive";
+            if (sptr->nrecv == 0) {
+                msg = "Completely isolated";
+            }
+        } else if (sptr->nrecv == 0) {
+            msg = "Can only send";
+        }
+        printf(" %-19s",msg);
+        printf(" (original name %s)\n", sptr->nname);
+        printf("         Multicast address: ");
+        for (i=0;i<6;i++) {
+            printf(" ");
+            for (j=7; j>=0; j--) {
+                printf("%d",(sptr->nmcast[i]>>j)&0x01);
+            }
+        }
+        printf("\n");
+    }
 }
 
 /************************************************************************/
@@ -690,198 +700,238 @@ void analyze_results()
 /************************************************************************/
 
 void	find_output_file(
-	  char *instring,
-	  char *infile,
-	  char *outfile
-	)
+        char *instring,
+        char *infile,
+        char *outfile
+        )
 
- {
-	regex_t preg;			/* Pointer to pattern buffer	*/
-	size_t nmatch = 3;		/* Number of matches		*/
-	regmatch_t pmatch[3];		/* Array to store matches	*/
-	struct dirent *pDirent;		/* Pointer to dirent structure	*/
-	DIR *pDir;			/* Pointer to directory stream	*/
-	char *pattern;		        /* Regex pattern		*/
-	int rc = 1;			/* Return value for match	*/
-	int seen_top_match = 0;		/* Seen a match for input	*/
-					/* topology?			*/
-	int suffix = -1;		/* Suffix value for topology	*/
+{
+    regex_t preg;			/* Pointer to pattern buffer	*/
+    size_t nmatch = 3;		/* Number of matches		*/
+    regmatch_t pmatch[3];		/* Array to store matches	*/
+    struct dirent *pDirent;		/* Pointer to dirent structure	*/
+    DIR *pDir;			/* Pointer to directory stream	*/
+    char *pattern;		        /* Regex pattern		*/
+    int rc = 1;			/* Return value for match	*/
+    int seen_top_match = 0;		/* Seen a match for input	*/
+    /* topology?			*/
+    int suffix = -1;		/* Suffix value for topology	*/
 
 
-	char filename[256] = "[.]([0-9]+)$";
-	pattern = filename;
+    char filename[256] = "[.]([0-9]+)$";
+    pattern = filename;
 
-	strcpy(infile, instring);
+    strcpy(infile, instring);
 
-	if ((rc = regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE)) != 0) {
-		printf("regcomp() failed, returning nonzero (%d)\n", rc);
-		exit(1);
-	}
+    if ((rc = regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE)) != 0) {
+        printf("regcomp() failed, returning nonzero (%d)\n", rc);
+        exit(1);
+    }
 
-	if((rc = regexec(&preg, instring, nmatch, pmatch, 0)) == 0) {
-		strcpy(infile, instring);
-		suffix = atoi(&instring[pmatch[1].rm_so]);
-		suffix++;
-		char temp[256];
-		snprintf(temp, pmatch[1].rm_so, "%s", instring);
-		sprintf(outfile, "%s.%d", temp, suffix);
-		regfree(&preg);
-	}
+    if((rc = regexec(&preg, instring, nmatch, pmatch, 0)) == 0) {
+        strcpy(infile, instring);
+        suffix = atoi(&instring[pmatch[1].rm_so]);
+        suffix++;
+        char temp[256];
+        snprintf(temp, pmatch[1].rm_so, "%s", instring);
+        sprintf(outfile, "%s.%d", temp, suffix);
+        regfree(&preg);
+    }
 
-	else {
-		pDir = opendir(".");
-		if(pDir == NULL) {
-			printf("Can't open current directory");
-			exit(1);
-		}
+    else {
+        pDir = opendir(".");
+        if(pDir == NULL) {
+            printf("Can't open current directory");
+            exit(1);
+        }
 
-		sprintf(filename, "^%s[.]([0-9]+)$", infile);
-		pattern = filename;
-		while ((pDirent = readdir(pDir)) != NULL) {
-			char *name = pDirent->d_name;
+        sprintf(filename, "^%s[.]([0-9]+)$", infile);
+        pattern = filename;
+        while ((pDirent = readdir(pDir)) != NULL) {
+            char *name = pDirent->d_name;
 
-			if ((rc = regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE)) != 0) {
-				printf("regcomp() failed, returning nonzero (%d)\n", rc);
-				exit(1);
-			}
-			if ((rc = regexec(&preg, name, nmatch, pmatch, 0)) == 0) {
-				seen_top_match = 1;
-				if (suffix < atoi(&name[pmatch[1].rm_so]))
-				  suffix = atoi(&name[pmatch[1].rm_so]);
-			}
+            if ((rc = regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE)) != 0) {
+                printf("regcomp() failed, returning nonzero (%d)\n", rc);
+                exit(1);
+            }
+            if ((rc = regexec(&preg, name, nmatch, pmatch, 0)) == 0) {
+                seen_top_match = 1;
+                if (suffix < atoi(&name[pmatch[1].rm_so]))
+                    suffix = atoi(&name[pmatch[1].rm_so]);
+            }
 
-		}
-		regfree(&preg);
-		if (seen_top_match) {
-			sprintf(infile, "%s.%d", instring, suffix);
-			suffix++;
-			sprintf(outfile, "%s.%d", instring, suffix);
-		}
-		else {
-			printf("No topology present");
-			exit(1);
-		}
-		closedir (pDir);
-	}
+        }
+        regfree(&preg);
+        if (seen_top_match) {
+            sprintf(infile, "%s.%d", instring, suffix);
+            suffix++;
+            sprintf(outfile, "%s.%d", instring, suffix);
+        }
+        else {
+            printf("No topology present");
+            exit(1);
+        }
+        closedir (pDir);
+    }
 }
 
 void parse_topo(char *infile, char *outfile, int symmetric, struct node nodes[], int linkinfo) {
-	char	tok[NAMLEN];		/* The next input token		*/
-	int	typ;			/* Type of a token		*/
-	int	sindex;			/* Index of sender in nodes	*/
-	int	rindex;			/* Index of receiver in nodes	*/
-	struct	node	*sptr;		/* Ptr to sending node entry	*/
-	struct	node	*rptr;		/* Ptr to receiving node */
-	if (freopen(infile, "r", stdin) == NULL) {
-		fprintf(stderr, "error: cannot read input file %s\n", infile);
-		exit(1);
-	}
+    char	tok[NAMLEN];		/* The next input token		*/
+    int	typ;			/* Type of a token		*/
+    int	sindex;			/* Index of sender in nodes	*/
+    int	rindex;			/* Index of receiver in nodes	*/
+    struct	node	*sptr;		/* Ptr to sending node entry	*/
+    struct	node	*rptr;		/* Ptr to receiving node */
+    if (freopen(infile, "r", stdin) == NULL) {
+        fprintf(stderr, "error: cannot read input file %s\n", infile);
+        exit(1);
+    }
 
+    /* Start with the first token */
 
-	/* Start with the first token */
+    typ = gettok(tok);
+    if (typ == TOKEOF) {
+        fprintf(stderr, "error: no tokens found in input file %s\n", infile);
+        exit(1);
+    }
 
-	typ = gettok(tok);
-	if (typ == TOKEOF) {
-		fprintf(stderr, "error: no tokens found in input file %s\n", infile, 0);
-		exit(1);
-	}
+    /* While items remain to be processed */
 
-	/* While items remain to be processed */
+    while(1) {
 
-	while(1) {
+        /* Verify that the next item is the name of a sending node */
 
-		/* Verify that the next item is the name of a sending node */
+        if (typ != TOKSEND) {
+            errexit("Sending node expected on line %d\n", linenum, 0);
+        }
 
-		if (typ != TOKSEND) {
-			errexit("Sending node expected on line %d\n", linenum, 0);
-		}
+        /* Lookup name of sender and verify that the sender did	*/
+        /*	not have a previous specification		*/
 
-		/* Lookup name of sender and verify that the sender did	*/
-		/*	not have a previous specification		*/
+        sindex = lookup(tok);
+        sptr = &nodes[sindex];
+        if (sptr->nstatus == RECVDEF) {
+            errexit("error: multiple definitions for node %s on line %d\n", (long)tok, linenum);
+        }
 
-		sindex = lookup(tok);
-		sptr = &nodes[sindex];
-		if (sptr->nstatus == RECVDEF) {
-			errexit("error: multiple definitions for node %s on line %d\n", (long)tok, linenum);
-		}
+        /* Mark the sender as having appeared in a definition */
 
-		/* Mark the sender as having appeared in a definition */
+        sptr->nstatus = RECVDEF;
 
-		sptr->nstatus = RECVDEF;
+        /* Get the first receiver on the list */
 
-		/* Get the first receiver on the list */
+        typ = gettok(tok);
 
-		typ = gettok(tok);
+        if (typ != TOKRECV) {
+            /* The node does not have any receivers on its	*/
+            /*  list.  An error exit can be inserted here	*/
+            /*  isolated nodes are not allowed (the current	*/
+            /*  version allows them to permit testing the	*/
+            /*  effects of isolation.			*/
 
-		if (typ != TOKRECV) {
-			/* The node does not have any receivers on its	*/
-			/*  list.  An error exit can be inserted here	*/
-			/*  isolated nodes are not allowed (the current	*/
-			/*  version allows them to permit testing the	*/
-			/*  effects of isolation.			*/
+            if (typ == TOKEOF) {
+                break;
+            } else {
+                continue;
+            }
+        }
 
-			if (typ == TOKEOF) {
-				break;
-			} else {
-				continue;
-			}
-		}
+        /* While additional receiving nodes are found, add each to the list of receivers */
 
-		/* While additional receiving nodes are found, add each to the list of receivers */
+        while (typ == TOKRECV) {
+            rindex = lookup(tok);
+            if (rindex == sindex) {
+                errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
+            }
+            rptr = &nodes[rindex];
+            rptr->nrecv = 1;
+            sptr->nsend = 1;
+            srbit(sptr->nmcast, rindex, BIT_SET);
+            if (symmetric > 0) {
+                /* Force symmetry */
+                srbit(nodes[rindex].nmcast, sindex, BIT_SET);
+                rptr->nsend = 1;
+                sptr->nrecv = 1;
+            }
 
-		while (typ == TOKRECV) {
-			rindex = lookup(tok);
-			if (rindex == sindex) {
-				errexit("error: node %s cannot be a receiver for itself (line %d)\n", (long)tok, linenum);
-			}
-			rptr = &nodes[rindex];
-			rptr->nrecv = 1;
-			sptr->nsend = 1;
-			srbit(sptr->nmcast, rindex, BIT_SET);
-			if (symmetric > 0) {
-				/* Force symmetry */
-				srbit(nodes[rindex].nmcast, sindex, BIT_SET);
-				rptr->nsend = 1;
-				sptr->nrecv = 1;
-			}
+            /* Process link information */
+            if (linkinfo) {
+                int lqi, threshold, pathloss_ref, pathloss_exp, dist_ref, distance, sigma;
+                typ = gettok(tok);
+                if (typ != TOKNUM)
+                    errexit("error: lqi_low %s is not valid (line %d)", (long)tok, linenum);
+                lqi = atoi(tok);
+                if(!(1 <= lqi <= 255))
+                    errexit("error: lqi_low %s out of range (line %d)", (long)tok, linenum);
 
-			/* Process link information */
-			if (linkinfo) {
-				int lqi, loss;
-				typ = gettok(tok);
-				if (typ != TOKNUM)
-					errexit("error: lqi_low %s is not valid (line %d)", (long)tok, linenum);
-				lqi = atoi(tok);
-				if(!(1 <= lqi <= 255))
-					errexit("error: lqi_low %s out of range (line %d)", (long)tok, linenum);
+                sptr->linkinfo[rindex].lqi_low = (unsigned char)lqi;
 
-				sptr->linkinfo[rindex].lqi_low = (unsigned char)lqi;
+                typ = gettok(tok);
+                if (typ != TOKNUM)
+                    errexit("error: lqi_high %s is not valid (line %d)", (long)tok, linenum);
+                lqi = atoi(tok);
+                if(!(1 <= lqi <= 255))
+                    errexit("error: lqi_high %s out of range (line %d)", (long)tok, linenum);
 
-				typ = gettok(tok);
-				if (typ != TOKNUM)
-					errexit("error: lqi_high %s is not valid (line %d)", (long)tok, linenum);
-				lqi = atoi(tok);
-				if(!(1 <= lqi <= 255))
-					errexit("error: lqi_high %s out of range (line %d)", (long)tok, linenum);
+                sptr->linkinfo[rindex].lqi_high = (unsigned char)lqi;
 
-				sptr->linkinfo[rindex].lqi_high = (unsigned char)lqi;
+                //TODO: pathloss parameters probably go here
+                typ = gettok(tok);
+                if (typ != TOKNUM)
+                    errexit("error: threshold %s is not valid (line %d)", (long)tok, linenum);
+                threshold = atoi(tok);
+                if(!(0 <= threshold < 200))
+                    errexit("error: threshold %s out of range (line %d)", (long)tok, linenum);
+                sptr->linkinfo[rindex].threshold = (unsigned int)threshold;
 
+                typ = gettok(tok);
+                if (typ != TOKNUM)
+                    errexit("error: pathloss_ref %s is not valid (line %d)", (long)tok, linenum);
+                pathloss_ref = atoi(tok);
+                if(!(0 <= pathloss_ref < 5000))
+                    errexit("error: pathloss_ref %s out of range (line %d)", (long)tok, linenum);
+                sptr->linkinfo[rindex].pathloss_ref = (unsigned int)pathloss_ref;
 
-				typ = gettok(tok);
-				if (typ != TOKNUM)
-					errexit("error: loss %s is not valid (line %d)", (long)tok, linenum);
-				loss = atoi(tok);
-				if(!(0 <= loss < 100))
-					errexit("error: loss %s out of range (line %d)", (long)tok, linenum);
-				sptr->linkinfo[rindex].loss = (unsigned char)loss;
-			}
-			/* Move to the next token */
-			typ = gettok(tok);
-		}
-		if (typ == TOKEOF) {
-			break;
-		}
-	}
+                typ = gettok(tok);
+                if (typ != TOKNUM)
+                    errexit("error: pathloss_exp %s is not valid (line %d)", (long)tok, linenum);
+                pathloss_exp = atoi(tok);
+                if(!(1 <= pathloss_exp < 6))
+                    errexit("error: pathloss_exp %s out of range (line %d)", (long)tok, linenum);
+                sptr->linkinfo[rindex].pathloss_exp = (unsigned char)pathloss_exp;
+
+                typ = gettok(tok);
+                if (typ != TOKNUM)
+                    errexit("error: dist_ref %s is not valid (line %d)", (long)tok, linenum);
+                dist_ref = atoi(tok);
+                if(!(0 <= dist_ref < 10000))
+                    errexit("error: dist_ref %s out of range (line %d)", (long)tok, linenum);
+                sptr->linkinfo[rindex].dist_ref = (unsigned int)dist_ref;
+
+                typ = gettok(tok);
+                if (typ != TOKNUM)
+                    errexit("error: sigma %s is not valid (line %d)", (long)tok, linenum);
+                sigma = atoi(tok);
+                if(!(0 <= sigma < 500))
+                    errexit("error: sigma %s out of range (line %d)", (long)tok, linenum);
+                sptr->linkinfo[rindex].sigma = (unsigned char)sigma;
+
+                typ = gettok(tok);
+                if (typ != TOKNUM)
+                    errexit("error: distance %s is not valid (line %d)", (long)tok, linenum);
+                distance = atoi(tok);
+                if(!(0 <= distance < 10000))
+                    errexit("error: distance %s out of range (line %d)", (long)tok, linenum);
+                sptr->linkinfo[rindex].distance = (unsigned int)distance;
+
+            }
+            /* Move to the next token */
+            typ = gettok(tok);
+        }
+        if (typ == TOKEOF) {
+            break;
+        }
+    }
 }
 
 /************************************************************************/
@@ -891,247 +941,247 @@ void parse_topo(char *infile, char *outfile, int symmetric, struct node nodes[],
 /************************************************************************/
 
 int	main(
-	  int	argc,
-	  char	*argv[]
-	)
+        int	argc,
+        char	*argv[]
+        )
 {
-	char	tok[NAMLEN];		/* The next input token		*/
-	int	typ;			/* Type of a token		*/
-	int	sindex;			/* Index of sender in nodes	*/
-	int	rindex;			/* Index of receiver in nodes	*/
-	char	*infile;		/* Ptr to input file name	*/
-	char	*outfile;		/* Ptr to output file name	*/
-	char	*update_file;		/* Ptr to update file name	*/
-	FILE	*fout;			/* Stdio file ptr for outfile	*/
-	FILE	*fin;			/* Stdio file ptr for intop	*/
-	struct	node	*sptr;		/* Ptr to sending node entry	*/
-	struct	node	*rptr;		/* Ptr to receiving node entry	*/
-	int	nindex;			/* Index into the nodes array	*/
-	int	symmetric = 0;		/* Nonzero => force symmetry	*/
-	int	i;			/* Index for nodes		*/
-	unsigned char sentinel[6];	/* Sentinel value in the file	*/
-	unsigned char	nlen;		/* Length of a node name	*/
+    char	tok[NAMLEN];		/* The next input token		*/
+    int	typ;			/* Type of a token		*/
+    int	sindex;			/* Index of sender in nodes	*/
+    int	rindex;			/* Index of receiver in nodes	*/
+    char	*infile;		/* Ptr to input file name	*/
+    char	*outfile;		/* Ptr to output file name	*/
+    char	*update_file;		/* Ptr to update file name	*/
+    FILE	*fout;			/* Stdio file ptr for outfile	*/
+    FILE	*fin;			/* Stdio file ptr for intop	*/
+    struct	node	*sptr;		/* Ptr to sending node entry	*/
+    struct	node	*rptr;		/* Ptr to receiving node entry	*/
+    int	nindex;			/* Index into the nodes array	*/
+    int	symmetric = 0;		/* Nonzero => force symmetry	*/
+    int	i;			/* Index for nodes		*/
+    unsigned char sentinel[6];	/* Sentinel value in the file	*/
+    unsigned char	nlen;		/* Length of a node name	*/
 
-	unsigned char buffer[6], namebuffer[NAMLEN];
-	unsigned char name[NAMLEN];
-	unsigned char length[1];
+    unsigned char buffer[6], namebuffer[NAMLEN];
+    unsigned char name[NAMLEN];
+    unsigned char length[1];
 
-	char update_string[1 + 2 * NAMLEN + 3];
+    char update_string[1 + 2 * NAMLEN + 3];
 
-	struct node *nptr;
+    struct node *nptr;
 
-	int parse = 1;
-	int linkinfo = 1;
-	sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
-			sentinel[4] = sentinel[5] = 0x00;
+    int parse = 1;
+    int linkinfo = 1;
+    sentinel[0] = sentinel[1] = sentinel[2] = sentinel[3] =
+        sentinel[4] = sentinel[5] = 0x00;
 
-	char	use[] = "error: use is topgen [-s] (filename | -u topname [-f newtopfile])\n";
+    char	use[] = "error: use is topgen [-s] (filename | -u topname [-f newtopfile])\n";
 
-	int newtopfile = 0;
-	/* Process arguments */
+    int newtopfile = 0;
+    /* Process arguments */
 
-	if ( (argc!=2) && (argc!=3) && (argc!= 4) && (argc != 5 )) {
-		fprintf(stderr, "%s", use);
-		exit(1);
-	}
+    if ( (argc!=2) && (argc!=3) && (argc!= 4) && (argc != 5 )) {
+        fprintf(stderr, "%s", use);
+        exit(1);
+    }
 
-	if (argc == 3) {
-		if (strcmp(argv[1], "-s") == 0) {
-			symmetric = 1;
-			argv++;
-		}
+    if (argc == 3) {
+        if (strcmp(argv[1], "-s") == 0) {
+            symmetric = 1;
+            argv++;
+        }
 
-		else if (strcmp(argv[1], "-u") == 0) {
-			parse = 0;
-			argv++;
-		}
+        else if (strcmp(argv[1], "-u") == 0) {
+            parse = 0;
+            argv++;
+        }
 
-		else {
-			fprintf(stderr, "%s", use);
-			exit(1);
-		}
-	}
+        else {
+            fprintf(stderr, "%s", use);
+            exit(1);
+        }
+    }
 
-	if (argc == 4) {
-		if (strcmp(argv[1], "-s") == 0) {
-			symmetric++;
-			if (strcmp(argv[2], "-u") == 0) {
-				parse = 0;
-				argv += 2;
-			}
+    if (argc == 4) {
+        if (strcmp(argv[1], "-s") == 0) {
+            symmetric++;
+            if (strcmp(argv[2], "-u") == 0) {
+                parse = 0;
+                argv += 2;
+            }
 
-			else {
-				 fprintf(stderr, "%s", use);
-				 exit(1);
-			}
-		}
+            else {
+                fprintf(stderr, "%s", use);
+                exit(1);
+            }
+        }
 
-		else {
-			fprintf(stderr, "%s", use);
-			exit(1);
-		}
-	}
+        else {
+            fprintf(stderr, "%s", use);
+            exit(1);
+        }
+    }
 
-	if (argc == 5) {
-		if (strcmp(argv[1], "-u") == 0) {
-			if (strcmp(argv[3], "-f") == 0) {
-				newtopfile = 1;
-				parse = 0;
-				update_file = argv[4];
-				argv++;
-			}
-			else{
-				fprintf(stderr, "%s", use);
-				exit(1);
-			}
-		}
-		else{
-				fprintf(stderr, "%s", use);
-				exit(1);
-			}
-	}
+    if (argc == 5) {
+        if (strcmp(argv[1], "-u") == 0) {
+            if (strcmp(argv[3], "-f") == 0) {
+                newtopfile = 1;
+                parse = 0;
+                update_file = argv[4];
+                argv++;
+            }
+            else{
+                fprintf(stderr, "%s", use);
+                exit(1);
+            }
+        }
+        else{
+            fprintf(stderr, "%s", use);
+            exit(1);
+        }
+    }
 
-	/* Initialize data structures */
+    /* Initialize data structures */
 
-	init();
+    init();
 
-	/* Parse branch */
+    /* Parse branch */
 
-	if (parse) {
-		/*Reopen stdin to be the topology file */
+    if (parse) {
+        /*Reopen stdin to be the topology file */
 
-		infile = argv[1];
-		outfile = malloc(strlen(infile)+3);
+        infile = argv[1];
+        outfile = malloc(strlen(infile)+3);
 
-		strcpy(outfile, infile);
-		strcat(outfile, ".0");
+        strcpy(outfile, infile);
+        strcat(outfile, ".0");
 
-		parse_topo(infile, outfile, symmetric, nodes, linkinfo);
-	}
+        parse_topo(infile, outfile, symmetric, nodes, linkinfo);
+    }
 
-	/* Update branch */
+    /* Update branch */
 
-	else {
+    else {
 
-		infile = malloc(256 * sizeof(char));
-		outfile = malloc(256 * sizeof(char));
-		find_output_file(argv[1], infile, outfile);
+        infile = malloc(256 * sizeof(char));
+        outfile = malloc(256 * sizeof(char));
+        find_output_file(argv[1], infile, outfile);
 
-		/* Read the input file, and extract the information	*/
-		/* into the nodes array					*/
+        /* Read the input file, and extract the information	*/
+        /* into the nodes array					*/
 
-		/* Read multicast addresses */
+        /* Read multicast addresses */
 
-		fin = fopen(infile, "rb");
-		if (fin == NULL) {
-			printf("Can't open file");
-			exit(1);
-		}
+        fin = fopen(infile, "rb");
+        if (fin == NULL) {
+            printf("Can't open file");
+            exit(1);
+        }
 
-		printf("%s\n", infile);
-		while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
-			if(memcmp(buffer, sentinel, 6) == 0) {
-				break;
-			}
-			nptr = &nodes[nnodes++];
+        printf("%s\n", infile);
+        while(fread(buffer, 1, sizeof(buffer), fin) > 0) {
+            if(memcmp(buffer, sentinel, 6) == 0) {
+                break;
+            }
+            nptr = &nodes[nnodes++];
 
-			if (!newtopfile){ // if file is specified, don't read old mac addresses - they're all blank
-				for(int j = 0; j < 6; j++) {
-					nptr -> nmcast[j] = buffer[j];
-				}
-			}
-		}
+            if (!newtopfile){ // if file is specified, don't read old mac addresses - they're all blank
+                for(int j = 0; j < 6; j++) {
+                    nptr -> nmcast[j] = buffer[j];
+                }
+            }
+        }
 
-		/* Read node names */
+        /* Read node names */
 
-		nnodes = 0;
-		while(fread(buffer, 1, 1, fin) > 0) {
-			memcpy(length, buffer, 1);
-			fread(namebuffer, 1, (int) buffer[0], fin);
-			memcpy(name, namebuffer, (int)buffer[0]);
-			nptr = &nodes[nnodes++];
-			strcpy(nptr->nname, name);
-		}
+        nnodes = 0;
+        while(fread(buffer, 1, 1, fin) > 0) {
+            memcpy(length, buffer, 1);
+            fread(namebuffer, 1, (int) buffer[0], fin);
+            memcpy(name, namebuffer, (int)buffer[0]);
+            nptr = &nodes[nnodes++];
+            strcpy(nptr->nname, name);
+        }
 
-		fclose(fin);
+        fclose(fin);
 
-		if (!newtopfile) {
-		/* Accept update commands from the user and apply them	*/
-		  /* the topology						*/
+        if (!newtopfile) {
+            /* Accept update commands from the user and apply them	*/
+            /* the topology						*/
 
-			printf("\nEnter update commands, and enter \"write\" at the end: \n");
-			scanf("%[^\n]", update_string);
-			getchar();
+            printf("\nEnter update commands, and enter \"write\" at the end: \n");
+            scanf("%[^\n]", update_string);
+            getchar();
 
-			while(strcmp(update_string, "write") != 0) {
-				apply_update(update_string, symmetric);
-				linenum++;
-				scanf("%[^\n]", update_string);
-				getchar();
-			}
-		}
-		else {
-			parse_topo(update_file, outfile, symmetric, nodes, linkinfo);
-		}
-		/* test for isolation, sending and receiving capabiliites */
+            while(strcmp(update_string, "write") != 0) {
+                apply_update(update_string, symmetric);
+                linenum++;
+                scanf("%[^\n]", update_string);
+                getchar();
+            }
+        }
+        else {
+            parse_topo(update_file, outfile, symmetric, nodes, linkinfo);
+        }
+        /* test for isolation, sending and receiving capabiliites */
 
-		for (i = 0; i < nnodes; i++) {
-			if (node_can_send(i)) {
-				nodes[i].nsend = 1;
-			}
-			if (node_can_receive(i)) {
-				nodes[i].nrecv = 1;
-			}
-		}
-	}
+        for (i = 0; i < nnodes; i++) {
+            if (node_can_send(i)) {
+                nodes[i].nsend = 1;
+            }
+            if (node_can_receive(i)) {
+                nodes[i].nrecv = 1;
+            }
+        }
+    }
 
-	/* END of parse/update if conditional */
+    /* END of parse/update if conditional */
 
-	/* Analyze results */
+    /* Analyze results */
 
-	analyze_results();
+    analyze_results();
 
-	/* Output a topology database */
+    /* Output a topology database */
 
-	printf("\noutfile: %s\n", outfile);
+    printf("\noutfile: %s\n", outfile);
 
-	if ( (fout = fopen(outfile, "w") ) == NULL) {
-		fprintf(stderr,"error - cannot open output file %s\n", outfile);
-	}
+    if ( (fout = fopen(outfile, "w") ) == NULL) {
+        fprintf(stderr,"error - cannot open output file %s\n", outfile);
+    }
 
-	/* Write the multicast address for each node */
+    /* Write the multicast address for each node */
 
-	for (nindex=0; nindex<nnodes; nindex++) {
-		fwrite(nodes[nindex].nmcast, 1, 6, fout);
+    for (nindex=0; nindex<nnodes; nindex++) {
+        fwrite(nodes[nindex].nmcast, 1, 6, fout);
 
-		/* Write linkinfo if necessary */
+        /* Write linkinfo if necessary */
+        //TODO: change that 3
+        if(linkinfo) {
+            fwrite(&(nodes[nindex].linkinfo), 12, NODES, fout);
+        }
+    }
 
-		if(linkinfo) {
-			fwrite(&(nodes[nindex].linkinfo), 3, NODES, fout);
-		}
-	}
+    /* Write the sentinel value */
 
-	/* Write the sentinel value */
+    fwrite(sentinel, 1, 6, fout);
 
-	fwrite(sentinel, 1, 6, fout);
+    /* Write the node names as a 1-byte length field followed by	*/
+    /*	a set of (null-terminated) characters that form the	*/
+    /*	name of the node.  The length includes the null byte.	*/
 
-	/* Write the node names as a 1-byte length field followed by	*/
-	/*	a set of (null-terminated) characters that form the	*/
-	/*	name of the node.  The length includes the null byte.	*/
+    for (nindex=0; nindex<nnodes; nindex++) {
+        nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
+        fwrite(&nlen, 1, 1, fout);
+        fwrite(nodes[nindex].nname, 1, nlen, fout);
+    }
 
-	for (nindex=0; nindex<nnodes; nindex++) {
-		nlen = (strlen(nodes[nindex].nname) + 1) & 0xff;
-		fwrite(&nlen, 1, 1, fout);
-		fwrite(nodes[nindex].nname, 1, nlen, fout);
-	}
+    fclose(fout);
 
-	fclose(fout);
-
-	int status;
-	char cmpcommand[18 + 2*256];
-	sprintf(cmpcommand, "cmp %s %s > /dev/null", infile, outfile);
-	status = system(cmpcommand);
-	if (status == 0)
-		printf("\nWarning: no change in topology\n");
-	exit(0);
+    int status;
+    char cmpcommand[18 + 2*256];
+    sprintf(cmpcommand, "cmp %s %s > /dev/null", infile, outfile);
+    status = system(cmpcommand);
+    if (status == 0)
+        printf("\nWarning: no change in topology\n");
+    exit(0);
 }

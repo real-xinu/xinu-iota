@@ -101,8 +101,12 @@ status	testbed_assign (
 		kprintf("\tcopying link_info %d\n", i);
 		rqptr->link_info[i].lqi_low = topo[index].link_info[i].lqi_low;
 		rqptr->link_info[i].lqi_high = topo[index].link_info[i].lqi_high;
-		rqptr->link_info[i].probloss = topo[index].link_info[i].probloss;
-	}
+		rqptr->link_info[i].threshold = topo[index].link_info[i].threshold;
+		rqptr->link_info[i].pathloss_ref = topo[index].link_info[i].pathloss_ref;
+		rqptr->link_info[i].pathloss_exp = topo[index].link_info[i].pathloss_exp;
+		rqptr->link_info[i].distance = topo[index].link_info[i].distance;
+		rqptr->link_info[i].dist_ref = topo[index].link_info[i].dist_ref;
+		rqptr->link_info[i].sigma = topo[index].link_info[i].sigma;	}
 	*/
 	rqptr->topoidx = index;
 	rqptr->waiting = FALSE;
@@ -153,7 +157,12 @@ status wsserver_assign ( struct netpacket *pkt )
     {
        assign_msg->msg.link_info[i].lqi_high = topo[nodeid].link_info[i].lqi_high;
        assign_msg->msg.link_info[i].lqi_low = topo[nodeid].link_info[i].lqi_low;
-       assign_msg->msg.link_info[i].probloss = topo[nodeid].link_info[i].probloss;
+       assign_msg->msg.link_info[i].threshold = topo[nodeid].link_info[i].threshold;
+       assign_msg->msg.link_info[i].pathloss_ref = topo[nodeid].link_info[i].pathloss_ref;
+       assign_msg->msg.link_info[i].pathloss_exp = topo[nodeid].link_info[i].pathloss_exp;
+       assign_msg->msg.link_info[i].distance = topo[nodeid].link_info[i].distance;
+       assign_msg->msg.link_info[i].dist_ref = topo[nodeid].link_info[i].dist_ref;
+       assign_msg->msg.link_info[i].sigma = topo[nodeid].link_info[i].sigma;
     }
 
 

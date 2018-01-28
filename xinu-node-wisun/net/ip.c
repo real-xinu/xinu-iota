@@ -768,12 +768,13 @@ int32	ip_send_rpl (
 
 		if(rpkt->net_ethdst[j] & bmask) {
 			//kprintf("%d -> %d : ", info.nodeid, k);
-			if((rand() % 100) < info.link_info[i].probloss) {
-				rpkt->net_ethdst[j] &= ~bmask;
-				//kprintf("DROP: %02x, %d\n", rpkt->net_ethdst[j], j);
+			//if((rand() % 100) < info.link_info[i].probloss) {
+			if(calc_pathloss(i)) {	
+                rpkt->net_ethdst[j] &= ~bmask;
+				kprintf("DROP: %02x, %d\n", rpkt->net_ethdst[j], j);
 			}
 			else {
-				//kprintf("NODROP\n");
+				kprintf("NODROP\n");
 			}
 		}
 

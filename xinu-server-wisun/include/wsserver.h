@@ -110,15 +110,15 @@
 /*  the C_FIND message).		*/
 
 #define C_MAP           15  /* A message sent by the management system to obtain 
-			       the mapping between the nodes' name and the IDs 
-			       of the current network topology */
+                               the mapping between the nodes' name and the IDs 
+                               of the current network topology */
 
 #define C_MAP_REPLY     16  /* a response to C_MAP message */
 
 #define C_PINGALL  17   /* A message sent by the management system to 
-			       ping all of the backends which are running 
-			       a node image (including the nodes that are not in the current active
-			       topology)*/
+                           ping all of the backends which are running 
+                           a node image (including the nodes that are not in the current active
+                           topology)*/
 
 #define C_PINGALL_REPLY  18
 
@@ -134,7 +134,7 @@
 /*  operation cannot be performed.	*/
 
 #define C_CLEANUP       21      /* A message sent by management app to testbed
-				   server to shut down all of the nodes */
+                                   server to shut down all of the nodes */
 
 #define C_SETTIME       22      /* A message sent by management app to testbed server 
                                    to set current time */
@@ -154,9 +154,14 @@ struct	topo_entry { 		/* Entry in a topology file (also used	*/
     byte	t_macaddr[6];	/* The Mac address of a node		*/
     int32       t_bbbid;
     struct {
-	          byte lqi_low;
-		  byte lqi_high;
-		  byte probloss;
+        byte lqi_low;
+        byte lqi_high;
+        byte threshold;
+        byte pathloss_ref;
+        byte pathloss_exp;
+        byte dist_ref;
+        byte sigma;
+        uint32 distance;
     }link_info[46];
 
 };
@@ -213,32 +218,32 @@ struct	c_msg {
         };
 
 
-	struct {
-                  int32 nnodes;
-		  char map[MAXNODES][NAMELEN];   /* As a response of C_MAP message */
-                 
+        struct {
+            int32 nnodes;
+            char map[MAXNODES][NAMELEN];   /* As a response of C_MAP message */
 
-	};
 
-	struct {
-		int32 nbbb;
-		int32 bbb_stat[MAX_BBB];
-	};
+        };
 
-	struct	{
-		int32 mon_cmd;
-		int32 mon_nodeid;
-		bool8 mon_fsrc;
-		bool8 mon_fdst;
-		byte  mon_ipsrc[16];
-		byte  mon_ipdst[16];
-	};
+        struct {
+            int32 nbbb;
+            int32 bbb_stat[MAX_BBB];
+        };
+
+        struct	{
+            int32 mon_cmd;
+            int32 mon_nodeid;
+            bool8 mon_fsrc;
+            bool8 mon_fdst;
+            byte  mon_ipsrc[16];
+            byte  mon_ipdst[16];
+        };
 
         uint32	uptime;		/* TS_RESP (amount of time the	*/
         /* server has been up (in msec).*/
 
 
-	uint32 ctime;           /* current time */
+        uint32 ctime;           /* current time */
 
     };
 };

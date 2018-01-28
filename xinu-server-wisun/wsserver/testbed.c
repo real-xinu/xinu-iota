@@ -52,7 +52,7 @@ process	testbed_proc (void) {
 	intmask	mask;			/* Interrupt mask	*/
 	int32	i;			/* Loop index		*/
 	/* Allocate a packet */
-
+    //pkt = (struct tbedpacket *) getmem(sizeof(struct tbedpacket));
 	pkt = (struct tbedpacket *)getbuf(netbufpool);
 
 	while(1) {
@@ -90,142 +90,149 @@ process	testbed_proc (void) {
 			for(i = 0; i < 46; i++) {
 				pkt->amsg.link_info[i].lqi_low = req.link_info[i].lqi_low;
 				pkt->amsg.link_info[i].lqi_high = req.link_info[i].lqi_high;
-				pkt->amsg.link_info[i].probloss = req.link_info[i].probloss;
 			}*/
 			pkt->amsg.anodeid = htonl(topo[req.topoidx].t_nodeid);
 			memcpy(pkt->amsg.amcastaddr, topo[req.topoidx].t_neighbors, 6);
 			for(i = 0; i < 46; i++) {
 				pkt->amsg.link_info[i].lqi_low = topo[req.topoidx].link_info[i].lqi_low;
 				pkt->amsg.link_info[i].lqi_high = topo[req.topoidx].link_info[i].lqi_high;
-				pkt->amsg.link_info[i].probloss = topo[req.topoidx].link_info[i].probloss;
-			}
-			break;
+				pkt->amsg.link_info[i].threshold = topo[req.topoidx].link_info[i].threshold;
+				pkt->amsg.link_info[i].pathloss_ref = topo[req.topoidx].link_info[i].pathloss_ref;
+				pkt->amsg.link_info[i].pathloss_exp = topo[req.topoidx].link_info[i].pathloss_exp;
+				pkt->amsg.link_info[i].distance = topo[req.topoidx].link_info[i].distance;
+				pkt->amsg.link_info[i].dist_ref = topo[req.topoidx].link_info[i].dist_ref;
+				pkt->amsg.link_info[i].sigma = topo[req.topoidx].link_info[i].sigma;
+            }
+           break;
 
-		case TBR_TYPE_NPING:
-			kprintf("testbed_proc: NPING\n");
-			pkt->amsg.amsgtyp = htonl(A_PING);
-			pkt->amsg.anodeid = htonl(req.nodeid);
-			break;
+        case TBR_TYPE_NPING:
+            kprintf("testbed_proc: NPING\n");
+            pkt->amsg.amsgtyp = htonl(A_PING);
+            pkt->amsg.anodeid = htonl(req.nodeid);
+            break;
 
-		case TBR_TYPE_NPING_ALL:
-		case TBR_TYPE_NPINGALL:
-			kprintf("testbed_proc: NPING_ALL\n");
+        case TBR_TYPE_NPING_ALL:
+        case TBR_TYPE_NPINGALL:
+            kprintf("testbed_proc: NPING_ALL\n");
 
-			/* There has to be someone waiting */
+            /* There has to be someone waiting */
 
-			if(!req.waiting) {
-				continue;
-			}
+            if(!req.waiting) {
+                continue;
+            }
 
-			/* Fill out the packet fields */
+            /* Fill out the packet fields */
 
-			if(req.type == TBR_TYPE_NPING_ALL) {
-				pkt->amsg.amsgtyp = htonl(A_PING_ALL);
-			}
-			else {
-				pkt->amsg.amsgtyp = htonl(A_PINGALL);
-			}
+            if(req.type == TBR_TYPE_NPING_ALL) {
+                pkt->amsg.amsgtyp = htonl(A_PING_ALL);
+            }
+            else {
+                pkt->amsg.amsgtyp = htonl(A_PINGALL);
+            }
 
-			pkt->amsg.anodeid = 0;
-			memcpy(pkt->ethdst, NetData.ethbcast, 6);
-			memcpy(pkt->ethsrc, NetData.ethucast, 6);
-			pkt->ethtype = htons(ETH_TYPE_A);
-			pkt->amsg.aseq = testbed.seq;
+            pkt->amsg.anodeid = 0;
+            memcpy(pkt->ethdst, NetData.ethbcast, 6);
+            memcpy(pkt->ethsrc, NetData.ethucast, 6);
+            pkt->ethtype = htons(ETH_TYPE_A);
+            pkt->amsg.aseq = testbed.seq;
 
-			/* Set the testbed process in waiting state */
+            /* Set the testbed process in waiting state */
 
-			mask = disable();
-			testbed.state = TB_STATE_WAIT;
-			memset(testbed.waitaddr, 0, 6);
-			testbed.pid = getpid();
-			write(ETHER0, (char *)pkt, sizeof(struct tbedpacket));
+            mask = disable();
+            testbed.state = TB_STATE_WAIT;
+            memset(testbed.waitaddr, 0, 6);
+            testbed.pid = getpid();
+            write(ETHER0, (char *)pkt, sizeof(struct tbedpacket));
 
-			/* Receive all packets for next 500 ms */
+            /* Receive all packets for next 500 ms */
 
-			time1 = clktimems + 500;
-			while(clktimems < time1) {
-				msg = recvtime(time1-clktimems);
-				kprintf("testbed_proc: received %x\n", msg);
-				if((int32)msg == SYSERR || (int32)msg == TIMEOUT) {
-					send(req.waitpid, SYSERR);
-					break;
-				}
-				rcvpkt = (struct tbedpacket *)msg;
+            time1 = clktimems + 500;
+            while(clktimems < time1) {
+                msg = recvtime(time1-clktimems);
+                kprintf("testbed_proc: received %x\n", msg);
+                if((int32)msg == SYSERR || (int32)msg == TIMEOUT) {
+                    send(req.waitpid, SYSERR);
+                    break;
+                }
+                rcvpkt = (struct tbedpacket *)msg;
 
-				if(rcvpkt->amsg.aacktyp == ntohl(A_PING_ALL)) {
-					kprintf("testbed_proc: PING_ALL\n");
-					send(req.waitpid, ntohl(rcvpkt->amsg.anodeid));
-				}
-				else if(rcvpkt->amsg.aacktyp == ntohl(A_PINGALL)) {
-					kprintf("testbed_proc: PINGALL\n");
-					for(i = 0; i < MAX_BBB; i++) {
-						if(!memcmp(rcvpkt->ethsrc, bbb_macs[i], 6)) {
-							send(req.waitpid, i);
-							break;
-						}
-					}
-				}
-				else {
-					kprintf("testbed_proc: unknown ack type %d\n", ntohl(rcvpkt->amsg.aacktyp));
-				}
-				freebuf((char *)rcvpkt);
-			}
-			continue;
+                if(rcvpkt->amsg.aacktyp == ntohl(A_PING_ALL)) {
+                    kprintf("testbed_proc: PING_ALL\n");
+                    send(req.waitpid, ntohl(rcvpkt->amsg.anodeid));
+                }
+                else if(rcvpkt->amsg.aacktyp == ntohl(A_PINGALL)) {
+                    kprintf("testbed_proc: PINGALL\n");
+                    for(i = 0; i < MAX_BBB; i++) {
+                        if(!memcmp(rcvpkt->ethsrc, bbb_macs[i], 6)) {
+                            send(req.waitpid, i);
+                            break;
+                        }
+                    }
+                }
+                else {
+                    kprintf("testbed_proc: unknown ack type %d\n", ntohl(rcvpkt->amsg.aacktyp));
+                }
+                freebuf((char *)rcvpkt);
+            }
+            continue;
 
-		default:
-			continue;
-		}
+        default:
+            continue;
+        }
 
-		/* Fill out fields in the packet */
+        /* Fill out fields in the packet */
 
-		pkt->amsg.aseq = testbed.seq;
-		memcpy(pkt->ethdst, req.dst, 6);
-		memcpy(pkt->ethsrc, NetData.ethucast, 6);
-		pkt->ethtype = htons(ETH_TYPE_A);
+        pkt->amsg.aseq = testbed.seq;
+        memcpy(pkt->ethdst, req.dst, 6);
+        memcpy(pkt->ethsrc, NetData.ethucast, 6);
+        pkt->ethtype = htons(ETH_TYPE_A);
 
-		mask = disable();
-		testbed.state = TB_STATE_WAIT;
-		memcpy(testbed.waitaddr, req.dst, 6);
-		testbed.pid = getpid();
-		restore(mask);
+        mask = disable();
+        testbed.state = TB_STATE_WAIT;
+        memcpy(testbed.waitaddr, req.dst, 6);
+        testbed.pid = getpid();
+        restore(mask);
 
-		retries = 0;
-		while(retries < 3) {
+        retries = 0;
+        while(retries < 3) {
 
-			retries++;
+            retries++;
 
-			/* Send the packet */
+            /* Send the packet */
 
-			kprintf("testbed_proc: sending assign message\n");
-			write(ETHER0, (char *)pkt, sizeof(struct tbedpacket));
+            kprintf("testbed_proc: sending assign message\n");
+            kprintf("a_msg: %d\n", sizeof(struct a_msg));
+            kprintf("linkinfo: %d\n", sizeof(pkt->amsg.link_info[0]));
+            kprintf("tbedpacket: %d\n", sizeof(struct tbedpacket));
+            write(ETHER0, (char *)pkt, sizeof(struct tbedpacket));
 
-			/* Wait for an appropriate response */
+            /* Wait for an appropriate response */
 
-			msg = recvtime(1000);
-			if((int32)msg == TIMEOUT) {
-				continue;
-			}
-			else {
-				freebuf((char *)msg);
-				break;
-			}
-		}
+            msg = recvtime(1000);
+            if((int32)msg == TIMEOUT) {
+                continue;
+            }
+            else {
+                freebuf((char *)msg);
+                break;
+            }
+        }
 
-		if(req.waiting) {
-			if(retries < 3) {
-				send(req.waitpid, OK);
-			}
-			else {
-				send(req.waitpid, SYSERR);
-			}
-		}
+        if(req.waiting) {
+            if(retries < 3) {
+                send(req.waitpid, OK);
+            }
+            else {
+                send(req.waitpid, SYSERR);
+            }
+        }
 
-		mask = disable();
-		testbed.state = 0;
-		restore(mask);
-	}
+        mask = disable();
+        testbed.state = 0;
+        restore(mask);
+    }
 
-	return OK;
+    return OK;
 }
 
 /*------------------------------------------------------------------------
@@ -233,70 +240,70 @@ process	testbed_proc (void) {
  *------------------------------------------------------------------------
  */
 void	testbed_in (
-		struct	tbedpacket *pkt	/* Incoming packet	*/
-		)
+        struct	tbedpacket *pkt	/* Incoming packet	*/
+        )
 {
-	struct	tbreq rqptr;	/* Testbed request	*/
-	uint32	nodeid;		/* Node ID		*/
-	int32	i, j;		/* Loop indexes		*/
+    struct	tbreq rqptr;	/* Testbed request	*/
+    uint32	nodeid;		/* Node ID		*/
+    int32	i, j;		/* Loop indexes		*/
 
-	byte	allzeros[] = {0, 0, 0, 0, 0, 0};
+    byte	allzeros[] = {0, 0, 0, 0, 0, 0};
 
-	/* Change type to host byte order */
+    /* Change type to host byte order */
 
-	pkt->amsg.amsgtyp = ntohl(pkt->amsg.amsgtyp);
+    pkt->amsg.amsgtyp = ntohl(pkt->amsg.amsgtyp);
 
-	switch(pkt->amsg.amsgtyp) {
+    switch(pkt->amsg.amsgtyp) {
 
-	case A_JOIN:
+        case A_JOIN:
 
-		if(online) {
-			kprintf("====> Incoming Join message\n");
-			testbed_assign(-1, pkt->ethsrc);
-		}
+            if(online) {
+                kprintf("====> Incoming Join message\n");
+                testbed_assign(-1, pkt->ethsrc);
+            }
 
-		freebuf((char *)pkt);
-		break;
+            freebuf((char *)pkt);
+            break;
 
-	case A_JOIN_MONITOR:
+        case A_JOIN_MONITOR:
 
-		kprintf("====> Incoming Monitor Join message\n");
-		if(!testbed.monitor) {
-			memcpy(testbed.mon_ethaddr, pkt->ethsrc, 6);
-			testbed.monitor = 1;
-		}
-		break;
+            kprintf("====> Incoming Monitor Join message\n");
+            if(!testbed.monitor) {
+                memcpy(testbed.mon_ethaddr, pkt->ethsrc, 6);
+                testbed.monitor = 1;
+            }
+            break;
 
-	case A_ACK:
+        case A_ACK:
 
-		kprintf("====> Incoming Ack message\n");
+            kprintf("====> Incoming Ack message\n");
 
-		/* Check if the ack matches our expectation */
+            /* Check if the ack matches our expectation */
 
-		if( (testbed.state == TB_STATE_WAIT) &&
-		    (!memcmp(testbed.waitaddr, allzeros, 6) ||
-		     !memcmp(pkt->ethsrc, testbed.waitaddr, 6)) &&
-		    (pkt->amsg.aseq == testbed.seq) ) {
-			kprintf("\t");
-			for(i = 0; i < 6; i++) {
-				kprintf("%02x ", pkt->ethsrc[i]);
-			}
-			kprintf("\n");
-			send(testbed.pid, (umsg32)pkt);
-		}
-		else {
-			kprintf("\tdoes not match\n");
-			kprintf("\tseq = %d, %d\n\t", pkt->amsg.aseq, testbed.seq);
-			for(i = 0; i < 6; i++) {
-				kprintf("%02x ", pkt->ethsrc[i]);
-			}
-			kprintf("\n");
-		}
-		break;
+            if( (testbed.state == TB_STATE_WAIT) &&
+                    (!memcmp(testbed.waitaddr, allzeros, 6) ||
+                     !memcmp(pkt->ethsrc, testbed.waitaddr, 6)) &&
+                    (pkt->amsg.aseq == testbed.seq) ) {
+                kprintf("\t");
+                for(i = 0; i < 6; i++) {
+                    kprintf("%02x ", pkt->ethsrc[i]);
+                }
+                kprintf("\n");
+                send(testbed.pid, (umsg32)pkt);
+            }
+            else {
+                kprintf("\tdoes not match\n");
+                kprintf("\tseq = %d, %d\n\t", pkt->amsg.aseq, testbed.seq);
+                for(i = 0; i < 6; i++) {
+                    kprintf("%02x ", pkt->ethsrc[i]);
+                }
+                kprintf("\n");
+            }
+            break;
 
-	default:
-		kprintf("Invalid TYPE A: %x\n", pkt->amsg.amsgtyp);
-		freebuf((char *)pkt);
-		break;
-	}
+        default:
+            kprintf("Invalid TYPE A: %x\n", pkt->amsg.amsgtyp);
+            freebuf((char *)pkt);
+            break;
+    }
 }

@@ -21,7 +21,12 @@ void init_topo()
 	{
 	   topo[i].link_info[k].lqi_high = 0;
 	   topo[i].link_info[k].lqi_low = 0;
-	   topo[i].link_info[k].probloss = 0;
+	   topo[i].link_info[k].threshold = 0;
+	   topo[i].link_info[k].pathloss_ref = 0;
+	   topo[i].link_info[k].pathloss_exp = 0;
+	   topo[i].link_info[k].distance = 0;
+	   topo[i].link_info[k].dist_ref = 0;
+	   topo[i].link_info[k].sigma = 0;
 	}
  
     }

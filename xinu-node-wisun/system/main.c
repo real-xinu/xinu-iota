@@ -18,8 +18,11 @@ process	main(void)
 
 	sleep(3);
 
-	wsnode_join();
-
+	if (wsnode_join() == SYSERR) {
+        kprintf("WSNODE_JOIN() ERROR!\n");
+    }
+    
+    pathloss_init();
 	sleep(1);
 #if 0
 	byte	prefix[] = {0x20, 0x01, 0, 0, 0, 0, 0, 0,
@@ -113,7 +116,7 @@ process	main(void)
 
 	while(1);
 #endif
-
+    
 	kprintf("\n...creating a shell\n");
 	recvclr();
 	resume(create(shell, 8192, 50, "shell", 1, CONSOLE));

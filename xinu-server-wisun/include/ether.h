@@ -2,10 +2,10 @@
 
 /* Ethernet packet format:
 
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |  Dest. MAC (6)  |  Src. MAC (6)   |Type (2)|      Data (46-1500)...   |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-*/
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  Dest. MAC (6)  |  Src. MAC (6)   |Type (2)|      Data (46-1500)...   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   */
 
 #define	ETH_ADDR_LEN	6	/* Length of Ethernet (MAC) address	*/
 typedef	unsigned char	Eaddr[ETH_ADDR_LEN];/* a physical Ethernet address*/
@@ -14,80 +14,85 @@ typedef	unsigned char	Eaddr[ETH_ADDR_LEN];/* a physical Ethernet address*/
 
 #pragma pack(1)
 struct a_msg {
-	int32	amsgtyp;	/* Message Type	*/
-	int32	anodeid;	/* Node ID	*/
-	int32	aseq;		/* Message seq.	*/
-	int32	aacktyp;	/* Type of ACK	*/
-	union {
-          struct { /* Join messge */
-	    byte	amcastaddr[6];
-	    struct {
-	      byte  lqi_low;
-	      byte  lqi_high;
-	      byte  probloss;
-	      } link_info[46];
-	   };
-	  struct { /* Ack message */
-	    uint32	acktype;
-	  };
-	  struct {
-	    int32	mon_cmd;
-	    int32	mon_nodeid;
-	    bool8	mon_fsrc;
-	    bool8	mon_fdst;
-	    byte	mon_ipsrc[16];
-	    byte	mon_ipdst[16];
-	  };
-	   byte	apingdata[8];
-	   byte	aacking[16];
-	   byte	aerrmsg[16];
-	   uint32 ctime;
-	};
+    int32	amsgtyp;	/* Message Type	*/
+    int32	anodeid;	/* Node ID	*/
+    int32	aseq;		/* Message seq.	*/
+    int32	aacktyp;	/* Type of ACK	*/
+    union {
+        struct { /* Join messge */
+            byte	amcastaddr[6];
+            struct {
+                byte	lqi_low;
+                byte	lqi_high;
+                byte threshold;
+                byte pathloss_ref;
+                byte pathloss_exp;
+                byte dist_ref;
+                byte sigma;
+                uint32 distance;
+            } link_info[46];
+        };
+        struct { /* Ack message */
+            uint32	acktype;
+        };
+        struct {
+            int32	mon_cmd;
+            int32	mon_nodeid;
+            bool8	mon_fsrc;
+            bool8	mon_fdst;
+            byte	mon_ipsrc[16];
+            byte	mon_ipdst[16];
+        };
+        byte	apingdata[8];
+        byte	aacking[16];
+        byte	aerrmsg[16];
+        uint32 ctime;
+    };
 };
 #pragma pack()
 
 /* Structure of A-Type Message */
 #pragma pack(1)
 struct	tbedpacket {
-	byte	ethdst[6];	/* Ethernet Destination	*/
-	byte	ethsrc[6];	/* Ethernet Source	*/
-	uint16	ethtype;	/* Ethernet Type	*/
-	struct	a_msg amsg;	/* A-Type Message data	*/
+    byte	ethdst[6];	/* Ethernet Destination	*/
+    byte	ethsrc[6];	/* Ethernet Source	*/
+    uint16	ethtype;	/* Ethernet Type	*/
+    struct	a_msg amsg;	/* A-Type Message data	*/
 };
 #pragma pack()
 
 /* Ethernet packet header */
 #pragma pack(1)
 struct	etherPkt {
-	byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
-	byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
-	uint16	type;			/* Ether type field		*/
-	struct 	a_msg msg;		/* Type-A Message		*/
+    byte	dst[ETH_ADDR_LEN];	/* Destination Mac address	*/
+    byte	src[ETH_ADDR_LEN];	/* Source Mac address		*/
+    uint16	type;			/* Ether type field		*/
+    struct 	a_msg msg;		/* Type-A Message		*/
 };
 #pragma pack()
 
 
 #define	ETH_HDR_LEN		14	/* Length of Ethernet packet 	*/
-					/*  header			*/
+/*  header			*/
 
 /* Ethernet DMA buffer sizes */
 
 #define	ETH_MTU			1500	/* Maximum transmission unit	*/
 #define	ETH_VLAN_LEN		4	/* Length of Ethernet vlan tag	*/
 #define ETH_CRC_LEN		4	/* Length of CRC on Ethernet 	*/
-					/*  frame			*/
+/*  frame			*/
 
 #define	ETH_MAX_PKT_LEN	( ETH_HDR_LEN + ETH_VLAN_LEN + ETH_MTU )
 
 #define	ETH_BUF_SIZE		2048	/* A multiple of 16 greater 	*/
-					/* 	than the max packet 	*/
-					/*  	size(cache alignment)	*/
+/* 	than the max packet 	*/
+/*  	size(cache alignment)	*/
 
 /* State of the Ethernet interface */
 
 #define	ETH_STATE_FREE		0	/* control block is unused 	*/
 #define	ETH_STATE_DOWN		1	/* interface is currently  	*/
-					/* 	inactive 		*/
+/* 	inactive 		*/
 #define	ETH_STATE_UP		2	/* interface is currently active*/
 
 /* Ethernet device control functions */
@@ -116,51 +121,51 @@ struct	etherPkt {
 #define ETH_PHY_STATREG_LINK	0x0004
 
 struct	ethcblk	{
-	byte	state; 		/* ETH_STATE_... as defined above 	*/
-	struct	dentry	*phy;	/* physical eth device for Tx DMA 	*/
-	byte 	type; 		/* NIC type_... as defined above 	*/
+    byte	state; 		/* ETH_STATE_... as defined above 	*/
+    struct	dentry	*phy;	/* physical eth device for Tx DMA 	*/
+    byte 	type; 		/* NIC type_... as defined above 	*/
 
-	/* Pointers to associated structures */
+    /* Pointers to associated structures */
 
-	struct	dentry	*dev;	/* address in device switch table	*/
-	void	*csr;		/* addr.of control and status regs.	*/
-	uint32	pcidev;		/* PCI device number			*/
-	uint32	iobase;		/* I/O base from config			*/
-	uint32  flashbase;      /* flash base from config	       	*/
-    	uint32	membase; 	/* memory base for device from config	*/
+    struct	dentry	*dev;	/* address in device switch table	*/
+    void	*csr;		/* addr.of control and status regs.	*/
+    uint32	pcidev;		/* PCI device number			*/
+    uint32	iobase;		/* I/O base from config			*/
+    uint32  flashbase;      /* flash base from config	       	*/
+    uint32	membase; 	/* memory base for device from config	*/
 
-	void    *rxRing;	/* ptr to array of recv ring descriptors*/
-	void    *rxBufs; 	/* ptr to Rx packet buffers in memory	*/
-	uint32	rxHead;		/* Index of current head of Rx ring	*/
-	uint32	rxTail;		/* Index of current tail of Rx ring	*/
-	uint32	rxRingSize;	/* size of Rx ring descriptor array	*/
-	uint32	rxIrq;		/* Count of Rx interrupt requests       */
+    void    *rxRing;	/* ptr to array of recv ring descriptors*/
+    void    *rxBufs; 	/* ptr to Rx packet buffers in memory	*/
+    uint32	rxHead;		/* Index of current head of Rx ring	*/
+    uint32	rxTail;		/* Index of current tail of Rx ring	*/
+    uint32	rxRingSize;	/* size of Rx ring descriptor array	*/
+    uint32	rxIrq;		/* Count of Rx interrupt requests       */
 
-	void    *txRing; 	/* ptr to array of xmit ring descriptors*/
-	void    *txBufs; 	/* ptr to Tx packet buffers in memory	*/
-	uint32	txHead;		/* Index of current head of Tx ring	*/
-	uint32	txTail;		/* Index of current tail of Tx ring	*/
-	uint32	txRingSize;	/* size of Tx ring descriptor array	*/
-	uint32	txIrq;		/* Count of Tx interrupt requests       */
+    void    *txRing; 	/* ptr to array of xmit ring descriptors*/
+    void    *txBufs; 	/* ptr to Tx packet buffers in memory	*/
+    uint32	txHead;		/* Index of current head of Tx ring	*/
+    uint32	txTail;		/* Index of current tail of Tx ring	*/
+    uint32	txRingSize;	/* size of Tx ring descriptor array	*/
+    uint32	txIrq;		/* Count of Tx interrupt requests       */
 
-	byte	devAddress[ETH_ADDR_LEN];/* MAC address 		*/
+    byte	devAddress[ETH_ADDR_LEN];/* MAC address 		*/
 
-	uint8	addrLen;	/* Hardware address length	      	*/
-	uint16	mtu;	    	/* Maximum transmission unit (payload)  */
+    uint8	addrLen;	/* Hardware address length	      	*/
+    uint16	mtu;	    	/* Maximum transmission unit (payload)  */
 
-	uint32	errors;		/* Number of Ethernet errors 		*/
-	sid32	isem;		/* Semaphore for Ethernet input		*/
-	sid32	osem; 		/* Semaphore for Ethernet output	*/
-	uint16	istart;		/* Index of next packet in the ring     */
+    uint32	errors;		/* Number of Ethernet errors 		*/
+    sid32	isem;		/* Semaphore for Ethernet input		*/
+    sid32	osem; 		/* Semaphore for Ethernet output	*/
+    uint16	istart;		/* Index of next packet in the ring     */
 
-	int16	inPool;		/* Buffer pool ID for input buffers 	*/
-	int16	outPool;	/* Buffer pool ID for output buffers	*/
+    int16	inPool;		/* Buffer pool ID for input buffers 	*/
+    int16	outPool;	/* Buffer pool ID for output buffers	*/
 
-	int16 	proms; 		/* nonzero => promiscuous mode 		*/
+    int16 	proms; 		/* nonzero => promiscuous mode 		*/
 
-	int16 	ed_mcset;       /* nonzero => multicast reception set   */
-	int16 	ed_mcc;	 	/* count of multicast addresses		*/
-    	Eaddr   ed_mca[ETH_NUM_MCAST];/* array of multicast addrs 	*/
+    int16 	ed_mcset;       /* nonzero => multicast reception set   */
+    int16 	ed_mcc;	 	/* count of multicast addresses		*/
+    Eaddr   ed_mca[ETH_NUM_MCAST];/* array of multicast addrs 	*/
 };
 
 extern	struct	ethcblk	ethertab[];	/* array of control blocks      */

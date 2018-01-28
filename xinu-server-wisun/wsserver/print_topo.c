@@ -20,12 +20,12 @@ void print_topo()
 
         kprintf ( " --Link Info: ");
         for ( j = 0; j < 46; j++ )
-            kprintf ( "%d,%d,%d ", old_topo[i].link_info[j].lqi_low, old_topo[i].link_info[j].lqi_high, old_topo[i].link_info[j].probloss);
+            kprintf ( "%d,%d,%d ", old_topo[i].link_info[j].lqi_low, old_topo[i].link_info[j].lqi_high, old_topo[i].link_info[j].threshold);
 
         kprintf ( "  :  " );
 
         for ( j = 0; j < 46; j++ )
-            kprintf ( "%d,%d,%d ", topo[i].link_info[j].lqi_low, topo[i].link_info[j].lqi_high, topo[i].link_info[j].probloss );
+            kprintf ( "%d,%d,%d ", topo[i].link_info[j].lqi_low, topo[i].link_info[j].lqi_high, topo[i].link_info[j].threshold);
 
 /*
 

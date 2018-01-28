@@ -1,0 +1,19 @@
+download t 182 xinu.boot.s
+download n 132 xinu.boot.r
+download n 133 xinu.boot.n
+download n 134 xinu.boot.n
+download n 135 xinu.boot.n
+download n 136 xinu.boot.n
+delay 1000
+pcycle t
+delay 8000
+cleanup
+pcycle 132
+pcycle 133
+pcycle 134
+pcycle 135
+pcycle 136
+delay 5000
+settime
+delay 2000
+newtop ploss.0

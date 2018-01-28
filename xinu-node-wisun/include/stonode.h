@@ -108,7 +108,12 @@ struct node_info {
 	struct {
 	  byte	lqi_low;
 	  byte	lqi_high;
-	  byte	probloss;
+	  byte threshold;
+      byte pathloss_ref;
+      byte pathloss_exp;
+      byte dist_ref;
+      byte sigma;
+      uint32 distance;
 	} link_info[46];
 };
 

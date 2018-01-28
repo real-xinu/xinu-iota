@@ -31,10 +31,30 @@ void amsg_handler ( struct netpacket_e *node_msg )
 		for(i = 0; i < 46; i++) {
 		    info.link_info[i].lqi_low = node_msg->msg.link_info[i].lqi_low;
 		    info.link_info[i].lqi_high = node_msg->msg.link_info[i].lqi_high;
-		    info.link_info[i].probloss = node_msg->msg.link_info[i].probloss;
-		}
+		    info.link_info[i].threshold = node_msg->msg.link_info[i].threshold;
+            info.link_info[i].pathloss_ref = node_msg->msg.link_info[i].pathloss_ref;
+		    info.link_info[i].pathloss_exp = node_msg->msg.link_info[i].pathloss_exp;
+		    info.link_info[i].distance = node_msg->msg.link_info[i].distance;
+		    info.link_info[i].dist_ref = node_msg->msg.link_info[i].dist_ref;
+		    info.link_info[i].sigma = node_msg->msg.link_info[i].sigma;
+        }
+
                 kprintf ("\n");
-                print_info();
+                i = 1;
+
+                kprintf("Message\n %d:\nLQI: Low: %d, High:%d\nThreshold: %d\nPathloss: Ref: %d, Exp:%d\nDist_ref: %d, Sigma: %d\nDistance: %d\n",
+                i, node_msg->msg.link_info[i].lqi_low, node_msg->msg.link_info[i].lqi_high, 
+                node_msg->msg.link_info[i].threshold, node_msg->msg.link_info[i].pathloss_ref, 
+                node_msg->msg.link_info[i].pathloss_exp, node_msg->msg.link_info[i].dist_ref,
+                node_msg->msg.link_info[i].sigma, node_msg->msg.link_info[i].distance);
+ 
+                kprintf("Struct\n %d:\nLQI: Low: %d, High:%d\nThreshold: %d\nPathloss: Ref: %d, Exp:%d\nDist_ref: %d, Sigma: %d\nDistance: %d\n",
+                i, info.link_info[i].lqi_low, info.link_info[i].lqi_high, 
+                info.link_info[i].threshold, info.link_info[i].pathloss_ref, 
+                info.link_info[i].pathloss_exp, info.link_info[i].dist_ref,
+                info.link_info[i].sigma, info.link_info[i].distance);
+ 
+                //print_info();
                 kprintf ( "\n====>ACK message is sent\n" );
             }
 

@@ -6,22 +6,27 @@
 #define	TBR_TYPE_NPINGALL	4
 
 struct	tbreq {
-	uint32	type;
-	byte	dst[6];
-	bool8	waiting;
-	pid32	waitpid;
-	uint32	nodeid;
-	//union {
-	  int32	topoidx;
-	  struct {
-	    byte	mcast[6];
-	    struct {
-	      byte	lqi_low;
-	      byte	lqi_high;
-	      byte	probloss;
-	    } link_info[46];
-	  };
-	//};
+    uint32	type;
+    byte	dst[6];
+    bool8	waiting;
+    pid32	waitpid;
+    uint32	nodeid;
+    //union {
+    int32	topoidx;
+    struct {
+        byte	mcast[6];
+        struct {
+            byte	lqi_low;
+            byte	lqi_high;
+            byte threshold;
+            byte pathloss_ref;
+            byte pathloss_exp;
+            byte dist_ref;
+            byte sigma;
+            uint32 distance;
+        } link_info[46];
+    };
+    //};
 };
 
 #define	TB_STATE_WAIT	1
@@ -29,18 +34,18 @@ struct	tbreq {
 #define	TB_QSIZE	80
 
 struct	tbinfo {
-	uint32	state;
-	uint32	nextid;
-	struct	tbreq reqq[TB_QSIZE];
-	int32	thead;
-	int32	ttail;
-	int32	tcount;
-	sid32	tsem;
-	uint32	seq;
-	byte	waitaddr[6];
-	pid32	pid;
-	bool8	monitor;
-	byte	mon_ethaddr[6];
+    uint32	state;
+    uint32	nextid;
+    struct	tbreq reqq[TB_QSIZE];
+    int32	thead;
+    int32	ttail;
+    int32	tcount;
+    sid32	tsem;
+    uint32	seq;
+    byte	waitaddr[6];
+    pid32	pid;
+    bool8	monitor;
+    byte	mon_ethaddr[6];
 };
 
 extern	struct tbinfo testbed;
@@ -49,9 +54,9 @@ extern	struct tbinfo testbed;
 #define	TMAP_STATE_FREE	0
 
 struct	tmapentry {
-	int32	state;
-	uint32	nodeid;
-	uint32	bbbid;
+    int32	state;
+    uint32	nodeid;
+    uint32	bbbid;
 };
 
 extern	struct tmapentry tbedmap[MAX_BBB];

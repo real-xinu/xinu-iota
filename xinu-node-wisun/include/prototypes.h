@@ -1,3 +1,8 @@
+
+/* in file ploss.c */
+extern  int32   calc_pathloss(int32);
+extern  void    pathloss_init();
+
 /* in file addargs.c */
 extern	status	addargs(pid32, int32, int32[], int32,char *, void *);
 

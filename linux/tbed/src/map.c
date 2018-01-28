@@ -24,6 +24,7 @@ void mapping_list (char *fname)
 
     if (fp == NULL) {
         printf ("Cannot open the file. \n");
+        printf("Please make sure the file is in the remote file server dir\n");
         return;
     }
 
