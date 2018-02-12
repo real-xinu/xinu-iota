@@ -245,7 +245,7 @@ void	testbed_in (
 {
     struct	tbreq rqptr;	/* Testbed request	*/
     uint32	nodeid;		/* Node ID		*/
-    int32	i, j;		/* Loop indexes		*/
+    int32	i;		/* Loop indexes		*/
 
     byte	allzeros[] = {0, 0, 0, 0, 0, 0};
 

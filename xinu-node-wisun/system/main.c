@@ -15,7 +15,7 @@ process	counterproc() {
 process	main(void)
 {
 	/* Start the network */
-
+    
 	sleep(3);
 
 	if (wsnode_join() == SYSERR) {

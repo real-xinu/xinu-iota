@@ -1,3 +1,6 @@
+extern  int     rand();
+extern  double  log10(double);
+
 /* in file addargs.c */
 extern	status	addargs(pid32, int32, int32[], int32,char *, void *);
 
@@ -604,8 +607,10 @@ extern struct c_msg * cmsg_handler(struct c_msg *);
 extern struct c_msg *toporeply();
 extern struct c_msg  *newtop(struct c_msg *);
 extern status nping(int32);
+//extern struct c_msg * nping_in(struct c_msg *);
 extern struct c_msg * nping_reply(struct c_msg *);
 extern status nping_all();
+//extern struct c_msg * nping_all_in(struct c_msg *, bool8);
 extern struct c_msg * nping_all_reply(struct c_msg *);
 extern status topo_compr();
 extern void topo_update_mac(struct netpacket *);

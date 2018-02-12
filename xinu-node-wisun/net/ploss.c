@@ -39,15 +39,6 @@ double simple_sqrt(double input) {
 	return answer - 1;
 }
 
-double simple_log_10(double input) {
-	int32 answer = 0;
-	while(input >= 10) {
-		input /= 10;
-		answer++;
-	}
-	return answer;
-}
-
 /*------------------------------------------------------------------------
  * calc_pathloss  -  Function to calculate path loss
  *             -  Returns 1 if packet is dropped 0 otherwise
@@ -58,16 +49,17 @@ int32	calc_pathloss (
         int32 receiver
         )
 {
-    kprintf("calculating path loss\n");
+
     int32 pathloss;//= rand();
     int32 gauss = 0; //calc_gauss(0, info.link_info[receiver].sigma);
 
     //PL(d)=PL(d0)+10*exponent*log(d/d0)+X
     //TODO: implement a better log function
-    pathloss = info.link_info[receiver].pathloss_ref + 10 * info.link_info[receiver].pathloss_exp * simple_log_10(info.link_info[receiver].distance / info.link_info[receiver].dist_ref) + gauss;
+    pathloss = info.link_info[receiver].pathloss_ref + 10 * info.link_info[receiver].pathloss_exp * log10(info.link_info[receiver].distance / info.link_info[receiver].dist_ref) + gauss;
 
     //TODO: future improvement, have a transmission power, then minus path loss,
     //if result is less than threshold, then packet isn't received - look below
+    kprintf("calculating path loss: %d, threshold: %d\n", pathloss, info.link_info[receiver].threshold);
     if (pathloss > info.link_info[receiver].threshold) 
         //lost too much power, so drop the packet
         return DROP;
@@ -103,7 +95,7 @@ int32   calc_gauss (
             w = x1 * x1 + x2 * x2;
         } while ( w >= 1.0 );
 
-        w = simple_sqrt( (-2.0 * simple_log_10( w ) ) / w );
+        w = simple_sqrt( (-2.0 * log10( w ) ) / w );
         y1 = x1 * w;
         y2 = x2 * w;
         use_last = 1;

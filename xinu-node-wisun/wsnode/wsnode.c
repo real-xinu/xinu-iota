@@ -1,9 +1,7 @@
-/* wsserver.c - Wi-SUN emulation testbed server */
+/* wsnode.c - Wi-SUN emulation testbed node */
 
 #include <xinu.h>
 #include <stdio.h>
-#include <stdlib.h>
-
 
 
 int32 slot;

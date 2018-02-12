@@ -1,5 +1,4 @@
 #include <xinu.h>
-#include <stdlib.h>
 
 /*-------------------------------------------------------------
  * Send ack message as a repsonse of assign and ping messages

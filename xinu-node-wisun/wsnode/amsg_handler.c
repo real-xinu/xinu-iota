@@ -1,5 +1,5 @@
 #include <xinu.h>
-#include <stdlib.h>
+
 /*------------------------------------------------
  * Message handler is used to call
  * appropiate function based on message type.

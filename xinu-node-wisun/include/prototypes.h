@@ -1,4 +1,6 @@
+extern  double  log10(double);
 
+extern  int32   calc_gauss(double, double);
 /* in file ploss.c */
 extern  int32   calc_pathloss(int32);
 extern  void    pathloss_init();
@@ -418,6 +420,9 @@ extern	devcall	ramread(struct dentry *, char *, int32);
 /* in file ramwrite.c */
 extern	devcall	ramwrite(struct dentry *, char *, int32);
 
+/* in file rand.c */
+extern  unsigned long rand(void);
+
 /* in file rdsclose.c */
 extern	devcall	rdsclose(struct dentry *);
 
@@ -589,6 +594,9 @@ extern	devcall	spicontrol(struct dentry *, int32, int32, int32);
 
 /* in spiinit.c */
 extern	int32	spiinit(struct dentry *);
+
+/* in file srand.c */
+void srand(unsigned long);
 
 /* in file start.S */
 extern	int32	inb(int32);
