@@ -28,19 +28,19 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
             cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
             if ( online ) {
                 cmsg_reply->cmsgtyp = htonl ( C_OK );
-	    }
-	    else
-                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+            }
+            else
+                cmsg_reply->cmsgtyp = htonl ( C_ERR );
             break;
 
         case C_PING_REQ:
             kprintf ( "Message type is %d\n", C_PING_REQ );
             if ( online )
                 cmsg_reply = nping_in(ctlpkt, cmsg_reply);
-	    else
-	    {
-                    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
-                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+            else
+            {
+                cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                cmsg_reply->cmsgtyp = htonl ( C_ERR );
             }
             break;
 
@@ -49,10 +49,10 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
 
             if ( online )
                 cmsg_reply = nping_all_in ( ctlpkt, 1 );
-	    else
-	    {
-	            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
-                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+            else
+            {
+                cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                cmsg_reply->cmsgtyp = htonl ( C_ERR );
             }
             break;
 
@@ -62,7 +62,7 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
             if ( online ) {
                 xonoffid = ntohl (ctlpkt->xonoffid);
 
-		cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
 
                 if (wsserver_xonoff (XOFF, xonoffid) == OK)
                     cmsg_reply->cmsgtyp = htonl ( C_OK );
@@ -70,10 +70,10 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
                 else
                     cmsg_reply->cmsgtyp = htonl (C_ERR);
             }
-	    else
+            else
             {
-	            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
-                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+                cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                cmsg_reply->cmsgtyp = htonl ( C_ERR );
             }
             break;
 
@@ -83,7 +83,7 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
             if ( online ) {
                 xonoffid = ntohl (ctlpkt->xonoffid);
 
-		cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
 
                 if (wsserver_xonoff (XON, xonoffid) == OK)
                     cmsg_reply->cmsgtyp = htonl ( C_OK );
@@ -91,23 +91,23 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
                 else
                     cmsg_reply->cmsgtyp = htonl (C_ERR);
             }
-	    else
+            else
             {
-	            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
-                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
+                cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+                cmsg_reply->cmsgtyp = htonl ( C_ERR );
             }
             break;
 
         case C_OFFLINE:
             online = 0;
-	    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
             kprintf ( "Message type is %d\n", C_OFFLINE );
             cmsg_reply->cmsgtyp = htonl ( C_OK );
             break;
 
         case C_ONLINE:
             online = 1;
-	    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
             kprintf ( "Message type is %d\n", C_ONLINE );
             cmsg_reply->cmsgtyp = htonl ( C_OK );
             break;
@@ -124,14 +124,14 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
 
         case C_TS_REQ:
             kprintf ( "Message type is %d\n", C_TS_REQ );
-	    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
             cmsg_reply->cmsgtyp = htonl ( C_TS_RESP );
-	    cmsg_reply->uptime  = htonl(clktime);
+            cmsg_reply->uptime  = htonl(clktime);
             break;
 
         case C_MAP:
             kprintf (" Message type is %d\n", C_MAP);
-	    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
             cmsg_reply->cmsgtyp = htonl (C_MAP_REPLY);
             cmsg_reply->nnodes = htonl (nnodes);
             memcpy (cmsg_reply->map, map_list, sizeof (map_list));
@@ -139,48 +139,48 @@ struct c_msg * cmsg_handler ( struct c_msg *ctlpkt )
 
         case C_SHUTDOWN:
             kprintf ("Message type is %d\n", C_SHUTDOWN);
-	    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
-	    cmsg_reply->cmsgtyp = htonl (C_SHUTDOWN);
+            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+            cmsg_reply->cmsgtyp = htonl (C_SHUTDOWN);
             break;
 
         case C_PINGALL:
             kprintf ("Message type is %d\n", C_PINGALL);
             cmsg_reply = nping_all_in ( ctlpkt, 0 );
-	    break;
+            break;
 
         case C_CLEANUP:
             kprintf ("Message type is %d\n", C_CLEANUP);
-	    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
-	    if (cleanup() == OK)
-		    cmsg_reply->cmsgtyp = htonl ( C_OK );
-	    else
-                    cmsg_reply->cmsgtyp = htonl ( C_ERR );
-	    break;
+            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+            if (cleanup() == OK)
+                cmsg_reply->cmsgtyp = htonl ( C_OK );
+            else
+                cmsg_reply->cmsgtyp = htonl ( C_ERR );
+            break;
 
-	case C_SETTIME:
-	     kprintf("Message type is %d:%d\n", C_SETTIME, ctlpkt->ctime);
-	     status retval = settime(ctlpkt->ctime);
-	     if(retval == OK)
-	         cmsg_reply->cmsgtyp = htonl(C_OK);
-             else
-	         cmsg_reply->cmsgtyp = htonl(C_ERR);
-	     
-	     break;
+        case C_SETTIME:
+            kprintf("Message type is %d:%d\n", C_SETTIME, ctlpkt->ctime);
+            status retval = settime(ctlpkt->ctime);
+            if(retval == OK)
+                cmsg_reply->cmsgtyp = htonl(C_OK);
+            else
+                cmsg_reply->cmsgtyp = htonl(C_ERR);
 
-	case C_MONITOR:
-	     kprintf("Message type is %d\n", C_MONITOR);
-	     if(!testbed.monitor) {
-		     cmsg_reply->cmsgtyp = htonl(C_ERR);
-		     break;
-	     }
+            break;
 
-	     monitor(ctlpkt);
-	     cmsg_reply->cmsgtyp = htonl(C_OK);
-	     break;
+        case C_MONITOR:
+            kprintf("Message type is %d\n", C_MONITOR);
+            if(!testbed.monitor) {
+                cmsg_reply->cmsgtyp = htonl(C_ERR);
+                break;
+            }
+
+            monitor(ctlpkt);
+            cmsg_reply->cmsgtyp = htonl(C_OK);
+            break;
 
         default:
             kprintf ( "ERROR\n" );
-	    cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
+            cmsg_reply = (struct c_msg *)getmem(sizeof(struct c_msg));
             cmsg_reply->cmsgtyp = htonl ( C_ERR );
     }
 

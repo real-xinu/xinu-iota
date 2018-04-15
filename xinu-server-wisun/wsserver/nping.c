@@ -87,7 +87,8 @@ struct	c_msg *nping_all_in (
 		bool8	intopo		/* PING_ALL or PINGALL		*/
 		)
 {
-	struct	c_msg *reply;	/* Reply packet		*/
+	kprintf("nping_all_in\n");
+    struct	c_msg *reply;	/* Reply packet		*/
 	struct	tbreq *rqptr;	/* Testbed request	*/
 	umsg32	msg;		/* Received message	*/
 	intmask	mask;		/* Saved interrupt mask	*/

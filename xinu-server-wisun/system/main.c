@@ -45,7 +45,7 @@ int32   calc_gauss (
 
         } while ( w >= 1.0 );
 
-        //kprintf("calc_gauss: w * 1000:%d\n", (int32)(w * 1000));
+        kprintf("calc_gauss: w * 1000:%d\n", (int32)(w * 1000));
         
         w = simple_sqrt( (-2.0 * log10( w ) ) / w );
         y1 = x1 * w;
@@ -58,19 +58,20 @@ int32   calc_gauss (
 
 process	main(void)
 {
-    uint32 i;
 /*    uint32 time = 0;
     kprintf("gettime\n");
     gettime(&time);
     srand(time);//sets seed so it's random
     kprintf("seed set at: %d\n", time);*/
-/*    for (i = 0; i < 20; i++) {
+    
+    uint32 i;
+    for (i = 0; i < 20; i++) {
         kprintf("Gauss: %d\n", calc_gauss(0, 4));
-    }*/
+    }
     
     /* Obtain an IP address */
 
-	netstart();
+	//netstart();
 
 	/* Run the Xinu shell */
 

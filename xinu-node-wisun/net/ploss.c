@@ -28,6 +28,11 @@ void pathloss_init () {
         info.link_info[i].distance = 0;//set up from topology file
     }
     kprintf("pathloss_init done\n");
+
+    for(i = 0; i< 20; i++) {
+        kprintf("Gauss: %d\n", calc_gauss(0, 4));
+    }
+
 }
 
 double simple_sqrt(double input) {
@@ -95,6 +100,8 @@ int32   calc_gauss (
             w = x1 * x1 + x2 * x2;
         } while ( w >= 1.0 );
 
+        kprintf("calc_gauss: w * 1000:%d\n", (int32)(w * 1000));
+        
         w = simple_sqrt( (-2.0 * log10( w ) ) / w );
         y1 = x1 * w;
         y2 = x2 * w;
@@ -103,6 +110,7 @@ int32   calc_gauss (
 
     return( mean + y1 * stdDev );
 }
+
 /*====================================================================================*/
 
 /*==================================================================================*/
